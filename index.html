@@ -1,0 +1,3226 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Luvvies Crush</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root{
+      --bg1:#f7f2ff;
+      --bg2:#eaf6ff;
+      --card:#ffffffd9;
+      --card2:#ffffffef;
+      --stroke:rgba(17,13,26,.10);
+      --shadow: 0 18px 60px rgba(20,10,60,.12);
+
+      --cols: 10;
+      --rows: 10;
+      --cell: 54px;
+      --gap: 8px;
+      --pad: 14px;
+      --boardRadius: 26px;
+
+      --toastMs: 2600ms;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      color:#1d1334;
+      overflow:hidden;
+      background: linear-gradient(180deg, var(--bg1), var(--bg2));
+      position:relative;
+    }
+
+    /* Scroll container (scrollbar hidden) */
+    #page{
+      height:100vh;
+      overflow:auto;
+      position:relative;
+      z-index:0;
+    }
+    #page{ scrollbar-width:none; }
+    #page::-webkit-scrollbar{ width:0; height:0; }
+
+    /* Scrollender Background Layer */
+    #scrollBg{
+      position:absolute;
+      inset:0;
+      z-index:0;
+      pointer-events:none;
+      min-height: 120vh;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255,105,180,.14), transparent 48%),
+        radial-gradient(circle at 85% 25%, rgba(122,216,255,.20), transparent 52%),
+        radial-gradient(circle at 55% 75%, rgba(255,209,90,.16), transparent 50%),
+        linear-gradient(120deg,
+          rgba(255,79,185,.18),
+          rgba(255,209,90,.14),
+          rgba(122,216,255,.18),
+          rgba(139,92,246,.14),
+          rgba(255,79,185,.18)
+        );
+      background-size: auto, auto, auto, 300% 300%;
+      filter: blur(18px);
+      opacity:.55;
+      animation: bgMove 18s ease-in-out infinite;
+    }
+    @keyframes bgMove{
+      0%{ background-position: 0% 50% }
+      50%{ background-position: 100% 50% }
+      100%{ background-position: 0% 50% }
+    }
+
+    #globalBg{
+      position:absolute;
+      inset:0;
+      z-index:0;
+      pointer-events:none;
+      overflow:hidden;
+    }
+
+    /* Background luvvies: langsamer + fade, immer hinter allem */
+    .bgLuv{
+      position:absolute;
+      width: clamp(150px, 17vw, 300px);
+      filter: drop-shadow(0 18px 40px rgba(0,0,0,.10));
+      opacity:.72;
+      animation: floaty 18s ease-in-out infinite;
+      z-index:0;
+      pointer-events:none;
+    }
+    .bgLuv img{ width:100%; height:auto; display:block; }
+    @keyframes floaty{
+      0%{ transform: translate(0,0) rotate(-1deg); opacity:.64; }
+      50%{ transform: translate(10px,-16px) rotate(1.2deg); opacity:.82; }
+      100%{ transform: translate(0,0) rotate(-1deg); opacity:.64; }
+    }
+
+    /* Subtle twinkles (statt bubbles) */
+    .twinkle{
+      position:absolute;
+      width: 10px; height: 10px;
+      left:0; top:0;
+      transform: translate(-50%,-50%) scale(.6);
+      opacity:0;
+      pointer-events:none;
+      mix-blend-mode: screen;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.95), rgba(255,255,255,.15));
+      clip-path: polygon(50% 0%, 62% 30%, 100% 50%, 62% 70%, 50% 100%, 38% 70%, 0% 50%, 38% 30%);
+      animation: tw 1200ms ease-out forwards;
+      filter: drop-shadow(0 0 18px rgba(255,79,185,.18));
+    }
+    @keyframes tw{
+      0%{opacity:0; transform:translate(-50%,-50%) scale(.45) rotate(0deg)}
+      20%{opacity:1}
+      100%{opacity:0; transform:translate(-50%,-65%) scale(1.15) rotate(140deg)}
+    }
+
+    #app{
+      width:min(1100px, 96vw);
+      margin: 18px auto 28px;
+      position:relative;
+      z-index:5; /* Vordergrund */
+    }
+
+    .topRow{
+      margin-top: 12px;
+      background: var(--card);
+      border:1px solid var(--stroke);
+      border-radius: 22px;
+      padding: 12px;
+      box-shadow: var(--shadow);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      position:relative;
+      z-index:6;
+    }
+
+    .diffWrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .diffWrap .label{font-weight:900;opacity:.9;margin-right:4px}
+    .diffPills{
+      display:flex;
+      gap:8px; padding:6px;
+      border-radius:999px;
+      background: rgba(255,255,255,.78);
+      border:1px solid rgba(17,13,26,.08);
+    }
+    .diffPills input{display:none}
+    .diffPills label{
+      cursor:pointer;
+      user-select:none;
+      padding:10px 14px; border-radius:999px;
+      font-weight:900; font-size:14px;
+      color:#2b1b4f;
+      transition: transform .12s ease, background .2s ease;
+    }
+    .diffPills input:checked + label{
+      background: linear-gradient(135deg, #ff4fb9, #7ad8ff);
+      background-size:200% 100%;
+      animation: pillGlow 2.2s ease-in-out infinite;
+      color:#fff;
+      box-shadow: 0 10px 22px rgba(255,79,185,.22);
+      transform: translateY(-1px);
+    }
+    @keyframes pillGlow{
+      0%{ background-position:0% 50% }
+      50%{ background-position:100% 50% }
+      100%{ background-position:0% 50% }
+    }
+
+    /* Jelly Button */
+    .Btn{
+      position: relative;
+      height: 46px;
+      padding: 0 16px;
+      border-radius: 999px;
+      border: none;
+      background-color: rgb(151, 95, 255);
+      color: white;
+      box-shadow: 0px 10px 10px rgb(210, 187, 253) inset,
+                  0px 5px 10px rgba(5, 5, 5, 0.18),
+                  0px -10px 10px rgb(124, 54, 255) inset;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap:8px;
+      font-weight:1000;
+      letter-spacing:.1px;
+      transition: transform .12s ease;
+      white-space:nowrap;
+    }
+    .Btn::before{
+      width: 70%; height: 2px; position: absolute;
+      background-color: rgba(250, 250, 250, 0.678);
+      content: ""; filter: blur(1px);
+      top: 7px; border-radius: 50%; left: 15%;
+    }
+    .Btn::after{
+      width: 70%; height: 2px; position: absolute;
+      background-color: rgba(250, 250, 250, 0.137);
+      content: ""; filter: blur(1px);
+      bottom: 7px; border-radius: 50%; left: 15%;
+    }
+    .Btn:hover { animation: jello-horizontal 0.9s both; }
+    .Btn:active{ transform: scale(.98); }
+    @keyframes jello-horizontal {
+      0% { transform: scale3d(1, 1, 1); }
+      30% { transform: scale3d(1.20, 0.80, 1); }
+      40% { transform: scale3d(0.80, 1.20, 1); }
+      50% { transform: scale3d(1.12, 0.88, 1); }
+      65% { transform: scale3d(0.96, 1.04, 1); }
+      75% { transform: scale3d(1.04, 0.96, 1); }
+      100% { transform: scale3d(1, 1, 1); }
+    }
+    .Btn.secondary{
+      background: linear-gradient(135deg, #ff4fb9, #ff9adf);
+      box-shadow: 0px 10px 10px rgba(255,200,235,.9) inset,
+                  0px 7px 18px rgba(5, 5, 5, 0.15),
+                  0px -10px 10px rgba(255,60,180,.55) inset;
+    }
+    .Btn.ghost{
+      background: rgba(255,255,255,.8);
+      color:#2a1849;
+      box-shadow: 0px 10px 10px rgba(240,240,255,.9) inset,
+                  0px 7px 18px rgba(5, 5, 5, 0.10),
+                  0px -10px 10px rgba(220,220,255,.55) inset;
+    }
+
+    .actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:flex-end;
+      z-index:6;
+    }
+
+    .stats{
+      margin-top: 12px;
+      display:grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      position:relative;
+      z-index:6;
+    }
+    .stat{
+      background: var(--card2);
+      border:1px solid var(--stroke);
+      border-radius: 18px;
+      padding: 10px 12px;
+      box-shadow: 0 10px 30px rgba(20,10,60,.07);
+      min-height: 62px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+    .stat .k{font-weight:900; font-size:12px; opacity:.7}
+    .stat .v{font-weight:1000; font-size:20px; margin-top:2px}
+
+    .progressRow{
+      margin-top: 10px;
+      background: var(--card2);
+      border:1px solid var(--stroke);
+      border-radius: 18px;
+      padding: 10px 12px;
+      box-shadow: 0 10px 30px rgba(20,10,60,.07);
+      display:flex;
+      align-items:center;
+      gap:10px;
+      position:relative;
+      z-index:6;
+    }
+    .progressRow b{font-size:14px}
+    .bar{
+      flex:1;
+      height: 14px;
+      border-radius:999px;
+      background: rgba(140,120,200,.18);
+      overflow:hidden;
+      border:1px solid rgba(60,20,120,.10);
+      position:relative;
+    }
+    .bar > i{
+      display:block;
+      height:100%;
+      width:0%;
+      border-radius:999px;
+      background: linear-gradient(90deg,
+        #ff4fb9,
+        #ffcf5a,
+        #7ad8ff,
+        #8b5cf6,
+        #ff4fb9
+      );
+      background-size: 300% 100%;
+      animation: barHue 3.2s linear infinite;
+      box-shadow: 0 0 18px rgba(255,79,185,.22);
+      transition: width .25s ease;
+    }
+    @keyframes barHue{
+      0%{background-position:0% 50%}
+      100%{background-position:100% 50%}
+    }
+    .pct{font-weight:1000; min-width:46px; text-align:right}
+
+    .playArea{
+      margin-top: 12px;
+      background: var(--card);
+      border:1px solid var(--stroke);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 14px;
+      position:relative;
+      overflow:hidden;
+      z-index:6; /* Vordergrund */
+    }
+
+    #boardWrap{
+      position:relative;
+      width:100%;
+      min-height: 64vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index:10;
+      padding: 8px;
+      touch-action: none;
+    }
+
+    #board{
+      position:relative;
+      z-index:12; /* Board immer vorne */
+      padding: var(--pad);
+      border-radius: var(--boardRadius);
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255,255,255,.86), rgba(255,255,255,.35)),
+        radial-gradient(circle at 80% 70%, rgba(255,209,90,.16), transparent 55%),
+        radial-gradient(circle at 30% 75%, rgba(255,79,185,.12), transparent 55%),
+        radial-gradient(circle at 75% 25%, rgba(122,216,255,.16), transparent 55%),
+        linear-gradient(180deg, rgba(255,255,255,.62), rgba(255,255,255,.36));
+      border: 1px solid rgba(17,13,26,.08);
+      box-shadow:
+        0 18px 70px rgba(20,10,60,.10),
+        0 6px 16px rgba(0,0,0,.06) inset;
+      overflow:hidden;
+      animation: boardFade 20s ease-in-out infinite;
+    }
+    @keyframes boardFade{
+      0%{ filter:hue-rotate(0deg) saturate(1) }
+      50%{ filter:hue-rotate(10deg) saturate(1.04) }
+      100%{ filter:hue-rotate(0deg) saturate(1) }
+    }
+
+    /* Swirl overlay (statt bubble pattern) */
+    #board:before{
+      content:"";
+      position:absolute; inset:-20px;
+      background:
+        conic-gradient(from 180deg at 35% 35%,
+          rgba(255,255,255,.18),
+          rgba(255,255,255,0) 22%,
+          rgba(255,255,255,.12) 45%,
+          rgba(255,255,255,0) 65%,
+          rgba(255,255,255,.18)
+        );
+      opacity:.45;
+      mix-blend-mode: soft-light;
+      filter: blur(0.2px);
+      pointer-events:none;
+    }
+    #board:after{
+      content:"";
+      position:absolute; inset:0;
+      border-radius: var(--boardRadius);
+      box-shadow:
+        0 2px 0 rgba(255,255,255,.55) inset,
+        0 -6px 12px rgba(0,0,0,.10) inset;
+      pointer-events:none;
+    }
+
+    #fxLayer{
+      pointer-events:none;
+      position:absolute;
+      inset:0;
+      z-index:20;
+    }
+
+    #fsBg{
+      position:absolute;
+      inset:0;
+      z-index:5; /* hinter board */
+      pointer-events:none;
+      overflow:hidden;
+      display:none;
+    }
+    body.fs #fsBg{ display:block; }
+
+    /* Tiles */
+    .tile{
+      position:absolute;
+      width: var(--cell);
+      height: var(--cell);
+      left:0; top:0;
+      transform: translate(var(--x), var(--y));
+      transition: transform 190ms cubic-bezier(.2,.9,.2,1.0);
+      will-change: transform;
+      z-index:15;
+    }
+    .tile.bigMellow{
+      width: calc(var(--cell) * 2 + var(--gap));
+      height: calc(var(--cell) * 2 + var(--gap));
+      z-index:25;
+    }
+    .tile.dragging{ transition:none !important; z-index: 50; filter: drop-shadow(0 22px 20px rgba(0,0,0,.20)); }
+    .tile.locked{ pointer-events:none; }
+
+    .plate{
+      width:100%; height:100%;
+      border-radius: 16px;
+      background:
+        radial-gradient(circle at 22% 18%, rgba(255,255,255,.88), rgba(255,255,255,0) 40%),
+        linear-gradient(135deg, var(--p1), var(--p2));
+      border: 1px solid rgba(255,255,255,.50);
+      box-shadow:
+        0 14px 24px rgba(20,10,60,.10),
+        0 4px 8px rgba(0,0,0,.06),
+        0 -10px 18px rgba(255,255,255,.45) inset;
+      position:relative;
+      overflow:hidden;
+
+      transform: translateY(var(--oy, 0px)) scale(1);
+      opacity: var(--op, 1);
+      transition: transform 260ms cubic-bezier(.2,.9,.2,1), opacity 260ms ease;
+    }
+    .tile.bigMellow .plate{ border-radius: 26px; }
+
+    /* Swirl on tile (subtle) */
+    .plate:before{
+      content:"";
+      position:absolute; inset:-18px;
+      background:
+        conic-gradient(from 120deg at 35% 35%,
+          rgba(255,255,255,.18),
+          rgba(255,255,255,0) 26%,
+          rgba(255,255,255,.12) 54%,
+          rgba(255,255,255,0) 72%,
+          rgba(255,255,255,.18)
+        );
+      opacity:.35;
+      mix-blend-mode: soft-light;
+      pointer-events:none;
+    }
+    .plate:after{
+      content:"";
+      position:absolute; inset:0;
+      border-radius:inherit;
+      box-shadow:
+        0 2px 0 rgba(255,255,255,.55) inset,
+        0 -6px 12px rgba(0,0,0,.10) inset;
+      pointer-events:none;
+    }
+
+    /* Luvvies auf der Karte größer */
+    .tile img{
+      position:absolute;
+      inset: 6%;
+      width:88%;
+      height:88%;
+      object-fit:contain;
+      filter: drop-shadow(0 10px 12px rgba(0,0,0,.10));
+      user-select:none;
+      -webkit-user-drag:none;
+      pointer-events:none;
+    }
+    .tile.bigMellow img{
+      inset: 8%;
+      width:84%;
+      height:84%;
+    }
+
+    /* Question mark powerup visual */
+    .qmark{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:1000;
+      font-size: 26px;
+      color:#fff;
+      text-shadow: 0 10px 18px rgba(0,0,0,.22);
+      pointer-events:none;
+    }
+
+    /* Animierter Power Background (für Powerups + ??? + Lovelie) */
+    .powerAnim .plate{
+      background: linear-gradient(135deg, #ff4fb9, #ffcf5a, #7ad8ff, #8b5cf6, #ff4fb9) !important;
+      background-size: 320% 100% !important;
+      animation: mystHue 3.8s ease-in-out infinite;
+    }
+    @keyframes mystHue{
+      0%{background-position:0% 50%}
+      50%{background-position:100% 50%}
+      100%{background-position:0% 50%}
+    }
+
+    /* Puff reveal (??? -> random) */
+    .tile.puff .plate{ animation: puff 520ms ease both; }
+    @keyframes puff{
+      0%{ transform: translateY(0) scale(1); filter: blur(0px); }
+      40%{ transform: translateY(-2px) scale(1.12); filter: blur(0.2px); }
+      100%{ transform: translateY(0) scale(1); filter: blur(0px); }
+    }
+
+    /* Pop */
+    .pop .plate{ animation: popPlate 420ms ease-in both; }
+    @keyframes popPlate{
+      0%{ transform: translateY(0) scale(1); opacity:1; }
+      55%{ transform: translateY(-2px) scale(1.14); opacity:1; }
+      100%{ transform: translateY(8px) scale(.30); opacity:0; }
+    }
+
+    /* Landing bounce */
+    .land .plate{ animation: landPlate 560ms cubic-bezier(.2,.9,.2,1) both; }
+    @keyframes landPlate{
+      0%{ transform: translateY(0) scale(1); }
+      28%{ transform: translateY(4px) scale(1.06, .98); }
+      58%{ transform: translateY(-4px) scale(.99,1.04); }
+      100%{ transform: translateY(0) scale(1); }
+    }
+
+    /* Spawn glow */
+    .spawnGlow .plate{ animation: spawnGlow 700ms ease-out both; }
+    @keyframes spawnGlow{
+      0%{ filter: drop-shadow(0 0 0 rgba(255,255,255,0)); transform: translateY(0) scale(.92); }
+      55%{ filter: drop-shadow(0 0 20px rgba(255,255,255,.95)); transform: translateY(0) scale(1.05); }
+      100%{ filter: drop-shadow(0 0 0 rgba(255,255,255,0)); transform: translateY(0) scale(1); }
+    }
+
+    /* Hint auffälliger */
+    .tile.hint .plate{
+      outline: 3px solid rgba(255,79,185,.85);
+      box-shadow:
+        0 0 0 5px rgba(122,216,255,.35),
+        0 0 30px rgba(255,79,185,.28),
+        0 18px 40px rgba(0,0,0,.12);
+      animation: hintGlow 1.0s ease-in-out infinite;
+    }
+    @keyframes hintGlow{
+      0%,100%{ filter: saturate(1) brightness(1); }
+      50%{ filter: saturate(1.25) brightness(1.12); }
+    }
+
+    /* Mellow HP Zahl: kein Background, größer, fade */
+    .hp{
+      position:absolute;
+      right:10px; top:8px;
+      font-weight:1000;
+      font-size: 18px;
+      color: rgba(255,255,255,.98);
+      text-shadow:
+        0 10px 20px rgba(0,0,0,.18),
+        0 2px 0 rgba(0,0,0,.12);
+      z-index:30;
+      background:none;
+      border:none;
+      box-shadow:none;
+      padding:0;
+      animation: hpFade 2.2s ease-in-out infinite;
+      pointer-events:none;
+    }
+    .tile.bigMellow .hp{
+      font-size: 22px;
+      right:14px;
+      top:12px;
+    }
+    @keyframes hpFade{
+      0%,100%{ opacity:.60; transform: translateY(0); }
+      50%{ opacity:1; transform: translateY(-1px); }
+    }
+
+    /* Below panels */
+    .below{
+      margin-top: 12px;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      align-items:stretch;
+      position:relative;
+      z-index:6;
+    }
+    .below > .panel{height:100%}
+
+    @media (max-width: 880px){
+      .stats{grid-template-columns: repeat(2, minmax(0,1fr));}
+      .below{grid-template-columns:1fr;}
+      #boardWrap{min-height: 52vh;}
+    }
+
+    .panel{
+      background: var(--card2);
+      border:1px solid var(--stroke);
+      border-radius: 22px;
+      padding: 12px;
+      box-shadow: var(--shadow);
+      position:relative;
+      z-index:6;
+    }
+    .panel h3{margin:0 0 10px;font-size:16px}
+
+    .luvGrid{display:grid;grid-template-columns: repeat(2, minmax(0,1fr));gap:10px}
+    .luvCard{
+      display:flex;gap:10px;align-items:center;
+      padding:10px;border-radius:18px;
+      background: rgba(255,255,255,.82);
+      border:1px solid rgba(17,13,26,.08);
+      box-shadow: 0 12px 26px rgba(20,10,60,.08);
+      cursor:pointer;transition: transform .12s ease;
+    }
+    .luvCard:hover{ transform: translateY(-1px); }
+    .luvCard img{
+      width: 78px;height: 78px;object-fit:contain;
+      filter: drop-shadow(0 10px 12px rgba(0,0,0,.12));
+      flex:0 0 auto;
+    }
+    .luvCard b{display:block}
+    .luvCard small{opacity:.7;font-weight:900}
+
+    #rightPanel{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      min-height: 100%;
+    }
+
+    .lbRow{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+    .lbRow input{
+      flex:1; min-width: 170px; height:44px;
+      border-radius:14px; border:1px solid rgba(17,13,26,.12);
+      padding:0 12px; font-weight:900; outline:none;
+      background: rgba(255,255,255,.92);
+    }
+
+    /* Leaderboard scrollbar: aktiv, aber optisch clean */
+    .lbList{
+      display:flex;
+      flex-direction:column; gap:8px;
+      overflow:auto;
+      padding-right:6px;
+      flex:1;
+      min-height: 260px;
+      border-radius: 16px;
+      scrollbar-width: thin;
+    }
+    .lbList::-webkit-scrollbar{ width: 10px; }
+    .lbList::-webkit-scrollbar-thumb{
+      background: rgba(151,95,255,.35);
+      border-radius: 999px;
+      border: 3px solid rgba(255,255,255,.6);
+    }
+    .lbList::-webkit-scrollbar-track{
+      background: rgba(255,255,255,.35);
+      border-radius: 999px;
+    }
+
+    .lbItem{
+      display:flex; justify-content:space-between; align-items:center; gap:10px;
+      background: rgba(255,255,255,.82);
+      border:1px solid rgba(17,13,26,.08);
+      border-radius:16px;
+      padding:10px 10px;
+      box-shadow: 0 10px 24px rgba(20,10,60,.07);
+    }
+    .lbItem .left b{display:block}
+    .lbItem .left small{opacity:.7;font-weight:900}
+    .lbItem .score{font-weight:1000}
+
+    /* Ranks */
+    .lbItem.rank1{
+      background:linear-gradient(90deg, rgba(255,215,0,.28), rgba(255,255,255,.14));
+      box-shadow:0 0 18px rgba(255,215,0,.65);
+      animation:shine 1.9s linear infinite;
+    }
+    .lbItem.rank2{
+      background:linear-gradient(90deg, rgba(192,192,192,.25), rgba(255,255,255,.12));
+      box-shadow:0 0 14px rgba(220,220,220,.55);
+      animation:pulse 1.6s ease-in-out infinite;
+    }
+    .lbItem.rank3{
+      background:linear-gradient(90deg, rgba(205,127,50,.25), rgba(255,255,255,.10));
+      box-shadow:0 0 12px rgba(205,127,50,.55);
+      animation:bounceMedal 1.6s ease-in-out infinite;
+    }
+    @keyframes shine{
+      0%{filter:brightness(1)}
+      50%{filter:brightness(1.25)}
+      100%{filter:brightness(1)}
+    }
+    @keyframes pulse{
+      0%,100%{transform:scale(1)}
+      50%{transform:scale(1.03)}
+    }
+    @keyframes bounceMedal{
+      0%,100%{transform:translateY(0)}
+      50%{transform:translateY(-2px)}
+    }
+
+    /* Toasts -> rechts seitlich (Desktop/Fullscreen), Mobile oben */
+    #toast{
+      position: fixed;
+      right: 16px;
+      top: 110px;
+      z-index: 9999;
+      pointer-events:none;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      align-items:flex-end;
+      max-width: min(420px, 92vw);
+    }
+    @media (max-width: 560px){
+      #toast{
+        left: 50%;
+        right: auto;
+        top: 10%;
+        transform: translateX(-50%);
+        align-items:center;
+      }
+    }
+    .toast{
+      width: 100%;
+      background: rgba(255,255,255,.92);
+      border:1px solid rgba(17,13,26,.12);
+      border-radius: 20px;
+      padding: 12px 14px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.15);
+      font-weight:1000;
+      text-align:left;
+      animation: toastIn var(--toastMs) ease forwards;
+    }
+    .toast small{display:block;font-weight:900;opacity:.75;margin-top:3px}
+    @keyframes toastIn{
+      0%{opacity:0; transform: translateY(-10px) scale(.96)}
+      16%{opacity:1; transform: translateY(0) scale(1)}
+      86%{opacity:1}
+      100%{opacity:0; transform: translateY(-10px) scale(.98)}
+    }
+
+    /* Modal */
+    .modalBack{
+      position:fixed;
+      inset:0;
+      display:none;
+      align-items:center; justify-content:center;
+      background: rgba(10,8,18,.55);
+      z-index: 99998;
+      padding: 18px;
+    }
+    .modal{
+      width: min(760px, 96vw);
+      max-height: min(82vh, 780px);
+      overflow:auto;
+      background: rgba(255,255,255,.96);
+      border-radius: 24px;
+      border:1px solid rgba(17,13,26,.12);
+      box-shadow: 0 28px 90px rgba(0,0,0,.25);
+      padding: 14px 14px 12px;
+    }
+    .modal h2{margin:6px 0 8px}
+    .modal p, .modal li{font-weight:800; opacity:.9}
+    .modal .foot{
+      display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;
+      margin-top:12px;
+    }
+    .tiny{font-size:12px; opacity:.8; font-weight:900}
+
+    /* Greeting */
+    .greet{
+      text-align:center;
+      padding: 18px 14px 14px;
+    }
+    .greet img{
+      width:min(380px, 82vw);
+      height:auto;
+      filter: drop-shadow(0 18px 28px rgba(0,0,0,.14));
+      margin: 4px auto 10px;
+      display:block;
+    }
+    .greet h2{ margin: 6px 0 8px; }
+    .greet .sub{
+      font-weight:900;
+      opacity:.8;
+      margin: 0 auto 10px;
+      max-width: 560px;
+    }
+    .greet .cta{
+      display:flex;
+      justify-content:center;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top: 12px;
+    }
+
+    /* FX star */
+    .star{
+      position:absolute;
+      left:0; top:0;
+      width: 12px; height: 12px;
+      transform: translate(-50%,-50%) scale(.6);
+      opacity:0;
+      pointer-events:none;
+      mix-blend-mode: screen;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.95), rgba(255,255,255,.2));
+      clip-path: polygon(50% 0%, 62% 30%, 100% 50%, 62% 70%, 50% 100%, 38% 70%, 0% 50%, 38% 30%);
+      animation: starPop 820ms ease forwards;
+      filter: drop-shadow(0 0 18px rgba(255,79,185,.22));
+    }
+    @keyframes starPop{
+      0%{opacity:0; transform:translate(-50%,-50%) scale(.4) rotate(0deg)}
+      20%{opacity:1; transform:translate(-50%,-50%) scale(1) rotate(20deg)}
+      100%{opacity:0; transform:translate(-50%,-75%) scale(.9) rotate(160deg)}
+    }
+
+    .ring{
+      position:absolute; left:0; top:0;
+      width: 10px; height: 10px;
+      border-radius:999px;
+      border: 3px solid rgba(255,255,255,.95);
+      box-shadow: 0 0 30px rgba(255,79,185,.28);
+      transform: translate(-50%,-50%) scale(.4);
+      opacity:0;
+      animation: ring 720ms ease-out forwards;
+      pointer-events:none;
+      mix-blend-mode: screen;
+    }
+    @keyframes ring{
+      0%{opacity:0; transform:translate(-50%,-50%) scale(.35)}
+      15%{opacity:1}
+      100%{opacity:0; transform:translate(-50%,-50%) scale(4.2)}
+    }
+
+    /* Fullscreen */
+    body.fs{ overflow:hidden; }
+    body.fs #app{ width: min(1200px, 98vw); margin: 10px auto; }
+    body.fs #boardWrap{
+      min-height: 92vh;
+      padding-top: 84px;
+      padding-bottom: 12px;
+    }
+
+    /* FS HUD: left / center / right */
+    #fsHud{
+      position:absolute;
+      left: 14px;
+      right: 14px;
+      top: 12px;
+      z-index: 60;
+      display:none;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      pointer-events:none;
+      flex-wrap:wrap;
+    }
+    body.fs #fsHud{display:flex}
+
+    .hudLeft, .hudCenter, .hudRight{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .hudCenter{
+      justify-content:center;
+      flex: 1;
+      min-width: 240px;
+    }
+
+    .hudChip{
+      padding:8px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.88);
+      border:1px solid rgba(17,13,26,.12);
+      box-shadow: 0 16px 40px rgba(0,0,0,.12);
+      font-weight:1000;
+      font-size: 13px;
+      white-space:nowrap;
+      pointer-events:none;
+      animation: chipFade 3.2s ease-in-out infinite;
+    }
+    @keyframes chipFade{
+      0%,100%{ opacity:.92; }
+      50%{ opacity:1; }
+    }
+    .hudChip.color{
+      background: linear-gradient(135deg, rgba(255,79,185,.88), rgba(122,216,255,.86));
+      color:#fff;
+      border:1px solid rgba(255,255,255,.35);
+      background-size: 200% 200%;
+      animation: hudGlow 3.2s ease-in-out infinite;
+      opacity:1;
+    }
+    @keyframes hudGlow{
+      0%{ background-position: 0% 50%; }
+      50%{ background-position: 100% 50%; }
+      100%{ background-position: 0% 50%; }
+    }
+
+    .hudProg{
+      pointer-events:none;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.88);
+      border:1px solid rgba(17,13,26,.12);
+      box-shadow: 0 16px 40px rgba(0,0,0,.12);
+      min-width: min(520px, 70vw);
+      justify-content:center;
+    }
+    .hudProg .pbar{
+      flex:1;
+      height: 12px;
+      border-radius:999px;
+      overflow:hidden;
+      background: rgba(140,120,200,.18);
+      border:1px solid rgba(60,20,120,.10);
+      min-width: 160px;
+    }
+    .hudProg .pbar i{
+      display:block;height:100%;width:0%;
+      border-radius:999px;
+      background: linear-gradient(90deg,#ff4fb9,#ffcf5a,#7ad8ff,#8b5cf6,#ff4fb9);
+      background-size: 300% 100%;
+      animation: barHue 3.2s linear infinite;
+      transition: width .25s ease;
+      box-shadow:0 0 18px rgba(255,79,185,.22);
+    }
+
+    .hudBtn{
+      pointer-events:auto;
+      height: 40px;
+      padding: 0 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(17,13,26,.12);
+      background: rgba(255,255,255,.85);
+      box-shadow: 0 14px 34px rgba(0,0,0,.12);
+      font-weight:1000;
+      cursor:pointer;
+      animation: chipFade 3.2s ease-in-out infinite;
+    }
+    .hudBtn:hover{ animation: jello-horizontal .9s both; }
+
+    /* Colored fullscreen buttons */
+    .hudBtn.exit{
+      background: linear-gradient(135deg, rgba(255,70,70,.92), rgba(255,130,130,.86));
+      color:#fff;
+      border: 1px solid rgba(255,255,255,.28);
+    }
+    .hudBtn.guide{
+      background: linear-gradient(135deg, rgba(90,170,255,.92), rgba(140,220,255,.86));
+      color:#fff;
+      border: 1px solid rgba(255,255,255,.28);
+    }
+    .hudBtn.hint{
+      background: linear-gradient(135deg, rgba(255,79,185,.92), rgba(255,170,230,.86));
+      color:#fff;
+      border: 1px solid rgba(255,255,255,.28);
+    }
+
+    /* Mobile/Tablet fullscreen layout */
+    @media (max-width: 820px){
+      body.fs #boardWrap{ padding-top: 14px; padding-bottom: 102px; min-height: 92vh; }
+      #fsHud{
+        top:auto;
+        bottom: 10px;
+        align-items:flex-end;
+      }
+      .hudProg{ min-width: min(520px, 92vw); }
+      .hudBtn{ height:44px; padding:0 14px; }
+    }
+    @media (orientation: portrait) and (min-width: 600px){
+      body.fs #boardWrap{ padding-top: 16px; padding-bottom: 110px; }
+      .hudProg{ min-width: min(560px, 92vw); }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="page">
+    <div id="scrollBg"></div>
+    <div id="globalBg"></div>
+    <div id="toast"></div>
+
+    <div class="modalBack" id="greetBack">
+      <div class="modal greet">
+        <img id="greetLogo" alt="Logo" />
+        <h2>Willkommen bei Luvvies Crush 🍭</h2>
+        <div class="sub">
+          Match • Powerups • Mellow-Blocks • Lovelie-Bonus ✨<br>
+          Bounciger, weicher Candy-Style – und jetzt mit richtigem Fullscreen-HUD.
+        </div>
+        <div class="cta">
+          <button class="Btn ghost" id="greetGuide">Anleitung</button>
+          <button class="Btn secondary" id="greetPlay">Spielen</button>
+        </div>
+        <div class="tiny" style="margin-top:10px;">(Dieser Screen erscheint nur 1× pro Tag.)</div>
+      </div>
+    </div>
+
+    <div class="modalBack" id="introBack">
+      <div class="modal">
+        <h2>Anleitung – Luvvies Crush 🍭</h2>
+        <ul>
+          <li><b>Match 3+</b> gleiche Luvvies (gleiche Figur + gleiche Variant-Farbe).</li>
+          <li><b>4er Match</b> → <b>Sourworm</b> (Reihe/Spalte je nach Drag)</li>
+          <li><b>5er Match</b> → <b>Citrussy</b> (Stern Radius 3)</li>
+          <li><b>T/L Match</b> → <b>Koala</b> (Magie)</li>
+          <li><b>Koala + Citrussy</b> → 2× Board Clean & 2× Punkte!</li>
+          <li><b>Wurm + Wurm</b> → “Zu sauer!” Welle</li>
+          <li><b>2× Sleepy + 1× Mondlie</b> → Shuffle <b>4×4</b> ✨</li>
+          <li><b>2× Joyce + 1× Smokey</b> → Buddy Burst</li>
+          <li><b>2× Smokey + 1× Simba</b> → Best Buddy Wave (ab Lvl 4)</li>
+          <li><b>Mellow</b> ab Level 3 (alle 4 Level), hat 3 HP • Clears daneben ziehen HP ab</li>
+          <li><b>???</b> klicken → <b>random</b> Powerup/Bonus/Block (mit Puff-Animation)</li>
+          <li><b>Falscher Swap</b> kostet <b>3 Moves</b> (außer Powerup-Combos).</li>
+          <li><b>Keine Züge</b> → Auto-Shuffle, −3 Moves.</li>
+        </ul>
+        <div class="foot">
+          <button class="Btn ghost" id="introClose">Schließen</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modalBack" id="infoBack">
+      <div class="modal">
+        <div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
+          <img id="infoImg" src="" alt=""
+               style="width:172px;height:172px;object-fit:contain;filter:drop-shadow(0 18px 28px rgba(0,0,0,.18));">
+          <div style="min-width:240px;">
+            <h2 id="infoName" style="margin:0 0 6px">—</h2>
+            <div class="tiny" id="infoTag">—</div>
+            <div style="height:10px"></div>
+            <div class="panel" style="padding:10px; border-radius:18px;">
+              <b>Ability</b>
+              <div id="infoAbility" style="margin-top:6px;font-weight:900;opacity:.9;">—</div>
+            </div>
+          </div>
+        </div>
+
+        <p id="infoStory" style="margin:12px 0 10px;font-weight:900;opacity:.9;">—</p>
+
+        <div class="panel" style="padding:10px; border-radius:18px;">
+          <b>3 Sprüche</b>
+          <ul id="infoLines" style="margin:8px 0 0; padding-left:18px;"></ul>
+        </div>
+
+        <p class="tiny" style="margin:10px 0 0;">(Platzhalter) Später: Plushie-Shop Link ✨</p>
+        <div class="foot">
+          <button class="Btn ghost" id="infoClose">Schließen</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="app">
+      <div class="topRow">
+        <div class="diffWrap">
+          <div class="label">Schwierigkeit</div>
+          <div class="diffPills" id="diffPills">
+            <input type="radio" name="diff" id="d_easy" value="easy" checked><label for="d_easy">Easy</label>
+            <input type="radio" name="diff" id="d_normal" value="normal"><label for="d_normal">Normal</label>
+            <input type="radio" name="diff" id="d_hard" value="hard"><label for="d_hard">Hard</label>
+            <input type="radio" name="diff" id="d_shock" value="shock"><label for="d_shock">Zuckerschock</label>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="Btn ghost" id="btnIntro">Anleitung</button>
+          <button class="Btn secondary" id="btnNew">Neues Spiel</button>
+          <button class="Btn" id="btnHint">Hint</button>
+          <button class="Btn" id="btnFs">Vollbild</button>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="k">Level</div><div class="v" id="uiLevel">1</div></div>
+        <div class="stat"><div class="k">Ziel</div><div class="v" id="uiGoal">4000</div></div>
+        <div class="stat"><div class="k">Score</div><div class="v" id="uiScore">0</div></div>
+        <div class="stat"><div class="k">Moves</div><div class="v" id="uiMoves">30</div></div>
+        <div class="stat"><div class="k">Combo</div><div class="v" id="uiCombo">x1</div></div>
+      </div>
+
+      <div class="progressRow">
+        <b>Fortschritt zum Ziel</b>
+        <div class="bar"><i id="uiBar"></i></div>
+        <div class="pct" id="uiPct">0%</div>
+      </div>
+
+      <div class="playArea" id="playArea">
+        <div id="boardWrap">
+          <div id="fsBg"></div>
+          <div id="board"></div>
+          <div id="fxLayer"></div>
+
+          <div id="fsHud">
+            <div class="hudLeft">
+              <div class="hudChip color" id="hudLevel">Level 1</div>
+              <div class="hudChip color" id="hudScore">Score 0</div>
+              <div class="hudChip" id="hudMoves">Moves 0</div>
+              <div class="hudChip" id="hudCombo">Combo x1</div>
+            </div>
+
+            <div class="hudCenter">
+              <div class="hudProg">
+                <div class="tiny" style="opacity:.85;">Ziel</div>
+                <div class="pbar"><i id="hudBar"></i></div>
+                <div class="tiny" id="hudPct" style="min-width:40px;text-align:right;">0%</div>
+              </div>
+            </div>
+
+            <div class="hudRight">
+              <button class="hudBtn hint" id="fsHint">Hint</button>
+              <button class="hudBtn guide" id="fsIntro">Anleitung</button>
+              <button class="hudBtn exit" id="fsExit">Exit</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="below">
+        <div class="panel" id="luvPanel">
+          <h3>Deine Luvvies <span class="tiny">(anklicken für Steckbrief)</span></h3>
+          <div class="luvGrid" id="luvMenu"></div>
+        </div>
+
+        <div class="panel" id="rightPanel">
+          <div>
+            <h3>Quick-Tipps</h3>
+            <div class="tiny" id="quickTips"></div>
+          </div>
+          <div style="height:1px;background:rgba(17,13,26,.08);"></div>
+          <div style="display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;">
+            <h3 style="margin:0;">Leaderboard</h3>
+            <div class="lbRow">
+              <input id="lbName" maxlength="24" placeholder="Dein Name (z.B. KOALAaufPILLEN)" />
+              <label class="tiny" style="display:flex;align-items:center;gap:6px;">
+                <input type="checkbox" id="lbAuto" checked>
+                Auto-Post bei Game Over
+              </label>
+            </div>
+            <div class="lbRow">
+              <button class="Btn secondary" id="btnPost">Score posten</button>
+              <button class="Btn ghost" id="btnRefresh">Refresh</button>
+            </div>
+            <div class="lbList" id="lbList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**********************
+     * Helpers
+     **********************/
+    function fmt(n){ return Number(n||0).toLocaleString("de-DE"); }
+    function diffLabel(k){
+      const key = (k||"").toLowerCase();
+      if(key==="shock" || key==="schock" || key==="zuschock" || key==="zuckerschock") return "Zuckerschock";
+      if(key==="easy") return "Easy";
+      if(key==="normal") return "Normal";
+      if(key==="hard") return "Hard";
+      return k || "";
+    }
+
+    /**********************
+     * Supabase (intern)
+     **********************/
+    const SUPABASE_URL = "https://qgeddoqvzajpeawlythi.supabase.co";
+    const SUPABASE_KEY_PUBLISHABLE = "sb_publishable_EQUOdDGiCGgm8vA3YjN_jg_BwPnAiI_";
+    const SCORE_TABLE = "luvvies_crush_scores";
+
+    let sb = null;
+    try{
+      if(window.supabase?.createClient){
+        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY_PUBLISHABLE, {
+          auth: { persistSession:false, autoRefreshToken:false }
+        });
+      }
+    }catch(e){ sb = null; }
+
+    /**********************
+     * Cookies (1x/day greeting)
+     **********************/
+    function getCookie(name){
+      const m = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([$?*|{}\(\)\[\]\\\/\+^])/g,'\\$1') + '=([^;]*)'));
+      return m ? decodeURIComponent(m[1]) : "";
+    }
+    function setCookie(name, value, days=7){
+      const maxAge = days * 24 * 60 * 60;
+      document.cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; Max-Age=${maxAge}; Path=/; SameSite=Lax`;
+    }
+    const todayKey = ()=>new Date().toISOString().slice(0,10);
+
+    /**********************
+     * Difficulty
+     **********************/
+    const DIFFS = {
+      easy:   { key:"easy",   name:"Easy",        rows:10, cols:10, scoreMult:1.00, baseMoves:30, movesPerLevel:2, baseTarget:3500, targetGrow:0.18, lovelieChance:0.006, mystChance:0.010 },
+      normal: { key:"normal", name:"Normal",      rows: 9, cols: 9, scoreMult:1.25, baseMoves:26, movesPerLevel:2, baseTarget:4200, targetGrow:0.20, lovelieChance:0.005, mystChance:0.009 },
+      hard:   { key:"hard",   name:"Hard",        rows: 9, cols: 8, scoreMult:1.60, baseMoves:24, movesPerLevel:1, baseTarget:5000, targetGrow:0.22, lovelieChance:0.004, mystChance:0.008 },
+      shock:  { key:"shock",  name:"Zuckerschock",rows: 8, cols: 8, scoreMult:2.00, baseMoves:22, movesPerLevel:1, baseTarget:6500, targetGrow:0.24, lovelieChance:0.003, mystChance:0.007 }
+    };
+    let diff = DIFFS.easy;
+
+    /**********************
+     * Images
+     **********************/
+    const IMG = {
+      logo:     "https://static.wixstatic.com/media/d05122_7c445c8b5f3d46cdb778711661f2351e~mv2.png",
+      sweety:   "https://static.wixstatic.com/media/d05122_efe39fec7e5c4d569dfb3fef75e5b6ff~mv2.png",
+      sleepy:   "https://static.wixstatic.com/media/d05122_cfd779a0aad04c72bd08efbc0f363f53~mv2.png",
+      normal:   "https://static.wixstatic.com/media/d05122_8a7c2f43a31247a6994651163c2898c5~mv2.png",
+      cry:      "https://static.wixstatic.com/media/d05122_1950f2496b344e56bcac10ea51286750~mv2.png",
+      koala:    "https://static.wixstatic.com/media/d05122_9cb17e901a1a4775819bfda895d0f1c9~mv2.png",
+      citrussy: "https://static.wixstatic.com/media/d05122_9cdc763a1ec94a90a3fd91ee3481b2c4~mv2.png",
+      worm:     "https://static.wixstatic.com/media/d05122_a8e7a37e04694ff2a99b8af60f1567b7~mv2.png",
+      grumpy:   "https://static.wixstatic.com/media/d05122_983d59c5911e400e92819d12e27d6073~mv2.png",
+      happy:    "https://static.wixstatic.com/media/d05122_cff843264bd8495aaa9ac0360d72e131~mv2.png",
+      mond:     "https://static.wixstatic.com/media/d05122_aea344c0fd954194af2855eea745febf~mv2.png",
+      donut:    "https://static.wixstatic.com/media/d05122_5041c19e720d4e7e9439e4acf793655c~mv2.png",
+      joyce:    "https://static.wixstatic.com/media/d05122_36a3f8d83be4433082995ee1a8003218~mv2.png",
+      smokey:   "https://static.wixstatic.com/media/d05122_9a607ff042b647b789e3b44cc75bd38d~mv2.png",
+      mellow:   "https://static.wixstatic.com/media/d05122_53fbcb0babf447a5a32cc3b3fbecad2b~mv2.png",
+      lovelie:  "https://static.wixstatic.com/media/d05122_755c29b99fad419d9b9a5822d8ffb18c~mv2.png",
+      simba:    "https://static.wixstatic.com/media/d05122_4d92be50d61e4a2297af16a3295c38bf~mv2.png"
+    };
+    document.getElementById("greetLogo").src = IMG.logo;
+
+    /**********************
+     * Mystery reveal weights (Wurm > Cit > Mellow > Koala > Lovelie)
+     **********************/
+    const MYST_POOL = [
+      { key:"worm",   w: 40 },
+      { key:"cit",    w: 25 },
+      { key:"mellow", w: 16 },  // goldene mitte (zwischen cit und koala)
+      { key:"koala",  w: 12 },
+      { key:"lovelie",w:  7 }   // rare
+    ];
+
+    /**********************
+     * Bases
+     **********************/
+    const BASES = [
+      { key:"sweety", name:"Sweety", img:IMG.sweety, tag:"normal",
+        palettes:{ A:["#ff4fb9","#ff9adf"], B:["#46e4c2","#a7fff0"] },
+        ability:"Glitzer-Queen: cleanes Match 3+.",
+        story:"Sweety liebt Kettenreaktionen – je mehr es bounct, desto besser.",
+        lines:{
+          easy:["Zucker-Boom! ✨","Glitzer time!","Noch ein Match! 💖"],
+          normal:["Sauberer Swap 😌","Combo? Ich seh’s!","Keep the vibe ✨"],
+          hard:["No panic — precision.","Du bist fast da.","Tight! 😈"],
+          shock:["ZUCKERSCHOCK!","Mehr Chaos!","Ich will Ketten! 🔥"]
+        }
+      },
+      { key:"sleepy", name:"Sleepy", img:IMG.sleepy, tag:"normal",
+        palettes:{ A:["#7ad8ff","#b7f0ff"], B:["#ffd46a","#fff2b7"] },
+        ability:"2× Sleepy + 1× Mondlie → Shuffle 4×4 ✨",
+        story:"Wirkt müde… aber sein Shuffle ist brutal effektiv.",
+        lines:{
+          easy:["Zzz… aber ok 😴","Sanfter Swap…","Wach für Combo!"],
+          normal:["Nicht einschlafen.","Smooth & bouncy.","Weiter… ✨"],
+          hard:["Timing ist alles.","Kein Tilt.","Mach’s clean."],
+          shock:["ICH BIN WACH!","Shuffle oder RIP.","Mehr! 😈"]
+        }
+      },
+      { key:"normal", name:"Normal", img:IMG.normal, tag:"normal",
+        palettes:{ A:["#7b7bff","#cbbcff"], B:["#ff7bd6","#ffd0f1"] },
+        ability:"Klassiker: stabiler Tile für sichere Lines.",
+        story:"Normal ist der Anker – wenn’s brennt, rettet er dein Board.",
+        lines:{
+          easy:["Easy going.","Alles chill.","Noch eins!"],
+          normal:["Stabil.","Rund.","Passt."],
+          hard:["Disziplin.","Konsequent.","Kein Fehler."],
+          shock:["Ich bleib ruhig.","Präzise.","Durchziehen."]
+        }
+      },
+      { key:"cry", name:"Cry", img:IMG.cry, tag:"normal",
+        palettes:{ A:["#1fd1ff","#b8b1ff"], B:["#5ef2b5","#b6ffd6"] },
+        ability:"Emo-Boost: fühlt jede Chain-Reaction.",
+        story:"Cry weint… aber nur weil’s so schön glitzert.",
+        lines:{
+          easy:["😭✨ so schön","Bitte noch ein Match","Ich fühl das!"],
+          normal:["Combo macht happy.","Nicht aufgeben.","Weiter!"],
+          hard:["Tough love.","Du packst das.","Sauber bleiben."],
+          shock:["AAAA 😭","Nur noch Kette!","Chaos is love."]
+        }
+      },
+      { key:"happy", name:"Happy Cookie", img:IMG.happy, tag:"normal",
+        palettes:{ A:["#5ef2b5","#b6ffd6"], B:["#7ad8ff","#b7f0ff"] },
+        ability:"Therapy Time (2× Grumpy + 1× Happy) → +3 Moves, Grumpy→Happy.",
+        story:"Happy macht selbst Grumpy weich. 🍪✨",
+        lines:{
+          easy:["Smile! 🍪","Alles wird gut!","Süß & stark!"],
+          normal:["Therapy incoming.","Du schaffst das.","Nice chain!"],
+          hard:["Atmen. Fokus.","Guter Move.","Keep going."],
+          shock:["HAPPY RAGE 😈","Wir gewinnen!","Mehr Moves!!"]
+        }
+      },
+      { key:"grumpy", name:"Grumpy Cookie", img:IMG.grumpy, tag:"normal",
+        palettes:{ A:["#ff6b6b","#ffb3b3"], B:["#ffcf5a","#fff2b7"] },
+        ability:"Therapy Time (2× Grumpy + 1× Happy).",
+        story:"Grumpy sagt 'nein'… aber liebt +Moves heimlich.",
+        lines:{
+          easy:["Hmpf.","Mach schneller.","Ok…"],
+          normal:["Weniger Fehler.","Konzentrier dich.","Weiter."],
+          hard:["Sauber oder raus.","Nicht tilten.","Knapp!"],
+          shock:["Zuckerschock?!","Du bist verrückt.","…gefällt mir."]
+        }
+      },
+      { key:"mond", name:"Mondlie", img:IMG.mond, tag:"normal",
+        palettes:{ A:["#2b2b2b","#9b59ff"], B:["#ff4fb9","#7ad8ff"] },
+        ability:"2× Sleepy + 1× Mondlie → Shuffle 4×4 ✨",
+        story:"Mondlie ist selten ruhig… sein Shuffle ist Nachtmagie.",
+        lines:{
+          easy:["🌙 leise…","Moon vibes.","Shuffle? 😴"],
+          normal:["Nacht-Combo.","Elegant.","Weiter."],
+          hard:["Kein Risiko.","Nur Timing.","Mond-Plan."],
+          shock:["NACHTCHAOS 😈","Alles mischen!","Mehr!"]
+        }
+      },
+      { key:"donut", name:"Donutlie", img:IMG.donut, tag:"normal",
+        palettes:{ A:["#ffd1f2","#c9fffb"], B:["#ffcf5a","#ff9adf"] },
+        ability:"2× Donut + Sweety → Sprinkle Beam • 2× Donut + Happy → Sugar Rush.",
+        story:"Wenn Donut kommt, wird’s zuckrig gefährlich. 🍩",
+        lines:{
+          easy:["Sprinkles! ✨","Mehr Donuts!","Süßes Chaos!"],
+          normal:["Beam ready.","Zucker-Schub!","Let’s go!"],
+          hard:["Timing!","Nicht verschwenden.","Power!"],
+          shock:["OVERLOAD!","LASER 🍩","MEHR!!!"]
+        }
+      },
+      { key:"joyce", name:"Joyce Podenko", img:IMG.joyce, tag:"normal",
+        palettes:{ A:["#7ad8ff","#b8b1ff"], B:["#ff4fb9","#ffd1f2"] },
+        ability:"2× Joyce + 1× Smokey (oder umgekehrt) → Buddy Burst.",
+        story:"Joyce ist loyal – wenn Smokey da ist, zündet’s richtig.",
+        lines:{
+          easy:["Wuff! 🐾","Guter Swap!","Ich helf!"],
+          normal:["Buddy time!","Ich bin dabei!","Nice!"],
+          hard:["Wir schaffen’s.","Bleib dran.","Clean!"],
+          shock:["WUFF ZUCKER!","Vollgas!","No fear!"]
+        }
+      },
+      { key:"smokey", name:"Smokey", img:IMG.smokey, tag:"normal",
+        palettes:{ A:["#ffcf5a","#ffd9a5"], B:["#5ef2b5","#b6ffd6"] },
+        ability:"2× Smokey + 1× Joyce (oder umgekehrt) → Buddy Burst.",
+        story:"Smokey ist Boss-Katze – und Boss-Katzen räumen auf.",
+        lines:{
+          easy:["Miau.","Ok.","Weiter."],
+          normal:["Nicht schlecht.","Hmm.","Passt."],
+          hard:["Ich bewerte dich.","Konsequent.","Sauber."],
+          shock:["miau… RESPEKT.","Heftig.","No mercy."]
+        }
+      },
+      { key:"simba", name:"Simba", img:IMG.simba, tag:"normal", minLevel:4,
+        palettes:{ A:["#ff9d3c","#ffd1a1"], B:["#7ad8ff","#b7f0ff"] },
+        ability:"Best Buddies: 2× Smokey + 1× Simba (oder umgekehrt) → Buddy Wave ✨",
+        story:"Simba ist mutig und liebt Smokey – zusammen sind sie unaufhaltbar.",
+        lines:{
+          easy:["Roar! 🦁","Best Buddies!","Wir schaffen’s!"],
+          normal:["Starker Move!","Buddy Power!","Nice!"],
+          hard:["Fokus.","Clean.","Weiter so."],
+          shock:["ROAR SCHOCK!","Buddy Chaos!","No Mercy!"]
+        }
+      }
+    ];
+
+    const SPECIALS = {
+      worm:   { key:"worm",   name:"Sourworm", img:IMG.worm, tag:"powerup" },
+      cit:    { key:"cit",    name:"Citrussy", img:IMG.citrussy, tag:"powerup" },
+      koala:  { key:"koala",  name:"Koala", img:IMG.koala, tag:"powerup" },
+      mellow: { key:"mellow", name:"Mellow", img:IMG.mellow, tag:"obstacle" },
+      lovelie:{ key:"lovelie",name:"Lovelie", img:IMG.lovelie, tag:"bonus" },
+      myst:   { key:"myst",   name:"???", img:null, tag:"powerup" }
+    };
+
+    /**********************
+     * Variant unlock
+     **********************/
+    let unlocked = {};
+    function resetUnlocked(){
+      unlocked = {};
+      for(const b of BASES) unlocked[b.key] = new Set(["A"]);
+    }
+    function maybeUnlockVariant(){
+      if(level < 5) return;
+      if(level % 5 !== 0) return;
+      const candidates = BASES.filter(b => !unlocked[b.key].has("B"));
+      if(!candidates.length) return;
+      const pick = candidates[Math.floor(Math.random()*candidates.length)];
+      unlocked[pick.key].add("B");
+      toast(`Neue Variante 🎨`, `${pick.name} hat jetzt auch Farbe B ✨`, 3200);
+    }
+
+    /**********************
+     * State
+     **********************/
+    let rows=10, cols=10;
+    let grid = [];
+    let tileEls = new Map();
+    let busy = false;
+    // big mellow mapping
+    const bigMellows = new Map();
+    // id -> {id, r, c, hp}
+
+    let pointer = {down:false, id:null, startX:0, startY:0};
+    let level = 1;
+    let totalScore = 0;
+    let levelScore = 0;
+    let target = 4000;
+    let moves = 30;
+    let combo = 1;
+
+    let lastSwap = null;
+
+    // cached sizing
+    let CELL = 54;
+    let GAP = 8;
+    let PAD = 14;
+
+    /**********************
+     * UI refs
+     **********************/
+    const ui = {
+      level: document.getElementById("uiLevel"),
+      goal:  document.getElementById("uiGoal"),
+      score: document.getElementById("uiScore"),
+      moves: document.getElementById("uiMoves"),
+      combo: document.getElementById("uiCombo"),
+      bar:   document.getElementById("uiBar"),
+      pct:   document.getElementById("uiPct"),
+      board: document.getElementById("board"),
+      fx:    document.getElementById("fxLayer"),
+      menu:  document.getElementById("luvMenu"),
+      tips:  document.getElementById("quickTips"),
+      hudLevel: document.getElementById("hudLevel"),
+      hudScore: document.getElementById("hudScore"),
+      hudMoves: document.getElementById("hudMoves"),
+      hudCombo: document.getElementById("hudCombo"),
+      hudBar:   document.getElementById("hudBar"),
+      hudPct:   document.getElementById("hudPct"),
+    };
+
+    /**********************
+     * Helpers
+     **********************/
+    const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+    const posKey=(r,c)=>`${r},${c}`;
+    function toast(title, subtitle="", ms=2600){
+      document.documentElement.style.setProperty("--toastMs", ms+"ms");
+      const wrap = document.getElementById("toast");
+      const t = document.createElement("div");
+      t.className="toast";
+      t.innerHTML = `${title}${subtitle?`<small>${subtitle}</small>`:""}`;
+      wrap.appendChild(t);
+      setTimeout(()=>t.remove(), ms);
+    }
+
+    function typeId(baseKey, variant){ return `${baseKey}:${variant}`; }
+    function parseTypeId(id){
+      if(!id) return {baseKey:"", variant:"P"};
+      if(!id.includes(":")) return {baseKey:id, variant:"P"};
+      const [baseKey, variant] = id.split(":");
+      return {baseKey, variant};
+    }
+    function getBase(baseKey){ return BASES.find(b=>b.key===baseKey) || null; }
+    function getSpecial(baseKey){ return SPECIALS[baseKey] || null; }
+    function inBounds(r,c){ return r>=0 && c>=0 && r<rows && c<cols; }
+
+    function isPowerupKey(k){ return k==="worm" || k==="cit" || k==="koala"; }
+
+    function isPlaceholder(t){ return t && t.type==="mellow_part"; }
+    function isBlocker(t){
+      if(!t) return false;
+      const bk = parseTypeId(t.type).baseKey;
+      if(bk==="mellow") return true;
+      if(isPlaceholder(t)) return true;
+      return false;
+    }
+
+    function isSwappable(tile){
+      if(!tile) return false;
+      if(isBlocker(tile)) return false;
+      const {baseKey} = parseTypeId(tile.type);
+      if(baseKey==="myst") return false; // ??? nur klicken
+      return true;
+    }
+    function isMatchable(tile){
+      if(!tile) return false;
+      if(isBlocker(tile)) return false;
+      const {baseKey} = parseTypeId(tile.type);
+      if(getSpecial(baseKey)) return false;
+      return true;
+    }
+
+    function calcTarget(lv){
+      return Math.round(diff.baseTarget * (1 + (lv-1)*diff.targetGrow));
+    }
+    function calcMoves(lv){
+      const m = diff.baseMoves + (lv-1)*diff.movesPerLevel;
+      return Math.min(m, diff.key==="easy" ? 70 : diff.key==="normal" ? 60 : diff.key==="hard" ? 50 : 45);
+    }
+    function scorePerTile(){ return Math.round(60 * diff.scoreMult); }
+
+    function clearHints(){
+      for(const el of tileEls.values()) el.classList.remove("hint");
+    }
+
+    /**********************
+     * FX helpers
+     **********************/
+    function tileCenter(r,c){
+      const x = PAD + c*(CELL+GAP) + CELL/2;
+      const y = PAD + r*(CELL+GAP) + CELL/2;
+      return {x, y};
+    }
+    function makeStar(x,y, big=false){
+      const s = document.createElement("div");
+      s.className="star";
+      s.style.left = x+"px";
+      s.style.top  = y+"px";
+      s.style.width = big ? "16px":"12px";
+      s.style.height= big ? "16px":"12px";
+      ui.fx.appendChild(s);
+      setTimeout(()=>s.remove(), 900);
+    }
+    function ringFx(x,y){
+      const r=document.createElement("div");
+      r.className="ring";
+      r.style.left=x+"px"; r.style.top=y+"px";
+      ui.fx.appendChild(r);
+      setTimeout(()=>r.remove(), 760);
+    }
+    function burstFx(x,y, count=12){
+      ringFx(x,y);
+      for(let i=0;i<count;i++){
+        const ang = Math.random()*Math.PI*2;
+        const dist = 8 + Math.random()*30;
+        makeStar(x + Math.cos(ang)*dist, y + Math.sin(ang)*dist, Math.random()<0.35);
+      }
+    }
+
+    /**********************
+     * Responsive sizing
+     **********************/
+    function computeCell(){
+      const wrap = document.getElementById("boardWrap");
+      const wrapW = wrap.clientWidth;
+      const wrapH = wrap.clientHeight || (window.innerHeight*0.7);
+
+      const usableW = Math.max(260, wrapW - 40);
+      const usableH = Math.max(260, wrapH - 40);
+
+      const cellW = Math.floor((usableW - (cols-1)*GAP - PAD*2) / cols);
+      const cellH = Math.floor((usableH - (rows-1)*GAP - PAD*2) / rows);
+
+      const max = document.body.classList.contains("fs") ? 124 : 98;
+      return clamp(Math.min(cellW, cellH), 34, max);
+    }
+
+    function setTileXY(el, r, c){
+      const x = c*(CELL+GAP) + PAD;
+      const y = r*(CELL+GAP) + PAD;
+      el.style.setProperty("--x", x+"px");
+      el.style.setProperty("--y", y+"px");
+    }
+
+    function layoutBoard(){
+      CELL = computeCell();
+      document.documentElement.style.setProperty("--cell", CELL+"px");
+      document.documentElement.style.setProperty("--gap", GAP+"px");
+      document.documentElement.style.setProperty("--cols", cols);
+      document.documentElement.style.setProperty("--rows", rows);
+
+      const w = PAD*2 + cols*CELL + (cols-1)*GAP;
+      const h = PAD*2 + rows*CELL + (rows-1)*GAP;
+      ui.board.style.width = w+"px";
+      ui.board.style.height = h+"px";
+
+      for(const [id, el] of tileEls){
+        const tile = findTileById(id);
+        if(!tile) continue;
+        setTileXY(el, tile.r, tile.c);
+      }
+
+      syncLbHeight();
+    }
+
+    let ro=null;
+    function attachResize(){
+      try{
+        ro = new ResizeObserver(()=>layoutBoard());
+        ro.observe(document.getElementById("boardWrap"));
+      }catch(e){
+        window.addEventListener("resize", layoutBoard);
+      }
+      window.addEventListener("resize", syncBgHeight);
+      document.getElementById("page").addEventListener("scroll", syncBgHeight, {passive:true});
+      window.addEventListener("resize", ()=>{ buildGlobalBg(); buildFsBg(); });
+    }
+
+    function syncBgHeight(){
+      const page = document.getElementById("page");
+      const h = Math.max(page.scrollHeight, window.innerHeight);
+      document.getElementById("scrollBg").style.height = h + "px";
+      document.getElementById("globalBg").style.height = h + "px";
+    }
+
+    /**********************
+     * Tile DOM
+     **********************/
+    function createTileEl(tile, spawnDrop=false){
+      const el = document.createElement("div");
+      el.className="tile";
+      el.dataset.id = tile.id;
+
+      const {baseKey, variant} = parseTypeId(tile.type);
+      const base = getBase(baseKey);
+      const spec = getSpecial(baseKey);
+      const meta = base || spec;
+
+      // palettes
+      let pal = ["#7ad8ff","#ff4fb9"];
+      if(base){
+        pal = (base.palettes?.[variant]) || (base.palettes?.A) || pal;
+      }
+      el.style.setProperty("--p1", pal[0]);
+      el.style.setProperty("--p2", pal[1]);
+
+      const plate = document.createElement("div");
+      plate.className="plate";
+
+      // Powerups + ??? + Lovelie: animated background
+      if(isPowerupKey(baseKey) || baseKey==="lovelie" || baseKey==="myst" || baseKey==="cit" || baseKey==="worm" || baseKey==="koala"){
+        el.classList.add("powerAnim");
+      }
+
+      // Big mellow size
+      if(tile.big){
+        el.classList.add("bigMellow");
+      }
+
+      if(baseKey === "myst"){
+        const qm = document.createElement("div");
+        qm.className="qmark";
+        qm.textContent = "?";
+        plate.appendChild(qm);
+      }else{
+        const img = document.createElement("img");
+        img.src = meta?.img || "";
+        img.alt = meta?.name || baseKey;
+        plate.appendChild(img);
+      }
+
+      el.appendChild(plate);
+      if(baseKey==="mellow"){
+        const hp = document.createElement("div");
+        hp.className="hp";
+        hp.textContent = tile.hp;
+        el.appendChild(hp);
+      }
+
+      setTileXY(el, tile.r, tile.c);
+
+      if(spawnDrop){
+        const fallDist = (tile.r + 3) * (CELL+GAP);
+        plate.style.setProperty("--oy", `-${fallDist}px`);
+        plate.style.setProperty("--op", "0");
+        requestAnimationFrame(()=>{
+          plate.style.setProperty("--oy", "0px");
+          plate.style.setProperty("--op", "1");
+        });
+        const onEnd = (ev)=>{
+          if(ev.propertyName !== "transform") return;
+          plate.removeEventListener("transitionend", onEnd);
+          el.classList.add("land");
+          const center = tileCenter(tile.r, tile.c);
+          makeStar(center.x, center.y, true);
+          setTimeout(()=>el.classList.remove("land"), 560);
+        };
+        plate.addEventListener("transitionend", onEnd);
+      }
+
+      el.addEventListener("pointerdown", onPointerDown);
+      el.addEventListener("pointerup", onPointerUp);
+      return el;
+    }
+
+    function updateMellowHp(tile){
+      const el = tileEls.get(tile.id);
+      if(!el) return;
+      const hp = el.querySelector(".hp");
+      if(hp) hp.textContent = tile.hp;
+    }
+
+    function findTileById(id){
+      for(let r=0;r<rows;r++){
+        for(let c=0;c<cols;c++){
+          const t = grid[r][c];
+          if(t && t.id===id) return t;
+        }
+      }
+      return null;
+    }
+
+    /**********************
+     * Random tile generation
+     **********************/
+    function randNormalType(){
+      const pool = BASES.filter(b => (b.minLevel||1) <= level);
+      const weights = pool.map(b=>{
+        const w = (b.key==="joyce"||b.key==="smokey") ? 9 : (b.key==="donut") ? 10 : 12;
+        return {b, w};
+      });
+      const totalW = weights.reduce((a,x)=>a+x.w,0);
+      let r = Math.random()*totalW;
+      let pick = weights[0].b;
+      for(const x of weights){
+        r -= x.w;
+        if(r<=0){ pick = x.b; break; }
+      }
+
+      const variants = Array.from(unlocked[pick.key]);
+      let v="A";
+      if(variants.includes("B")){
+        v = (Math.random() < 0.28) ? "B" : "A";
+      }
+      return typeId(pick.key, v);
+    }
+
+    function makeId(){
+      return (crypto?.randomUUID?.() || (Math.random().toString(16).slice(2)+Date.now().toString(16)));
+    }
+
+    function makeTile(r,c,type){
+      const id = makeId();
+      return { id, r, c, type, hp:0, big:false };
+    }
+
+    function wouldCreateMatch(r,c,type){
+      if(c>=2){
+        const a=grid[r][c-1], b=grid[r][c-2];
+        if(a && b && a.type===type && b.type===type && isMatchable(a) && isMatchable(b)) return true;
+      }
+      if(r>=2){
+        const a=grid[r-1][c], b=grid[r-2][c];
+        if(a && b && a.type===type && b.type===type && isMatchable(a) && isMatchable(b)) return true;
+      }
+      return false;
+    }
+
+    /**********************
+     * Background (no bubbles) + subtle twinkles
+     **********************/
+    function buildGlobalBg(){
+      syncBgHeight();
+      const cont = document.getElementById("globalBg");
+      cont.innerHTML = "";
+
+      const page = document.getElementById("page");
+      const W = page.clientWidth;
+      const H = Math.max(page.scrollHeight, window.innerHeight);
+      const bgChars = [...BASES].sort(()=>Math.random()-0.5).slice(0,8);
+
+      bgChars.forEach((b)=>{
+        const wrap = document.createElement("div");
+        wrap.className="bgLuv";
+        const img = document.createElement("img");
+        img.src=b.img; img.alt=b.name;
+
+        const leftZone = Math.random() < 0.5;
+        const x = leftZone
+          ? Math.random()*(Math.max(240, W*0.26) - 120)
+          : (W - 300) - Math.random()*(Math.max(240, W*0.26) - 120);
+
+        const y = Math.random()*(Math.max(520,H)-280);
+
+        wrap.style.left = Math.max(0, x)+"px";
+        wrap.style.top  = y+"px";
+        wrap.style.animationDuration = (16 + Math.random()*10)+"s";
+
+        wrap.appendChild(img);
+        cont.appendChild(wrap);
+
+        // subtle twinkles around them (rare)
+        const tick = ()=>{
+          if(Math.random() < 0.28){
+            const rect = wrap.getBoundingClientRect();
+            const px = rect.left + rect.width * (0.2 + Math.random()*0.6);
+            const py = rect.top  + rect.height* (0.2 + Math.random()*0.6);
+            const t = document.createElement("div");
+            t.className="twinkle";
+            t.style.left = px + "px";
+            t.style.top  = (py + window.scrollY) + "px";
+            cont.appendChild(t);
+            setTimeout(()=>t.remove(), 1300);
+          }
+        };
+        setInterval(tick, 2200 + Math.random()*1400);
+      });
+    }
+
+    function buildFsBg(){
+      const fs = document.getElementById("fsBg");
+      fs.innerHTML = "";
+      if(!document.body.classList.contains("fs")) return;
+      const W = fs.clientWidth || window.innerWidth;
+      const H = fs.clientHeight || window.innerHeight;
+      const pick = [...BASES].sort(()=>Math.random()-0.5).slice(0,7);
+      pick.forEach((b)=>{
+        const wrap = document.createElement("div");
+        wrap.className="bgLuv";
+        wrap.style.opacity = ".78";
+        wrap.style.width = "min(260px, 42vw)";
+        const img = document.createElement("img");
+        img.src=b.img; img.alt=b.name;
+
+        const leftZone = Math.random() < 0.5;
+        const x = leftZone ? Math.random()*(W*0.28) : (W-280) - Math.random()*(W*0.28);
+        const y = Math.random()*(H-240);
+        wrap.style.left = Math.max(0,x)+"px";
+        wrap.style.top  = Math.max(0,y)+"px";
+        wrap.style.animationDuration = (16 + Math.random()*10)+"s";
+
+        wrap.appendChild(img);
+        fs.appendChild(wrap);
+      });
+    }
+
+    /**********************
+     * Board init
+     **********************/
+    function initBoard(){
+      rows = diff.rows;
+      cols = diff.cols;
+
+      ui.tips.innerHTML = `
+        • 4er-Match ⇒ <b>Sourworm</b> (Reihe/Spalte)<br>
+        • 5er-Match ⇒ <b>Citrussy</b> (Stern Radius 3)<br>
+        • T/L-Match ⇒ <b>Koala</b> (Magie)<br>
+        • <b>2× Sleepy + 1× Mondlie</b> ⇒ Shuffle 4×4 ✨<br>
+        • <b>2× Joyce + 1× Smokey</b> ⇒ Buddy Burst<br>
+        • <b>2× Smokey + 1× Simba</b> ⇒ Best Buddy Wave<br>
+        • <b>Falscher Swap</b> ⇒ −3 Moves<br>
+        • <b>Keine Züge</b> ⇒ Auto-Shuffle, −3 Moves
+      `;
+
+      grid = Array.from({length:rows}, (_,r)=>Array.from({length:cols}, (_,c)=>null));
+      tileEls.clear();
+      ui.board.innerHTML="";
+      ui.fx.innerHTML="";
+      bigMellows.clear();
+      for(let r=0;r<rows;r++){
+        for(let c=0;c<cols;c++){
+          let t;
+          let tries=0;
+          do{
+            t = randNormalType();
+            tries++;
+          }while(wouldCreateMatch(r,c,t) && tries<40);
+
+          const tile = makeTile(r,c,t);
+          grid[r][c]=tile;
+        }
+      }
+
+      spawnMellow();
+      maybeSpawnLovelie();
+      layoutBoard();
+
+      for(let r=0;r<rows;r++){
+        for(let c=0;c<cols;c++){
+          const tile = grid[r][c];
+          const el = createTileEl(tile, false);
+          tileEls.set(tile.id, el);
+          ui.board.appendChild(el);
+        }
+      }
+
+      buildGlobalBg();
+      buildFsBg();
+
+      setTimeout(()=>resolveAll(true), 50);
+    }
+
+    /**********************
+     * Mellow spawn: ab Level 3, dann alle 4 Level (3,7,11...) / immer 3 HP
+     **********************/
+    function shouldSpawnMellowThisLevel(){
+      if(level < 3) return false;
+      return level === 3 || ((level - 3) % 4 === 0);
+    }
+
+    function spawnMellow(){
+      if(!shouldSpawnMellowThisLevel()) return;
+      const count = clamp(1 + Math.floor(level/4), 1, Math.floor(rows*cols/10));
+      for(let i=0;i<count;i++){
+        for(let tries=0;tries<260;tries++){
+          const r=Math.floor(Math.random()*rows);
+          const c=Math.floor(Math.random()*cols);
+          const cur=grid[r][c];
+          if(!cur) continue;
+          if(isBlocker(cur)) continue;
+
+          const bk = parseTypeId(cur.type).baseKey;
+          if(getSpecial(bk)) continue;
+
+          const m = makeTile(r,c,typeId("mellow","P"));
+          m.hp = 3;
+          const oldEl = tileEls.get(cur.id);
+          if(oldEl){ oldEl.remove(); tileEls.delete(cur.id); }
+
+          grid[r][c]=m;
+          const el = createTileEl(m, false);
+          el.classList.add("spawnGlow");
+          tileEls.set(m.id, el);
+          ui.board.appendChild(el);
+          const center = tileCenter(r,c);
+          burstFx(center.x, center.y, 10);
+          break;
+        }
+      }
+    }
+
+    function maybeSpawnLovelie(){
+      if(Math.random() > diff.lovelieChance) return;
+      for(let tries=0;tries<220;tries++){
+        const r=Math.floor(Math.random()*rows);
+        const c=Math.floor(Math.random()*cols);
+        const cur=grid[r][c];
+        if(!cur) continue;
+        if(isBlocker(cur)) continue;
+        const bk = parseTypeId(cur.type).baseKey;
+        if(getSpecial(bk)) continue;
+
+        const lov = makeTile(r,c,typeId("lovelie","P"));
+        const oldEl = tileEls.get(cur.id);
+        if(oldEl){ oldEl.remove(); tileEls.delete(cur.id); }
+        grid[r][c]=lov;
+
+        const el = createTileEl(lov, false);
+        el.classList.add("spawnGlow");
+        tileEls.set(lov.id, el);
+        ui.board.appendChild(el);
+        toast("Lovelie erscheint! 💖","Ultra selten ✨", 3200);
+        break;
+      }
+    }
+
+    /**********************
+     * Mystery reveal (??? click -> random)
+     **********************/
+    function pickMyst(){
+      const total = MYST_POOL.reduce((a,x)=>a+x.w,0);
+      let r = Math.random()*total;
+      for(const x of MYST_POOL){
+        r -= x.w;
+        if(r<=0) return x.key;
+      }
+      return "worm";
+    }
+
+    function revealMyst(tile){
+      if(busy) return;
+      busy = true;
+      const el = tileEls.get(tile.id);
+      if(el) el.classList.add("puff");
+
+      const {x,y} = tileCenter(tile.r, tile.c);
+      burstFx(x,y, 14);
+
+      setTimeout(()=>{
+        const pick = pickMyst();
+
+        // replace old tile
+        const oldEl = tileEls.get(tile.id);
+        if(oldEl){ oldEl.remove(); tileEls.delete(tile.id); }
+
+        let newType = typeId("worm","P");
+        if(pick==="cit") newType = typeId("cit","P");
+        if(pick==="koala") newType = typeId("koala","P");
+        if(pick==="lovelie") newType = typeId("lovelie","P");
+        if(pick==="mellow") newType = typeId("mellow","P");
+
+        const t2 = makeTile(tile.r, tile.c, newType);
+        if(pick==="mellow") t2.hp = 3;
+
+        grid[tile.r][tile.c] = t2;
+
+        const el2 = createTileEl(t2, false);
+        el2.classList.add("spawnGlow");
+        tileEls.set(t2.id, el2);
+        ui.board.appendChild(el2);
+
+        toast("??? Reveal ✨", pick==="worm" ? "Sourworm!" :
+                            pick==="cit" ? "Citrussy!" :
+                            pick==="mellow" ? "Mellow Block!" :
+                            pick==="koala" ? "Koala!" : "Lovelie 💖", 2800);
+        busy = false;
+        updateUI();
+      }, 360);
+    }
+
+    /**********************
+     * Pointer (click ???)
+     **********************/
+    function onPointerDown(e){
+      if(busy) return;
+      clearHints();
+      const id = e.currentTarget.dataset.id;
+      const tile = findTileById(id);
+      if(!tile) return;
+
+      pointer.down = true;
+      pointer.id = id;
+      pointer.startX = e.clientX;
+      pointer.startY = e.clientY;
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+
+    function onPointerUp(e){
+      if(!pointer.down) return;
+      const id = pointer.id;
+      pointer.down = false;
+
+      const tile = findTileById(id);
+      if(!tile) return;
+
+      const dx = e.clientX - pointer.startX;
+      const dy = e.clientY - pointer.startY;
+      const dist = Math.hypot(dx,dy);
+      const {baseKey} = parseTypeId(tile.type);
+
+      // ??? Klick -> random reveal
+      if(baseKey==="myst" && dist < 10){
+        revealMyst(tile);
+      }
+    }
+
+    ui.board.addEventListener("pointermove", (e)=>{
+      if(!pointer.down) return;
+      const tile = findTileById(pointer.id);
+      if(!tile) return;
+
+      const dx = e.clientX - pointer.startX;
+      const dy = e.clientY - pointer.startY;
+      if(Math.hypot(dx,dy) < 12) return;
+
+      const {baseKey} = parseTypeId(tile.type);
+      if(baseKey==="myst") { pointer.down=false; return; }
+
+      if(!isSwappable(tile)) { pointer.down=false; return; }
+
+      let dir;
+      if(Math.abs(dx) > Math.abs(dy)) dir = dx>0 ? "R" : "L";
+      else dir = dy>0 ? "D" : "U";
+
+      const dr = (dir==="D")?1:(dir==="U")?-1:0;
+      const dc = (dir==="R")?1:(dir==="L")?-1:0;
+
+      const r2 = tile.r + dr;
+      const c2 = tile.c + dc;
+      if(!inBounds(r2,c2)) { pointer.down=false; return; }
+
+      pointer.down=false;
+      trySwap(tile.r, tile.c, r2, c2);
+    });
+    ui.board.addEventListener("pointercancel", ()=>{ pointer.down=false; });
+
+    /**********************
+     * Gameplay core (Swap/Resolve)
+     **********************/
+
+    function doSwap(r1,c1,r2,c2){
+      const a = grid[r1][c1], b = grid[r2][c2];
+      grid[r1][c1]=b; grid[r2][c2]=a;
+      a.r=r2; a.c=c2;
+      b.r=r1; b.c=c1;
+
+      const elA = tileEls.get(a.id);
+      const elB = tileEls.get(b.id);
+      if(elA) setTileXY(elA,a.r,a.c);
+      if(elB) setTileXY(elB,b.r,b.c);
+    }
+
+    function spendMoves(n){
+      moves = Math.max(0, moves - n);
+      if(moves===0){
+        setTimeout(()=>gameOver(), 350);
+      }
+    }
+
+    function tripletMatchKind(t1,t2,t3){
+      if(!t1||!t2||!t3) return null;
+      if(!isMatchable(t1)||!isMatchable(t2)||!isMatchable(t3)) return null;
+
+      const p1=parseTypeId(t1.type), p2=parseTypeId(t2.type), p3=parseTypeId(t3.type);
+      if(!(p1.variant===p2.variant && p2.variant===p3.variant)) return null;
+
+      const keys=[p1.baseKey,p2.baseKey,p3.baseKey];
+      const count=(k)=>keys.filter(x=>x===k).length;
+      if(count("sleepy")===2 && count("mond")===1) return "moonshuffle";
+      if(count("grumpy")===2 && count("happy")===1) return "therapy";
+      if(count("donut")===2 && count("sweety")===1) return "sprinkle";
+      if(count("donut")===2 && count("happy")===1) return "sugar";
+      // Buddy Burst: beide Richtungen
+      if(count("smokey")===2 && count("joyce")===1) return "buddies";
+      if(count("joyce")===2 && count("smokey")===1) return "buddies";
+      // Best Buddies (Smokey + Simba)
+      if(count("smokey")===2 && count("simba")===1) return "bestbuddies";
+      if(count("simba")===2 && count("smokey")===1) return "bestbuddies";
+      return null;
+    }
+
+    function findSpecialTriples(){
+      const found=[];
+      for(let r=0;r<rows;r++){
+        for(let c=0;c<cols-2;c++){
+          const t1=grid[r][c], t2=grid[r][c+1], t3=grid[r][c+2];
+          const kind = tripletMatchKind(t1,t2,t3);
+          if(kind) found.push({kind, cells:[{r,c},{r,c:c+1},{r,c:c+2}]});
+        }
+      }
+      for(let c=0;c<cols;c++){
+        for(let r=0;r<rows-2;r++){
+          const t1=grid[r][c], t2=grid[r+1][c], t3=grid[r+2][c];
+          const kind = tripletMatchKind(t1,t2,t3);
+          if(kind) found.push({kind, cells:[{r,c},{r:r+1,c},{r:r+2,c}]});
+        }
+      }
+      return found;
+    }
+
+    function findLineMatches(){
+      const clear = new Set();
+      const hRuns = [];
+      const vRuns = [];
+
+      for(let r=0;r<rows;r++){
+        let c=0;
+        while(c<cols){
+          const t = grid[r][c];
+          if(!isMatchable(t)){ c++; continue; }
+          let start=c;
+          while(c<cols && grid[r][c] && isMatchable(grid[r][c]) && grid[r][c].type===t.type) c++;
+          const len = c-start;
+          if(len>=3){
+            const cells=[];
+            for(let x=start;x<start+len;x++){
+              cells.push({r,c:x});
+              clear.add(posKey(r,x));
+            }
+            hRuns.push({len,cells});
+          }
+        }
+      }
+
+      for(let c=0;c<cols;c++){
+        let r=0;
+        while(r<rows){
+          const t = grid[r][c];
+          if(!isMatchable(t)){ r++; continue; }
+          let start=r;
+          while(r<rows && grid[r][c] && isMatchable(grid[r][c]) && grid[r][c].type===t.type) r++;
+          const len = r-start;
+          if(len>=3){
+            const cells=[];
+            for(let x=start;x<start+len;x++){
+              cells.push({r:x,c});
+              clear.add(posKey(x,c));
+            }
+            vRuns.push({len,cells});
+          }
+        }
+      }
+
+      const spawn = new Map();
+      const inRunH = new Map();
+      const inRunV = new Map();
+
+      for(const run of hRuns) for(const p of run.cells) inRunH.set(posKey(p.r,p.c), 1);
+      for(const run of vRuns) for(const p of run.cells) inRunV.set(posKey(p.r,p.c), 1);
+      for(const key of clear){
+        if(inRunH.has(key) && inRunV.has(key)){
+          spawn.set(key, {type:typeId("koala","P"), prio:3});
+        }
+      }
+
+      function pickSpawnCell(run){
+        if(lastSwap){
+          const pref = posKey(lastSwap.pref.r, lastSwap.pref.c);
+          if(run.cells.some(p=>posKey(p.r,p.c)===pref)) return pref;
+          const alt = posKey(lastSwap.alt.r, lastSwap.alt.c);
+          if(run.cells.some(p=>posKey(p.r,p.c)===alt)) return alt;
+        }
+        const mid = run.cells[Math.floor(run.cells.length/2)];
+        return posKey(mid.r, mid.c);
+      }
+
+      for(const run of [...hRuns, ...vRuns]){
+        const k = pickSpawnCell(run);
+        if(spawn.get(k)?.prio===3) continue;
+        if(run.len>=5) spawn.set(k, {type:typeId("cit","P"), prio:2});
+        else if(run.len===4) spawn.set(k, {type:typeId("worm","P"), prio:1});
+      }
+
+      for(const [k] of spawn) clear.delete(k);
+
+      return {clear, spawn};
+    }
+
+    function hasAnyMatchOrSpecial(){
+      const mm = findLineMatches();
+      if(mm.clear.size>0) return true;
+      const sp = findSpecialTriples();
+      return sp.length>0;
+    }
+
+    function trySwap(r1,c1,r2,c2){
+      if(busy) return;
+      clearHints();
+      const a = grid[r1][c1];
+      const b = grid[r2][c2];
+      if(!a || !b) return;
+      if(isBlocker(a) || isBlocker(b)) return;
+      if(!isSwappable(a) || !isSwappable(b)) return;
+      busy = true;
+      lastSwap = { pref:{r:r2,c:c2}, alt:{r:r1,c:c1} };
+
+      doSwap(r1,c1,r2,c2);
+      setTimeout(()=>{
+        const A = grid[r1][c1];
+        const B = grid[r2][c2];
+        const aBk = parseTypeId(A.type).baseKey;
+        const bBk = parseTypeId(B.type).baseKey;
+
+        if(isPowerupKey(aBk) || isPowerupKey(bBk)){
+          spendMoves(1);
+          resolvePowerSwap(A,B,{dr:r2-r1, dc:c2-c1});
+          setTimeout(()=>{ dropDown(); mergeMellows(); resolveAll(false); }, 220);
+          return;
+        }
+
+        const ok = hasAnyMatchOrSpecial();
+        if(!ok){
+          doSwap(r1,c1,r2,c2);
+          spendMoves(3);
+          combo = 1;
+          updateUI();
+          toast("Ouch 😵","Falscher Swap: −3 Moves", 3200);
+          busy=false;
+          return;
+        }
+        spendMoves(1);
+        resolveAll(false);
+      }, 185);
+    }
+
+    function hitMellowAt(r,c, dmg=1){
+      const t = grid[r][c];
+      if(!t) return false;
+      if(isPlaceholder(t)){
+        const bigId = t.partOf;
+        const big = bigMellows.get(bigId);
+        if(!big) return false;
+        big.hp = Math.max(0, big.hp - dmg);
+        const anchorTile = grid[big.r][big.c];
+        if(anchorTile){
+          anchorTile.hp = big.hp;
+          updateMellowHp(anchorTile);
+        }
+        if(big.hp<=0) removeBigMellow(bigId);
+        return true;
+      }
+
+      const bk = parseTypeId(t.type).baseKey;
+      if(bk==="mellow"){
+        t.hp = Math.max(0, t.hp - dmg);
+        updateMellowHp(t);
+        if(t.hp<=0){
+          const el = tileEls.get(t.id);
+          if(el){
+            el.classList.add("pop");
+            setTimeout(()=>{ el.remove(); tileEls.delete(t.id); }, 420);
+          }
+          grid[r][c]=null;
+          toast("Mellow gelöst! ✨","Weiter!", 2600);
+        }
+        return true;
+      }
+      return false;
+    }
+
+    function damageMellowsAround(clearedCells){
+      const dirs = [
+        [1,0],[-1,0],[0,1],[0,-1],
+        [1,1],[1,-1],[-1,1],[-1,-1]
+      ];
+      for(const p of clearedCells){
+        for(const [dr,dc] of dirs){
+          const rr=p.r+dr, cc=p.c+dc;
+          if(!inBounds(rr,cc)) continue;
+          hitMellowAt(rr,cc,1);
+        }
+      }
+    }
+
+    function clearCells(cells){
+      const uniq = new Set(cells.map(p=>posKey(p.r,p.c)));
+      const cleared = [];
+
+      for(const key of uniq){
+        const [r,c] = key.split(",").map(Number);
+        const t = grid[r][c];
+        if(!t) continue;
+
+        if(hitMellowAt(r,c,1)){
+          const center = tileCenter(r,c);
+          makeStar(center.x, center.y, false);
+          continue;
+        }
+        if(isPlaceholder(t)) continue;
+
+        const el = tileEls.get(t.id);
+        if(el){
+          el.classList.add("pop");
+          const center = tileCenter(r,c);
+          makeStar(center.x, center.y, true);
+          setTimeout(()=>{ el.remove(); tileEls.delete(t.id); }, 420);
+        }
+        grid[r][c]=null;
+        cleared.push({r,c});
+      }
+
+      damageMellowsAround(cleared);
+
+      const add = Math.round(cleared.length * scorePerTile() * 1.10);
+      totalScore += add;
+      levelScore += add;
+    }
+
+    function clearRow(r){
+      const cells=[];
+      for(let c=0;c<cols;c++) cells.push({r,c});
+      clearCells(cells);
+      totalScore += 200; levelScore += 200;
+    }
+    function clearCol(c){
+      const cells=[];
+      for(let r=0;r<rows;r++) cells.push({r,c});
+      clearCells(cells);
+      totalScore += 200; levelScore += 200;
+    }
+    function citBlast(r,c, radius=3){
+      const cells=[];
+      const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+      cells.push({r,c});
+      for(const [dr,dc] of dirs){
+        for(let i=1;i<=radius;i++){
+          const rr=r+dr*i, cc=c+dc*i;
+          if(inBounds(rr,cc)) cells.push({r:rr,c:cc});
+        }
+      }
+      clearCells(cells);
+      totalScore += 260; levelScore += 260;
+    }
+    function clearWholeBoard(){
+      const cells=[];
+      for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+        const t=grid[r][c];
+        if(!t) continue;
+        if(isBlocker(t)) continue;
+        const bk=parseTypeId(t.type).baseKey;
+        if(bk==="myst") continue;
+        cells.push({r,c});
+      }
+      clearCells(cells);
+      totalScore += 800; levelScore += 800;
+    }
+    function wormWave6(r1,c1,r2,c2){
+      const mid = Math.round((c1+c2)/2);
+      let start = mid-2;
+      let end = mid+3;
+      if(start<0){ end += -start; start=0; }
+      if(end>cols){ start -= (end-cols); end=cols; start=Math.max(0,start); }
+
+      const cells=[];
+      for(let r=0;r<rows;r++){
+        for(let c=start;c<end;c++) cells.push({r,c});
+      }
+      clearCells(cells);
+      totalScore += 500; levelScore += 500;
+    }
+    function koalaMagicOn(targetBaseKey){
+      const base = getBase(targetBaseKey);
+      toast("🐨 Koala-Magie!", "Alles von "+(base?.name||targetBaseKey)+" weg!", 3200);
+      const cells=[];
+      for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+        const t=grid[r][c];
+        if(!t) continue;
+        if(isBlocker(t)) continue;
+        const bk=parseTypeId(t.type).baseKey;
+        if(bk===targetBaseKey) cells.push({r,c});
+      }
+      clearCells(cells);
+    }
+
+    function resolvePowerSwap(A,B,dir){
+      const aBk = parseTypeId(A.type).baseKey;
+      const bBk = parseTypeId(B.type).baseKey;
+
+      if((aBk==="koala" && bBk==="cit") || (aBk==="cit" && bBk==="koala")){
+        toast("🐨🍋 KOALA × Citrussy!", "DOUBLE BOARD CLEAN ×2 💥💥", 3800);
+
+        // 1) first clear
+        clearWholeBoard();
+
+        // 2) after refill -> clear again
+        setTimeout(()=>{
+          dropDown();
+          mergeMellows();
+
+          setTimeout(()=>{
+            clearWholeBoard();
+
+            // double points reward
+            const bonus = Math.round(2200 * diff.scoreMult);
+            totalScore += bonus;
+            levelScore += bonus;
+
+            setTimeout(()=>{
+              dropDown();
+              mergeMellows();
+              resolveAll(false);
+            }, 240);
+
+          }, 260);
+        }, 260);
+
+        clearCells([{r:A.r,c:A.c},{r:B.r,c:B.c}]);
+        return;
+      }
+
+      if(aBk==="worm" && bBk==="worm"){
+        toast("🪱🪱 Zu sauer!","Welle down!", 3200);
+        wormWave6(A.r,A.c,B.r,B.c);
+        clearCells([{r:A.r,c:A.c},{r:B.r,c:B.c}]);
+        return;
+      }
+
+      if(aBk==="koala" && !getSpecial(bBk)){
+        koalaMagicOn(bBk);
+        clearCells([{r:A.r,c:A.c}]);
+        return;
+      }
+      if(bBk==="koala" && !getSpecial(aBk)){
+        koalaMagicOn(aBk);
+        clearCells([{r:B.r,c:B.c}]);
+        return;
+      }
+
+      if(aBk==="worm"){
+        if(dir.dr !== 0) clearCol(A.c);
+        else clearRow(A.r);
+        clearCells([{r:A.r,c:A.c}]);
+      }
+      if(bBk==="worm"){
+        if(dir.dr !== 0) clearCol(B.c);
+        else clearRow(B.r);
+        clearCells([{r:B.r,c:B.c}]);
+      }
+
+      if(aBk==="cit"){
+        citBlast(A.r,A.c,3);
+        clearCells([{r:A.r,c:A.c}]);
+      }
+      if(bBk==="cit"){
+        citBlast(B.r,B.c,3);
+        clearCells([{r:B.r,c:B.c}]);
+      }
+    }
+
+    function resolveAll(){
+      const step = ()=>{
+        const specials = findSpecialTriples();
+        const mm = findLineMatches();
+
+        if(mm.clear.size===0 && specials.length===0){
+          busy=false;
+          updateUI();
+          ensureMovesOrShuffle();
+          return;
+        }
+
+        combo = clamp(combo+1, 1, 99);
+        if(specials.length){
+          for(const sp of specials){
+            const center = sp.cells[Math.floor(sp.cells.length/2)];
+            const ctr = tileCenter(center.r, center.c);
+            burstFx(ctr.x, ctr.y, 14);
+
+            if(sp.kind==="moonshuffle"){
+              toast("🌙😴 Mond-Shuffle!", "4×4 Bereich ✨", 3200);
+              clearCells(sp.cells);
+              shuffleArea4x4(center.r, center.c);
+              continue;
+            }
+
+            if(sp.kind==="therapy"){
+              toast("🩹 Therapy Time!", "+3 Moves ✨", 3200);
+              moves += 3;
+              // Tripel entfernen, damit es NICHT erneut triggert
+              clearCells(sp.cells);
+
+              // Alle Grumpy -> Happy (Therapie Effekt)
+              for(let r=0;r<rows;r++){
+                for(let c=0;c<cols;c++){
+                  const t=grid[r][c];
+                  if(!t) continue;
+                  const p=parseTypeId(t.type);
+                  if(p.baseKey==="grumpy"){
+                    t.type = typeId("happy", p.variant);
+                    const el=tileEls.get(t.id);
+                    if(el){
+                      const img=el.querySelector("img");
+                      if(img) img.src = IMG.happy;
+                    }
+                  }
+                }
+              }
+              continue;
+            }
+
+            if(sp.kind==="sprinkle"){
+              toast("🍩✨ Sprinkle Beam!", "Beam Clear!", 3200);
+              clearCells(sp.cells);
+              const rr=center.r, cc=center.c;
+              const beam = [];
+              for(let d=-Math.max(rows,cols); d<=Math.max(rows,cols); d++){
+                if(inBounds(rr, cc+d)) beam.push({r:rr,c:cc+d});
+                if(inBounds(rr+d, cc)) beam.push({r:rr+d,c:cc});
+                if(inBounds(rr+d, cc+d)) beam.push({r:rr+d,c:cc+d});
+                if(inBounds(rr+d, cc-d)) beam.push({r:rr+d,c:cc-d});
+              }
+              clearCells(beam);
+              continue;
+            }
+
+            if(sp.kind==="sugar"){
+              toast("🍬 Sugar Rush!", "+5 Moves & Clears!", 3400);
+              moves += 5;
+              clearCells(sp.cells);
+              const picks = [];
+              for(let i=0;i<14;i++){
+                const r=Math.floor(Math.random()*rows);
+                const c=Math.floor(Math.random()*cols);
+                picks.push({r,c});
+              }
+              clearCells(picks);
+              continue;
+            }
+
+            if(sp.kind==="buddies"){
+              toast("🐱🐶 Buddy Burst!", "Boom!", 3200);
+              const area=[];
+              for(const p of sp.cells){
+                for(let dr=-1; dr<=1; dr++){
+                  for(let dc=-1; dc<=1; dc++){
+                    const rr=p.r+dr, cc=p.c+dc;
+                    if(inBounds(rr,cc)) area.push({r:rr,c:cc});
+                  }
+                }
+              }
+              clearCells(sp.cells);
+              clearCells(area);
+              continue;
+            }
+
+            if(sp.kind==="bestbuddies"){
+              toast("🦁🐱 BEST BUDDIES!", "Buddy Wave ✨", 3400);
+              clearCells(sp.cells);
+
+              // Row+Col vom Center + extra Punkte
+              clearRow(center.r);
+              clearCol(center.c);
+              totalScore += Math.round(1200*diff.scoreMult);
+              levelScore += Math.round(1200*diff.scoreMult);
+              continue;
+            }
+          }
+
+          setTimeout(()=>{
+            dropDown();
+            mergeMellows();
+            setTimeout(step, 260);
+          }, 240);
+          checkLevelUp();
+          updateUI();
+          return;
+        }
+
+        const toClear = new Set(mm.clear);
+        const scoreAdd = toClear.size * scorePerTile() * (1 + (combo-1)*0.12);
+        totalScore += Math.round(scoreAdd);
+        levelScore += Math.round(scoreAdd);
+
+        const clearedCells = [];
+        for(const key of toClear){
+          const [r,c] = key.split(",").map(Number);
+          const t = grid[r][c];
+          if(!t) continue;
+
+          if(hitMellowAt(r,c,1)) continue;
+
+          const el = tileEls.get(t.id);
+          if(el){
+            el.classList.add("pop");
+            const ctr = tileCenter(r,c);
+            makeStar(ctr.x, ctr.y, true);
+            setTimeout(()=>{ el.remove(); tileEls.delete(t.id); }, 420);
+          }
+          grid[r][c]=null;
+          clearedCells.push({r,c});
+        }
+
+        damageMellowsAround(clearedCells);
+
+        for(const [k, s] of mm.spawn){
+          const [r,c]=k.split(",").map(Number);
+          
+          // FIX: Alten Tile entfernen, falls noch da (da er aus 'clear' entfernt wurde)
+          const old = grid[r][c];
+          if(old){
+            const oldEl = tileEls.get(old.id);
+            if(oldEl) oldEl.remove();
+            tileEls.delete(old.id);
+          }
+
+          const t = makeTile(r,c,s.type);
+          grid[r][c]=t;
+          const el = createTileEl(t, false);
+          el.classList.add("spawnGlow");
+          tileEls.set(t.id, el);
+          ui.board.appendChild(el);
+
+          const ctr = tileCenter(r,c);
+          makeStar(ctr.x, ctr.y, true);
+        }
+
+        setTimeout(()=>{
+          dropDown();
+          mergeMellows();
+          setTimeout(step, 260);
+        }, 240);
+        checkLevelUp();
+        updateUI();
+      };
+
+      step();
+    }
+
+    function shuffleArea4x4(centerR, centerC){
+      const top = clamp(centerR-1, 0, rows-4);
+      const left= clamp(centerC-1, 0, cols-4);
+
+      const coords=[];
+      const tiles=[];
+      for(let r=top;r<top+4;r++){
+        for(let c=left;c<left+4;c++){
+          const t=grid[r][c];
+          if(!t) continue;
+          if(isBlocker(t)) continue;
+          const bk=parseTypeId(t.type).baseKey;
+          if(bk==="myst") continue;
+          coords.push({r,c});
+          tiles.push(t);
+        }
+      }
+
+      for(let i=tiles.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [tiles[i],tiles[j]]=[tiles[j],tiles[i]];
+      }
+
+      coords.forEach((p,i)=>{
+        const t=tiles[i];
+        grid[p.r][p.c]=t;
+        t.r=p.r; t.c=p.c;
+        const el = tileEls.get(t.id);
+        if(el){
+          setTileXY(el, t.r, t.c);
+          el.classList.add("spawnGlow");
+          setTimeout(()=>el.classList.remove("spawnGlow"), 700);
+        }
+      });
+    }
+
+    function dropDown(){
+      for(let c=0;c<cols;c++){
+        let r = rows-1;
+        while(r>=0){
+          while(r>=0 && isBlocker(grid[r][c])) r--;
+          if(r<0) break;
+
+          const segEnd = r;
+          let segStart = segEnd;
+          while(segStart>=0 && !isBlocker(grid[segStart][c])) segStart--;
+
+          let write = segEnd;
+          for(let rr=segEnd; rr>=segStart+1; rr--){
+            const t = grid[rr][c];
+            if(t){
+              if(write !== rr){
+                grid[write][c]=t;
+                grid[rr][c]=null;
+                t.r=write; t.c=c;
+                const el = tileEls.get(t.id);
+                if(el) setTileXY(el, t.r, t.c);
+              }
+              write--;
+            }
+          }
+
+          for(let rr=write; rr>=segStart+1; rr--){
+            let tType = randNormalType();
+            if(level >= 2 && Math.random() < diff.mystChance){
+              tType = "myst:P";
+            }
+            const t = makeTile(rr,c,tType);
+            grid[rr][c]=t;
+            const el = createTileEl(t, true);
+            tileEls.set(t.id, el);
+            ui.board.appendChild(el);
+          }
+
+          r = segStart;
+        }
+      }
+
+      for(let r=0;r<rows;r++){
+        for(let c=0;c<cols;c++){
+          if(grid[r][c]===null){
+            const t = makeTile(r,c,randNormalType());
+            grid[r][c]=t;
+            const el = createTileEl(t, true);
+            tileEls.set(t.id, el);
+            ui.board.appendChild(el);
+          }
+        }
+      }
+
+      if(Math.random() < diff.lovelieChance*0.45){
+        maybeSpawnLovelie();
+      }
+    }
+
+    function mergeMellows(){
+      for(let r=0;r<rows-1;r++){
+        for(let c=0;c<cols-1;c++){
+          const a = grid[r][c];
+          const b = grid[r][c+1];
+          const d = grid[r+1][c];
+          const e = grid[r+1][c+1];
+          if(!a||!b||!d||!e) continue;
+
+          if(isPlaceholder(a)||isPlaceholder(b)||isPlaceholder(d)||isPlaceholder(e)) continue;
+
+          const ak = parseTypeId(a.type).baseKey;
+          const bk = parseTypeId(b.type).baseKey;
+          const dk = parseTypeId(d.type).baseKey;
+          const ek = parseTypeId(e.type).baseKey;
+
+          if(ak!=="mellow" || bk!=="mellow" || dk!=="mellow" || ek!=="mellow") continue;
+          if(a.big || b.big || d.big || e.big) continue;
+
+          const hpSum = (a.hp||0) + (b.hp||0) + (d.hp||0) + (e.hp||0);
+          const bigHp = Math.max(1, Math.ceil(hpSum/2));
+
+          [a,b,d,e].forEach(t=>{
+            const el = tileEls.get(t.id);
+            if(el){ el.remove(); tileEls.delete(t.id); }
+          });
+          const bigId = makeId();
+          const bigTile = { id: bigId, r, c, type: typeId("mellow","P"), hp: bigHp, big:true };
+          bigMellows.set(bigId, {id:bigId, r, c, hp:bigHp});
+
+          grid[r][c] = bigTile;
+          grid[r][c+1] = { type:"mellow_part", partOf: bigId };
+          grid[r+1][c] = { type:"mellow_part", partOf: bigId };
+          grid[r+1][c+1] = { type:"mellow_part", partOf: bigId };
+
+          const el = createTileEl(bigTile, false);
+          el.classList.add("spawnGlow");
+          tileEls.set(bigTile.id, el);
+          ui.board.appendChild(el);
+
+          const ctr = tileCenter(r,c);
+          burstFx(ctr.x + (CELL+GAP)/2, ctr.y + (CELL+GAP)/2, 18);
+          toast("MEGA Mellow! 😈","4 Mellows verschmelzen!", 2800);
+          setTileXY(el, r, c);
+        }
+      }
+    }
+
+    function removeBigMellow(bigId){
+      const big = bigMellows.get(bigId);
+      if(!big) return;
+      bigMellows.delete(bigId);
+
+      const anchor = grid[big.r][big.c];
+      if(anchor && anchor.id){
+        const el = tileEls.get(anchor.id);
+        if(el){
+          el.classList.add("pop");
+          setTimeout(()=>{ el.remove(); tileEls.delete(anchor.id); }, 420);
+        }
+      }
+
+      for(let rr=big.r; rr<=big.r+1; rr++){
+        for(let cc=big.c; cc<=big.c+1; cc++){
+          if(inBounds(rr,cc)){
+            const t = grid[rr][cc];
+            if(t && isPlaceholder(t) && t.partOf===bigId) grid[rr][cc]=null;
+            if(t && t.id===bigId) grid[rr][cc]=null;
+          }
+        }
+      }
+      toast("Mega Mellow gelöst! ✨","Nice!", 2600);
+    }
+
+    function hasMove(){
+      for(let r=0;r<rows;r++){
+        for(let c=0;c<cols;c++){
+          const t=grid[r][c];
+          if(!t || isBlocker(t)) continue;
+          if(!isSwappable(t)) continue;
+
+          const dirs=[[1,0],[0,1]];
+          for(const [dr,dc] of dirs){
+            const rr=r+dr, cc=c+dc;
+            if(!inBounds(rr,cc)) continue;
+            const u=grid[rr][cc];
+            if(!u || isBlocker(u)) continue;
+            if(!isSwappable(u)) continue;
+
+            doSwap(r,c,rr,cc);
+            const ok = hasAnyMatchOrSpecial();
+            doSwap(r,c,rr,cc);
+            if(ok) return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    function shuffleAll(){
+      const coords=[];
+      const tiles=[];
+      for(let r=0;r<rows;r++){
+        for(let c=0;c<cols;c++){
+          const t=grid[r][c];
+          if(!t) continue;
+          if(isBlocker(t)) continue;
+          const bk = parseTypeId(t.type).baseKey;
+          if(bk==="myst") continue;
+          coords.push({r,c});
+          tiles.push(t);
+        }
+      }
+      for(let i=tiles.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [tiles[i],tiles[j]]=[tiles[j],tiles[i]];
+      }
+      coords.forEach((p,i)=>{
+        const t=tiles[i];
+        grid[p.r][p.c]=t;
+        t.r=p.r; t.c=p.c;
+        const el = tileEls.get(t.id);
+        if(el){
+          setTileXY(el, t.r, t.c);
+          el.classList.add("spawnGlow");
+          setTimeout(()=>el.classList.remove("spawnGlow"), 700);
+        }
+      });
+    }
+
+    function ensureMovesOrShuffle(){
+      if(busy) return;
+      if(hasMove()) return;
+      toast("Keine Züge möglich 😵","Auto-Shuffle: −3 Moves", 3600);
+      spendMoves(3);
+      shuffleAll();
+      setTimeout(()=>resolveAll(false), 180);
+    }
+
+    function hint(){
+      clearHints();
+      for(let r=0;r<rows;r++){
+        for(let c=0;c<cols;c++){
+          const t=grid[r][c];
+          if(!t || isBlocker(t)) continue;
+          if(!isSwappable(t)) continue;
+
+          const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+          for(const [dr,dc] of dirs){
+            const rr=r+dr, cc=c+dc;
+            if(!inBounds(rr,cc)) continue;
+            const u=grid[rr][cc];
+            if(!u || isBlocker(u)) continue;
+            if(!isSwappable(u)) continue;
+
+            doSwap(r,c,rr,cc);
+            const ok = hasAnyMatchOrSpecial();
+            doSwap(r,c,rr,cc);
+            if(ok){
+              const el1=tileEls.get(t.id);
+              const el2=tileEls.get(u.id);
+              if(el1) el1.classList.add("hint");
+              if(el2) el2.classList.add("hint");
+              toast("Hint ✨","Probier die zwei!", 3000);
+              return;
+            }
+          }
+        }
+      }
+      toast("Keine direkten Moves 😵","Shuffle kommt gleich…", 3000);
+      ensureMovesOrShuffle();
+    }
+
+    async function toggleFullscreen(){
+      const root = document.getElementById("playArea");
+      try{
+        if(document.fullscreenElement){
+          await document.exitFullscreen();
+        }else{
+          await root.requestFullscreen();
+        }
+      }catch(e){}
+    }
+    document.addEventListener("fullscreenchange", ()=>{
+      if(document.fullscreenElement){
+        document.body.classList.add("fs");
+        buildFsBg();
+      }else{
+        document.body.classList.remove("fs");
+        document.getElementById("fsBg").innerHTML="";
+      }
+      layoutBoard();
+    });
+
+    function updateUI(){
+      ui.level.textContent = level;
+      ui.goal.textContent = fmt(target);
+      ui.score.textContent = fmt(totalScore);
+      ui.moves.textContent = moves;
+      ui.combo.textContent = "x"+combo;
+
+      const pct = clamp(Math.round((levelScore/target)*100), 0, 100);
+      ui.bar.style.width = pct+"%";
+      ui.pct.textContent = pct+"%";
+
+      ui.hudLevel.textContent = "Level "+level;
+      ui.hudScore.textContent = "Score "+fmt(totalScore);
+      ui.hudMoves.textContent = "Moves "+moves;
+      ui.hudCombo.textContent = "Combo x"+combo;
+      ui.hudBar.style.width = pct+"%";
+      ui.hudPct.textContent = pct+"%";
+    }
+
+    function checkLevelUp(){
+      if(levelScore >= target){
+        level++;
+        levelScore = 0;
+        maybeUnlockVariant();
+
+        target = calcTarget(level);
+        moves = calcMoves(level);
+
+        toast("🎉 Ziel erreicht!","Next Level: "+level, 3200);
+        spawnMellow();
+        maybeSpawnLovelie();
+      }
+    }
+
+    function gameOver(){
+      toast("Game Over 😵","Score posten? → Leaderboard", 3600);
+      if(document.getElementById("lbAuto").checked){
+        postScore();
+      }
+    }
+
+    function newGame(fromDiffChange=false){
+      busy=false;
+      level=1;
+      totalScore=0;
+      levelScore=0;
+      combo=1;
+      resetUnlocked();
+      target = calcTarget(level);
+      moves = calcMoves(level);
+      lastSwap=null;
+
+      initBoard();
+      buildMenu();
+      updateUI();
+      refreshLeaderboard();
+      if(!fromDiffChange){
+        toast("Neues Spiel ✨", diff.name+" • "+diff.rows+"×"+diff.cols, 2600);
+      }
+      syncLbHeight();
+    }
+
+    /**********************
+     * Menu + Steckbrief
+     **********************/
+    function buildMenu(){
+      ui.menu.innerHTML="";
+      const all = [...BASES,
+        {key:"myst",name:"???",img:null,tag:"powerup",ability:"Klicken → random Reveal (Puff!)",story:"Mystery ist Glück + Rarity.",lines:{easy:["???","Puff ✨","Glück!"],normal:["Reveal time.","Puff.","Random!"],hard:["Risk it.","Puff.","Roll!"],shock:["ALL IN 😈","Puff!","GAMBLE!"]}},
+        {key:"worm",name:"Sourworm",img:IMG.worm,tag:"powerup",ability:"Reihe/Spalte (je nach Drag)",story:"Sauer, aber räumt sauber.",lines:{easy:["Chomp!","Weg damit!","Sauer!"],normal:["Line clear.","Crunch.","Nice."],hard:["Präzise.","Perfekt.","Clean."],shock:["WELLE!","CRUNCH!","RIP Reihe!"]}},
+        {key:"cit",name:"Citrussy",img:IMG.citrussy,tag:"powerup",ability:"Stern Radius 3 (8 Richtungen)",story:"Zitrus-Boom in alle Richtungen.",lines:{easy:["CIT!","Spritz!","Boom!"],normal:["Cross clear.","Zing!","Nice."],hard:["Setz’s gut.","Perfekt.","Value!"],shock:["ZITRUS-NUKE!","BOOM!","MEHR!"]}},
+        {key:"koala",name:"Koala",img:IMG.koala,tag:"powerup",ability:"Koala+Sorte clear",story:"Boss-Magie: eine Sorte komplett weg.",lines:{easy:["Boss!","Magie!","Clean!"],normal:["Koala time.","Alles weg.","Nice."],hard:["Richtig wählen.","Perfekt.","Carry."],shock:["BOSS MODE 😈","Wipe!","SWEET!"]}},
+        {key:"mellow",name:"Mellow",img:IMG.mellow,tag:"obstacle",ability:"Block (3 HP) – Clears daneben ziehen HP ab",story:"Klebt fest… bis du ihn knackbar machst.",lines:{easy:["Kleb 😈","HP runter!","Block!"],normal:["Nicht ignorieren.","Knacken!","Weg!"],hard:["Gefährlich.","Planen.","Ziel!"],shock:["BLOCK HELL 😈","RIP Moves","KNACKEN!"]}},
+        {key:"lovelie",name:"Lovelie",img:IMG.lovelie,tag:"bonus",ability:"Ultra selten (Bonus)",story:"Wenn Lovelie kommt, lohnt’s sich.",lines:{easy:["OMG 💖","So selten!","Bonus!"],normal:["Lovelie!","Lucky!","Nice."],hard:["Rare!","Take it.","Value!"],shock:["ULTRA RARE 💖","LETS GO!","HYPE!"]}},
+      ];
+      for(const b of all){
+        const card=document.createElement("div");
+        card.className="luvCard";
+        const imgHtml = b.img ?
+          `<img src="${b.img}" alt="${b.name}">` : `<div style="width:78px;height:78px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#ff4fb9,#7ad8ff);color:#fff;font-weight:1000;font-size:32px;box-shadow:0 12px 20px rgba(0,0,0,.12);">?</div>`;
+        card.innerHTML = `
+          ${imgHtml}
+          <div>
+            <b>${b.name}</b>
+            <small>${b.tag || "normal"}</small>
+          </div>
+        `;
+        card.addEventListener("click", ()=>openInfo(b));
+        ui.menu.appendChild(card);
+      }
+      syncLbHeight();
+    }
+
+    function openInfo(b){
+      document.getElementById("infoImg").src = b.img || "";
+      document.getElementById("infoImg").style.display = b.img ? "block" : "none";
+      document.getElementById("infoName").textContent = b.name;
+      document.getElementById("infoTag").textContent = (b.tag || "normal") + " • Varianten: A/B (ab Level 5)";
+      document.getElementById("infoAbility").textContent = b.ability || "—";
+      document.getElementById("infoStory").textContent = b.story || "—";
+
+      const ul = document.getElementById("infoLines");
+      ul.innerHTML="";
+      const lines = (b.lines?.[diff.key] || b.lines?.easy || []).slice(0,3);
+      for(const line of lines){
+        const li=document.createElement("li");
+        li.textContent=line;
+        ul.appendChild(li);
+      }
+      document.getElementById("infoBack").style.display="flex";
+    }
+
+    /**********************
+     * Leaderboard
+     **********************/
+    async function postScore(){
+      if(!sb){ toast("Leaderboard offline","(Supabase nicht erreichbar)", 3200); return; }
+      const name = (document.getElementById("lbName").value || "Anonymous").trim().slice(0,24);
+      try{
+        const payload = { player_name: name, score: totalScore, level: level, difficulty: diff.key, version:"luvvies-crush" };
+        const { error } = await sb.from(SCORE_TABLE).insert(payload);
+        if(error) throw error;
+        toast("Score gepostet ✅", name+" • "+fmt(totalScore), 3200);
+        await refreshLeaderboard();
+      }catch(e){
+        toast("Post fehlgeschlagen ❌", String(e.message||e), 3400);
+      }
+    }
+
+    async function refreshLeaderboard(){
+      const list = document.getElementById("lbList");
+      list.innerHTML = "";
+      if(!sb){
+        list.innerHTML = `<div class="tiny">Leaderboard aktuell nicht verfügbar.</div>`;
+        return;
+      }
+      try{
+        const { data, error } = await sb
+          .from(SCORE_TABLE)
+          .select("player_name,score,level,difficulty,created_at")
+          .order("score", { ascending:false })
+          .limit(25);
+        if(error) throw error;
+
+        (data||[]).forEach((x, i)=>{
+          const item = document.createElement("div");
+          item.className="lbItem";
+          if(i===0) item.classList.add("rank1");
+          if(i===1) item.classList.add("rank2");
+          if(i===2) item.classList.add("rank3");
+
+          const d = new Date(x.created_at);
+          const stamp = `${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")}.${d.getFullYear()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+          item.innerHTML = `
+            <div class="left">
+              <b>${i+1}. ${escapeHtml(x.player_name||"Anonymous")}</b>
+              <small>Lvl ${x.level} • ${diffLabel(x.difficulty)} • ${stamp}</small>
+            </div>
+            <div class="score">${fmt(x.score)}</div>
+          `;
+          list.appendChild(item);
+        });
+        if(!data || data.length===0){
+          list.innerHTML = `<div class="tiny">Noch keine Scores. Sei die/der Erste 😈✨</div>`;
+        }
+      }catch(e){
+        list.innerHTML = `<div class="tiny">Leaderboard Fehler.</div>`;
+      }
+      syncLbHeight();
+    }
+
+    function escapeHtml(s){
+      return String(s).replace(/[&<>"']/g, (m)=>({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+      }[m]));
+    }
+
+    /**********************
+     * Make Leaderboard same height as luvvies panel
+     **********************/
+    function syncLbHeight(){
+      const luvPanel = document.getElementById("luvPanel");
+      const rightPanel = document.getElementById("rightPanel");
+      const lbList = document.getElementById("lbList");
+      if(!luvPanel || !rightPanel || !lbList) return;
+
+      const a = luvPanel.getBoundingClientRect();
+      const b = rightPanel.getBoundingClientRect();
+      const listTop = lbList.getBoundingClientRect().top;
+
+      const targetBottom = b.top + a.height;
+      const avail = targetBottom - listTop - 10;
+
+      if(avail > 180){
+        lbList.style.maxHeight = Math.floor(avail) + "px";
+      }
+    }
+
+    /**********************
+     * Intro/Greet events
+     **********************/
+    function showGreetingIfNeeded(){
+      const k = "luvvies_greet_seen";
+      const seen = getCookie(k);
+      const today = todayKey();
+      if(seen !== today){
+        document.getElementById("greetBack").style.display="flex";
+      }
+    }
+    function closeGreeting(setToday=true){
+      if(setToday) setCookie("luvvies_greet_seen", todayKey(), 14);
+      document.getElementById("greetBack").style.display="none";
+    }
+
+    document.getElementById("greetPlay").addEventListener("click", ()=>{
+      closeGreeting(true);
+      toast("Let’s go! ✨","Viel Spaß!", 2600);
+    });
+    document.getElementById("greetGuide").addEventListener("click", ()=>{
+      closeGreeting(true);
+      document.getElementById("introBack").style.display="flex";
+    });
+
+    document.getElementById("btnIntro").addEventListener("click", ()=>document.getElementById("introBack").style.display="flex");
+    document.getElementById("introClose").addEventListener("click", ()=>document.getElementById("introBack").style.display="none");
+    document.getElementById("infoClose").addEventListener("click", ()=>document.getElementById("infoBack").style.display="none");
+
+    /**********************
+     * Buttons
+     **********************/
+    document.getElementById("btnNew").addEventListener("click", ()=>newGame(false));
+    document.getElementById("btnHint").addEventListener("click", hint);
+    document.getElementById("btnFs").addEventListener("click", toggleFullscreen);
+    document.getElementById("btnPost").addEventListener("click", postScore);
+    document.getElementById("btnRefresh").addEventListener("click", refreshLeaderboard);
+
+    document.getElementById("diffPills").addEventListener("change", ()=>{
+      const v = document.querySelector('input[name="diff"]:checked').value;
+      diff = DIFFS[v];
+      newGame(true);
+      buildGlobalBg();
+      buildFsBg();
+    });
+    document.getElementById("fsHint").addEventListener("click", hint);
+    document.getElementById("fsIntro").addEventListener("click", ()=>document.getElementById("introBack").style.display="flex");
+    document.getElementById("fsExit").addEventListener("click", async ()=>{
+      if(document.fullscreenElement) await document.exitFullscreen();
+    });
+
+    /**********************
+     * Boot
+     **********************/
+    attachResize();
+    syncBgHeight();
+    resetUnlocked();
+    newGame(true);
+    showGreetingIfNeeded();
+  </script>
+</body>
+</html>
