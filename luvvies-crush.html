@@ -2,24 +2,45 @@
 <html lang="de">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Sweet Swap – KOALA Candy Match-3</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Luvvies Crush</title>
 
-  <!-- Supabase (optional). Wenn du kein Leaderboard willst, kannst du diese Zeile entfernen. -->
+  <!-- Supabase JS (Client) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Mobile Fix Style (deins) -->
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100vh; /* 100% der Bildschirmhöhe */
+      width: 100vw;  /* 100% der Bildschirmbreite */
+      overflow: hidden; /* Verhindert Scrollen */
+    }
+  </style>
 
   <style>
     :root{
       --bg1:#ffe6f1;
       --bg2:#e7f6ff;
-      --panel:#ffffffcc;
+      --panel:#ffffffd8;
       --text:#2b2b2b;
-      --shadow: 0 12px 30px rgba(0,0,0,.12);
+      --shadow: 0 14px 34px rgba(0,0,0,.12);
       --ring: 0 0 0 4px rgba(255, 105, 180, .35);
 
-      /* Board sizing */
-      --gap: clamp(7px, 1.05vw, 12px);
-      --radius: 18px;
+      --gap: clamp(6px, 0.9vw, 10px);
+      --radius: 16px;
+
+      /* Animations */
+      --swapMs: 520ms; /* etwas langsamer */
+      --popMs: 440ms;
+      --fallMs: 720ms;
+
+      --twitch:#3b0a63;
+      --twitch2:#7b2cff;
+
+      --safeTop: env(safe-area-inset-top, 0px);
+      --safeBottom: env(safe-area-inset-bottom, 0px);
     }
 
     *{box-sizing:border-box}
@@ -27,147 +48,322 @@
       margin:0;
       font-family: ui-rounded, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
       color:var(--text);
-      min-height:100vh;
+      min-height: 100dvh;
       background:
         radial-gradient(circle at 20% 20%, #fff 0 18%, transparent 19%),
         radial-gradient(circle at 70% 25%, #fff 0 14%, transparent 15%),
         radial-gradient(circle at 25% 75%, #fff 0 12%, transparent 13%),
         linear-gradient(135deg, var(--bg1), var(--bg2));
-      display:flex;
-      justify-content:center;
+      overflow:hidden;
     }
 
+    /* Page wrapper scrollt intern (Body bleibt fixed/ruhig) */
     .wrap{
-      width: min(1280px, 98vw);
+      width: min(1180px, 100vw);
+      margin: 0 auto;
+      padding: 12px 12px calc(18px + var(--safeBottom));
       display:grid;
-      grid-template-columns: 1.25fr .75fr;
-      gap: 16px;
-      padding: 18px 0 22px;
-      align-items:start;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      position:relative;
+      z-index: 5;
+      height: 100dvh;
+      overflow:auto;
+      -webkit-overflow-scrolling: touch;
     }
-    @media (max-width: 980px){ .wrap{grid-template-columns:1fr} }
+    @media (min-width: 980px){
+      .wrap{
+        grid-template-columns: 1.35fr .65fr;
+        align-items:start;
+        overflow: visible;
+        height: auto;
+      }
+      body{ overflow:auto; }
+      html,body{ overflow:auto; }
+    }
+
+    /* Phone landscape warning */
+    .rotateOverlay{
+      position:fixed; inset:0;
+      display:none;
+      place-items:center;
+      z-index:9999;
+      background: rgba(10,8,18,.72);
+      backdrop-filter: blur(10px);
+      padding:18px;
+      color:#fff;
+      text-align:center;
+    }
+    .rotateOverlay .box{
+      width: min(520px, 92vw);
+      border-radius: 26px;
+      background: rgba(255,255,255,.10);
+      border: 1px solid rgba(255,255,255,.25);
+      box-shadow: 0 30px 80px rgba(0,0,0,.35);
+      padding: 16px 18px;
+    }
+    .rotateOverlay h2{margin:0 0 8px; font-size:18px}
+    .rotateOverlay p{margin:0; opacity:.9}
+    @media (orientation: landscape) and (max-width: 900px){
+      .rotateOverlay{display:grid;}
+      body{overflow:hidden;}
+    }
+
+    /* Background luvvies (nicht transparent!) */
+    .bgLuvvies{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      z-index:0;
+      overflow:hidden;
+    }
+    .luv{
+      position:absolute;
+      will-change: transform;
+      opacity: 1;
+      transform: translateZ(0);
+      animation: drift 9.2s ease-in-out infinite;
+      filter:
+        drop-shadow(0 22px 28px rgba(0,0,0,.22))
+        drop-shadow(0 0 18px rgba(255,79,185,.18))
+        saturate(.95);
+    }
+    .luv img{
+      width:100%;
+      height:100%;
+      object-fit:contain;
+    }
+    @keyframes drift{
+      0%   { transform: translate3d(0,0,0) rotate(-6deg) scale(1); }
+      25%  { transform: translate3d(50px,-30px,0) rotate(7deg) scale(1.05); }
+      55%  { transform: translate3d(-34px,-52px,0) rotate(11deg) scale(1.07); }
+      75%  { transform: translate3d(-60px,26px,0) rotate(-2deg) scale(1.06); }
+      100% { transform: translate3d(0,0,0) rotate(-6deg) scale(1); }
+    }
+
+    /* Speech bubble */
+    .luvBubble{
+      position:absolute;
+      padding:10px 12px;
+      border-radius: 16px;
+      background: rgba(255,255,255,.96);
+      border: 1px solid rgba(255,255,255,.98);
+      box-shadow: 0 18px 40px rgba(0,0,0,.14);
+      font-weight:950;
+      font-size: 13px;
+      color:#2b2b2b;
+      z-index: 9998;
+      pointer-events:none;
+      opacity:0;
+      transform: translateY(10px);
+      animation: bubbleIn 3.3s ease forwards;
+      max-width: 280px;
+    }
+    .luvBubble::after{
+      content:"";
+      position:absolute;
+      left:16px; bottom:-8px;
+      width:14px; height:14px;
+      background: rgba(255,255,255,.96);
+      border-left:1px solid rgba(255,255,255,.98);
+      border-bottom:1px solid rgba(255,255,255,.98);
+      transform: rotate(45deg);
+    }
+    @keyframes bubbleIn{
+      0%{opacity:0; transform: translateY(12px) scale(.98)}
+      12%{opacity:1; transform: translateY(0) scale(1)}
+      80%{opacity:1}
+      100%{opacity:0; transform: translateY(-10px) scale(.98)}
+    }
 
     .card{
       background:var(--panel);
       backdrop-filter: blur(10px);
-      border: 1px solid #ffffffaa;
+      border: 1px solid #ffffffb0;
       border-radius: 26px;
       box-shadow: var(--shadow);
-      padding: 16px;
+      padding: 14px;
       position:relative;
       overflow:hidden;
     }
 
-    .header{
+    /* Banner */
+    .gameBanner{
+      width: 100%;
+      border-radius: 22px;
+      padding: 14px 14px;
+      background:
+        radial-gradient(circle at 20% 30%, rgba(255,255,255,.85) 0 22%, transparent 23%),
+        linear-gradient(135deg, rgba(255,79,185,.30), rgba(122,216,255,.30));
+      border: 1px solid rgba(255,255,255,.85);
+      box-shadow: 0 14px 28px rgba(0,0,0,.09);
       display:flex;
       align-items:center;
-      justify-content:space-between;
+      justify-content:center;
       gap:12px;
-      padding: 6px 10px 14px;
+      margin-bottom: 10px;
     }
-    .brand{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      user-select:none;
+    .gameBanner .title{
+      font-size: 26px;
+      font-weight: 1000;
+      letter-spacing: .3px;
+      text-shadow: 0 12px 30px rgba(0,0,0,.10);
+      padding: 6px 10px;
+      border-radius: 16px;
+      background: rgba(255,255,255,.55);
+      border: 1px solid rgba(255,255,255,.9);
     }
-    .logo{
-      width:46px;height:46px;border-radius:16px;
-      background: conic-gradient(from 200deg, #ff4fb9, #ffd15a, #5ad1ff, #8b7bff, #ff4fb9);
-      box-shadow: 0 10px 20px rgba(255,79,185,.25);
-      position:relative;
-      flex: 0 0 auto;
-    }
-    .logo:after{
-      content:"";
-      position:absolute; inset:8px;
-      border-radius:12px;
-      background: radial-gradient(circle at 30% 30%, #ffffffcc 0 35%, transparent 36%),
-                  radial-gradient(circle at 70% 70%, #ffffff66 0 25%, transparent 26%);
-      mix-blend-mode:soft-light;
-    }
-    h1{ font-size: 20px; margin:0; line-height:1.1; letter-spacing:.2px; }
-    .sub{ font-size:12px; opacity:.8; margin-top:2px; }
 
-    .btns{display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;}
+    /* Buttons */
+    .controlsRow{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:center;
+      margin: 6px 0 10px;
+    }
     button{
       appearance:none; border:0; cursor:pointer;
-      padding:10px 12px; border-radius: 14px;
+      padding:12px 14px; border-radius: 16px;
       background: linear-gradient(135deg, #ff4fb9, #ff8ad8);
-      color:white; font-weight:900;
+      color:white; font-weight:950;
       box-shadow: 0 12px 22px rgba(255,79,185,.25);
       transition: transform .08s ease, filter .15s ease;
       user-select:none;
+      font-size: 14px;
     }
     button.secondary{
       background: linear-gradient(135deg, #7ad8ff, #7b7bff);
       box-shadow: 0 12px 22px rgba(123,123,255,.2);
     }
     button.ghost{
-      background: #ffffffb3;
-      color: #3b3b3b;
-      border: 1px solid #ffffffd9;
+      background: #ffffffdd;
+      color: #2f2f2f;
+      border: 1px solid #ffffffee;
       box-shadow: 0 12px 22px rgba(0,0,0,.08);
     }
     button:active{transform: translateY(1px) scale(.99)}
     button:hover{filter:saturate(1.05) brightness(1.02)}
 
+    /* Vollbild Button nur mobile */
+    #fsBtn{ display:none; }
+    @media (max-width: 980px){
+      #fsBtn{ display:inline-flex; }
+    }
+
+    /* Stats */
     .hud{
       display:grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 10px;
-      padding: 0 10px 12px;
+      padding: 0 2px 12px;
     }
-    @media (max-width: 520px){ .hud{grid-template-columns: repeat(2,1fr);} }
+    @media (max-width: 420px){
+      .hud{ grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (min-width: 980px){
+      .hud{ grid-template-columns: repeat(5, 1fr); }
+    }
     .stat{
-      background:#ffffffb3;
-      border: 1px solid #ffffffd9;
       border-radius: 18px;
-      padding: 10px 12px;
+      padding: 11px 12px;
+      min-height: 64px;
       box-shadow: 0 10px 18px rgba(0,0,0,.06);
+      border: 1px solid rgba(255,255,255,.88);
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.86), rgba(255,255,255,.62));
+      position:relative;
+      overflow:hidden;
     }
-    .stat .k{font-size:12px; opacity:.75}
-    .stat .v{font-size:18px; font-weight:900; margin-top:2px}
+    .stat:before{
+      content:"";
+      position:absolute; inset:-40px -30px auto auto;
+      width: 120px; height: 120px;
+      background: radial-gradient(circle, rgba(255,79,185,.22), transparent 70%);
+      transform: rotate(18deg);
+      pointer-events:none;
+    }
+    .stat .k{font-size:12px; opacity:.84; font-weight:900}
+    .stat .v{font-size:20px; font-weight:1000; margin-top:3px}
 
-    /* Board fills available space */
-    .boardWrap{
-      padding: 6px 10px 10px;
-      height: clamp(520px, 68vh, 820px); /* <-- füllt mehr „Feld“ */
-      display:flex;
-    }
+    /* Board container */
+    .boardWrap{ display:flex; justify-content:center; padding: 2px 0 10px; }
+
     .board{
-      width: 100%;
-      height: 100%;
       border-radius: 26px;
       background:
-        radial-gradient(circle at 20% 20%, rgba(255,255,255,.8) 0 18%, transparent 19%),
-        radial-gradient(circle at 75% 30%, rgba(255,255,255,.55) 0 12%, transparent 13%),
+        radial-gradient(circle at 20% 20%, rgba(255,255,255,.82) 0 18%, transparent 19%),
+        radial-gradient(circle at 75% 30%, rgba(255,255,255,.58) 0 12%, transparent 13%),
         linear-gradient(135deg, #fff, #ffffff80);
       border: 1px solid #ffffffcc;
       box-shadow: 0 18px 34px rgba(0,0,0,.10);
       position:relative;
       touch-action:none;
-      padding: 10px;
-      overflow: visible;
+      overflow:hidden;
+      width: min(94vw, 720px);
+      height: min(94vw, 720px);
     }
+
+    /* Progress overlay over the field */
+    .boardTop{
+      position:absolute;
+      left:10px; right:10px; top:10px;
+      z-index:20;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.82);
+      border: 1px solid rgba(255,255,255,.94);
+      box-shadow: 0 12px 22px rgba(0,0,0,.10);
+      backdrop-filter: blur(10px);
+    }
+    .boardTop .label{
+      font-weight:1000;
+      font-size: 12px;
+      opacity:.92;
+      white-space:nowrap;
+    }
+    .boardTop .pct{
+      font-weight:1000;
+      font-size: 12px;
+      opacity:.92;
+      white-space:nowrap;
+      margin-left:auto;
+    }
+    .bar{
+      flex: 1 1 auto;
+      height: 14px;
+      border-radius: 999px;
+      background: #ffffff;
+      border: 1px solid #eee;
+      overflow:hidden;
+    }
+    .bar > div{
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #ff4fb9, #ffd15a, #7ad8ff);
+      transition: width .25s ease;
+    }
+
     .grid{
-      width:100%;
-      height:100%;
+      position:absolute;
+      left:0; right:0; bottom:0;
+      top: 66px;
       display:grid;
-      grid-template-columns: repeat(8, 1fr);
-      grid-template-rows: repeat(8, 1fr);
       gap: var(--gap);
-      padding: 10px;
+      padding: 12px;
       border-radius: 20px;
       background: linear-gradient(135deg, #ffd7ec, #dff4ff);
-      border: 1px solid rgba(255,255,255,.85);
-      position:relative;
+      border-top: 1px solid rgba(255,255,255,.85);
+      touch-action:none;
     }
     .cell{
       position:relative;
       border-radius: var(--radius);
-      background: rgba(255,255,255,.35);
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.7);
+      background: rgba(255,255,255,.28);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.70);
       overflow: visible;
       aspect-ratio: 1 / 1;
     }
@@ -179,11 +375,15 @@
       place-items:center;
       user-select:none;
       transform: translateZ(0);
-      transition: transform 280ms ease; /* <-- langsamer */
+      transition: transform var(--swapMs) cubic-bezier(.18,.85,.22,1);
       box-shadow: inset 0 -10px 16px rgba(0,0,0,.08), 0 14px 18px rgba(0,0,0,.10);
       overflow:hidden;
       will-change: transform;
+      z-index: 1;
+      isolation: isolate;
+      background-clip: padding-box;
     }
+    .swapMoving{ z-index: 50 !important; }
     .candy::before{
       content:"";
       position:absolute;
@@ -193,170 +393,190 @@
       background: rgba(255,255,255,.55);
       transform: rotate(-10deg);
       pointer-events:none;
+      opacity:.92;
     }
     .candy img{
-      width: 82%;
-      height: 82%;
+      width: 88%;
+      height: 88%;
       object-fit: contain;
-      filter: drop-shadow(0 8px 10px rgba(0,0,0,.15));
+      filter: drop-shadow(0 10px 12px rgba(0,0,0,.18));
       pointer-events:none;
       transform: translateZ(0);
+      opacity: 1;
     }
 
     .selected{
       box-shadow: var(--ring), inset 0 -10px 16px rgba(0,0,0,.08), 0 14px 18px rgba(0,0,0,.12);
-      transform: scale(1.06);
+      transform: scale(1.09);
     }
     .blocked{ pointer-events:none; opacity:.98; }
+    .dragging{
+      transition: transform 0ms !important;
+      z-index:80;
+      filter: drop-shadow(0 18px 16px rgba(0,0,0,.18));
+    }
 
-    /* backplates */
+    /* Backplates (korrigierte Farben: gelbe chars nicht auf gelbem plate) */
     .t-sweety  { background: linear-gradient(135deg, #ff4fb9, #ff9adf); }
     .t-sleepy  { background: linear-gradient(135deg, #7ad8ff, #b7f0ff); }
-    .t-normal  { background: linear-gradient(135deg, #ffd15a, #ffe7a0); }
-    .t-cry     { background: linear-gradient(135deg, #7b7bff, #b8b1ff); }
-    .t-sourworm{ background: linear-gradient(135deg, #5ef2b5, #b6ffd6); }
-    .t-citrussy{ background: linear-gradient(135deg, #ff9f43, #ffd1a6); }
-    .t-koala   { background: linear-gradient(135deg, #ff6b6b, #ffb3b3); }
+    .t-normal  { background: linear-gradient(135deg, #7b7bff, #cbbcff); }
+    .t-cry     { background: linear-gradient(135deg, #1fd1ff, #b8b1ff); }
+    .t-happy   { background: linear-gradient(135deg, #5ef2b5, #b6ffd6); }
+    .t-grumpy  { background: linear-gradient(135deg, #ff6b6b, #ffb3b3); }
+    .t-mond    { background: linear-gradient(135deg, #2b2b2b, #9b59ff); }
+    .t-donut   { background: linear-gradient(135deg, #ffd1f2, #c9fffb); }
+    .t-joyce   { background: linear-gradient(135deg, #ffb86b, #b8d7ff); }
+    .t-smokey  { background: linear-gradient(135deg, #9fd7ff, #d8f2ff); }
 
-    /* Pop + Bling */
-    @keyframes pop{
+    .t-worm    { background: linear-gradient(135deg, #63ffa9, #a7ffe5); }
+    .t-cit     { background: linear-gradient(135deg, #ff9f43, #ffd1a6); }
+    .t-koala   { background: linear-gradient(135deg, #9b59ff, #d3b8ff); }
+
+    .comboStripe::after{
+      content:"";
+      position:absolute; inset: 4px;
+      border-radius: calc(var(--radius) - 4px);
+      background:
+        linear-gradient(90deg,
+          rgba(255,79,185,.0),
+          rgba(255,79,185,.55),
+          rgba(255,209,90,.55),
+          rgba(122,216,255,.55),
+          rgba(123,123,255,.55),
+          rgba(255,79,185,.0)
+        );
+      opacity:.9;
+      pointer-events:none;
+      mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+      -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+      padding:2px;
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      animation: stripeMove 900ms linear infinite;
+    }
+    @keyframes stripeMove{
+      0%{transform: translateX(-12%)}
+      100%{transform: translateX(12%)}
+    }
+
+    @keyframes popBig{
       0%{transform:scale(1)}
-      35%{transform:scale(1.18)}
+      22%{transform:scale(1.34)}
+      58%{transform:scale(.86)}
       100%{transform:scale(0)}
     }
-    .pop{ animation: pop 280ms ease forwards; } /* <-- langsamer */
+    .pop{ animation: popBig var(--popMs) cubic-bezier(.18,.9,.2,1) forwards; }
 
-    @keyframes wobble{
-      0%{transform:scale(1) rotate(0deg)}
-      25%{transform:scale(1.03) rotate(-4deg)}
-      50%{transform:scale(1.06) rotate(4deg)}
-      100%{transform:scale(1) rotate(0deg)}
+    @keyframes bumper{
+      0%{transform:scale(.90)}
+      55%{transform:scale(1.15)}
+      82%{transform:scale(.98)}
+      100%{transform:scale(1)}
     }
-    .wobble{ animation: wobble 320ms ease; } /* <-- langsamer */
+    .bumper{ animation: bumper 300ms cubic-bezier(.16,.95,.2,1); }
 
     @keyframes sparkle{
       0%{transform: translate(-50%,-50%) scale(.2); opacity:0}
       20%{opacity:1}
-      100%{transform: translate(-50%,-95%) scale(1.35); opacity:0}
+      100%{transform: translate(-50%,-135%) scale(1.8); opacity:0}
     }
     .sparkle{
       position:absolute; left:50%; top:55%;
-      width: 12px; height:12px;
+      width: 14px; height:14px;
       border-radius: 999px;
       background: radial-gradient(circle at 30% 30%, #fff, rgba(255,255,255,.2));
-      box-shadow: 0 0 18px rgba(255,255,255,.9), 0 0 28px rgba(255,79,185,.45);
-      animation: sparkle 620ms ease forwards;
+      box-shadow: 0 0 18px rgba(255,255,255,.92), 0 0 34px rgba(255,79,185,.45);
+      animation: sparkle 820ms ease forwards;
       pointer-events:none;
       mix-blend-mode: screen;
     }
 
-    @keyframes boom{
-      0%{transform: translate(-50%,-50%) scale(.2); opacity:.9}
-      100%{transform: translate(-50%,-50%) scale(2.9); opacity:0}
-    }
-    .boomRing{
-      position:absolute; left:50%; top:50%;
-      width: 40px; height:40px;
-      border-radius: 999px;
-      border: 3px solid rgba(255,255,255,.9);
-      box-shadow: 0 0 20px rgba(255,79,185,.35), 0 0 30px rgba(122,216,255,.25);
-      animation: boom 720ms ease forwards; /* <-- langsamer */
+    .confetti{
+      position:absolute;
+      width: 10px; height: 10px;
+      border-radius: 3px;
+      background: rgba(255,255,255,.9);
+      box-shadow: 0 0 18px rgba(255,255,255,.7);
       pointer-events:none;
       mix-blend-mode: screen;
+      animation: confettiFly 900ms cubic-bezier(.15,.9,.2,1) forwards;
+    }
+    @keyframes confettiFly{
+      0%{ transform: translate3d(0,0,0) rotate(0deg); opacity:0 }
+      10%{ opacity:1 }
+      100%{ transform: translate3d(var(--dx), var(--dy), 0) rotate(220deg); opacity:0 }
     }
 
-    @keyframes floatUp{
-      from{transform: translate(-50%, 0); opacity:1}
-      to{transform: translate(-50%, -18px); opacity:0}
-    }
-    .toast{
-      position:absolute; left:50%; top:10px;
-      transform: translateX(-50%);
-      padding: 10px 12px;
-      border-radius: 999px;
-      background: #ffffffd9;
-      border: 1px solid #ffffff;
-      box-shadow: 0 12px 22px rgba(0,0,0,.10);
-      font-weight:900;
+    .fxLayer{
+      position:absolute; inset:0;
       pointer-events:none;
-      animation: floatUp 1000ms ease forwards;
-      white-space:nowrap;
-      z-index: 20;
-    }
-
-    .dragging{
-      transition: transform 0ms !important;
-      z-index: 5;
-      filter: drop-shadow(0 18px 16px rgba(0,0,0,.18));
-    }
-
-    /* Side */
-    .side h2{ margin: 8px 0 6px; font-size: 16px; }
-    .help{
-      font-size: 13px;
-      line-height:1.35;
-      opacity:.95;
-      background:#ffffffb3;
-      border:1px solid #ffffffd9;
-      border-radius: 18px;
-      padding: 12px 12px;
-      box-shadow: 0 10px 18px rgba(0,0,0,.06);
-    }
-    .help kbd{
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 12px;
-      background:#fff;
-      border:1px solid #eee;
-      border-bottom-width:2px;
-      padding: 2px 6px;
-      border-radius: 8px;
-    }
-    .progress, .leader{
-      margin-top: 10px;
-      background:#ffffffb3;
-      border:1px solid #ffffffd9;
-      border-radius: 18px;
-      padding: 12px 12px;
-      box-shadow: 0 10px 18px rgba(0,0,0,.06);
-    }
-    .bar{
-      height: 14px;
-      border-radius: 999px;
-      background: #ffffff;
-      border: 1px solid #eee;
       overflow:hidden;
-      margin-top: 8px;
-    }
-    .bar > div{
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, #ff4fb9, #ffd15a, #7ad8ff);
-      transition: width .25s ease;
+      z-index:10;
     }
 
-    .row{
-      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
-      margin-top:10px;
+    .comboPopup{
+      position:absolute;
+      left:50%; top: 50%;
+      transform: translate(-50%,-50%);
+      z-index: 30;
+      width: min(460px, 90vw);
+      border-radius: 26px;
+      background: linear-gradient(135deg, rgba(255,255,255,.96), rgba(255,255,255,.84));
+      border:1px solid rgba(255,255,255,.9);
+      box-shadow: 0 24px 70px rgba(0,0,0,.22);
+      padding: 14px 14px;
+      display:flex;
+      gap:12px;
+      align-items:center;
+      opacity:0;
+      animation: popCard 1.25s ease forwards;
+      backdrop-filter: blur(10px);
     }
+    .comboPopup img{
+      width: 58px; height: 58px; object-fit:contain;
+      filter: drop-shadow(0 10px 16px rgba(0,0,0,.18));
+      flex:0 0 auto;
+    }
+    .comboPopup .t1{ font-weight:1000; font-size: 18px; line-height: 1.05; }
+    .comboPopup .t2{ margin-top:3px; font-weight:950; opacity:.9; font-size: 13px; }
+    @keyframes popCard{
+      0%{opacity:0; transform: translate(-50%,-46%) scale(.95)}
+      14%{opacity:1; transform: translate(-50%,-50%) scale(1.03)}
+      68%{opacity:1}
+      100%{opacity:0; transform: translate(-50%,-54%) scale(.98)}
+    }
+
+    /* Side panel */
+    .side h2{ margin: 8px 0 6px; font-size: 16px; }
+    .help, .leader, .luvList{
+      margin-top: 10px;
+      background:#ffffffcc;
+      border:1px solid #ffffffee;
+      border-radius: 18px;
+      padding: 12px 12px;
+      box-shadow: 0 10px 18px rgba(0,0,0,.06);
+    }
+    .help{font-size: 13px; line-height:1.35; opacity:.95;}
+
+    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px;}
     input{
       width: 100%;
-      padding: 10px 12px;
+      padding: 11px 12px;
       border-radius: 14px;
       border: 1px solid #eee;
       background:#fff;
       outline:none;
       box-shadow: 0 10px 18px rgba(0,0,0,.06);
-      font-weight:700;
+      font-weight:900;
+      font-size: 14px;
     }
-    .tiny{
-      font-size:12px; opacity:.75;
-    }
-    .lb{
-      margin-top:10px;
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-    }
+    .tiny{font-size:12px; opacity:.78;}
+
+    .lb{margin-top:10px; display:flex; flex-direction:column; gap:8px;}
     .lbItem{
       display:flex; justify-content:space-between; gap:10px;
       padding: 10px 12px;
@@ -372,10 +592,38 @@
       width:26px; height:26px; border-radius: 10px;
       display:grid; place-items:center;
       background: linear-gradient(135deg, #ffd15a, #ff8ad8);
-      color:#fff; font-weight:900;
+      color:#fff; font-weight:950;
       flex:0 0 auto;
     }
-    .footerNote{ margin-top:12px; font-size:12px; opacity:.75; text-align:center; }
+
+    .luvRow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:10px 10px;
+      border-radius: 14px;
+      background:#fff;
+      border:1px solid #eee;
+      box-shadow: 0 10px 18px rgba(0,0,0,.06);
+      margin-top:8px;
+      font-size:13px;
+      cursor:pointer;
+      transition: transform .08s ease, filter .15s ease;
+    }
+    .luvRow:active{transform: scale(.99)}
+    .luvRow:hover{filter:saturate(1.03)}
+    .luvRow .left{display:flex; align-items:center; gap:10px; font-weight:950;}
+    .luvRow img{width:34px; height:34px; object-fit:contain; filter: drop-shadow(0 8px 10px rgba(0,0,0,.15));}
+    .tag{
+      font-size:12px;
+      font-weight:950;
+      padding:6px 10px;
+      border-radius:999px;
+      background: rgba(255,79,185,.12);
+      border: 1px solid rgba(255,79,185,.22);
+      white-space:nowrap;
+    }
 
     /* Intro */
     .modalBack{
@@ -384,11 +632,11 @@
       backdrop-filter: blur(10px);
       display:grid;
       place-items:center;
-      z-index: 50;
-      padding: 16px;
+      z-index:60;
+      padding:16px;
     }
     .modal{
-      width: min(760px, 96vw);
+      width: min(820px, 96vw);
       border-radius: 26px;
       background: linear-gradient(135deg, rgba(255,255,255,.96), rgba(255,255,255,.86));
       border:1px solid rgba(255,255,255,.85);
@@ -396,34 +644,9 @@
       overflow:hidden;
       position:relative;
     }
-    .modalHead{
-      padding: 16px 18px 10px;
-      display:flex; align-items:center; justify-content:space-between; gap:12px;
-    }
-    .modalTitle{
-      display:flex; align-items:center; gap:10px;
-    }
+    .modalHead{ padding: 16px 18px 10px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
     .modalTitle h3{ margin:0; font-size:18px; letter-spacing:.2px; }
-    .modalBody{
-      padding: 0 18px 16px;
-      font-size: 13.5px;
-      line-height: 1.35;
-      color:#2b2b2b;
-    }
-    .modalGrid{
-      margin-top:12px;
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    @media (max-width: 640px){ .modalGrid{grid-template-columns:1fr} }
-    .modalCard{
-      background:#ffffffd0;
-      border:1px solid #ffffff;
-      border-radius: 18px;
-      padding: 12px;
-      box-shadow: 0 12px 22px rgba(0,0,0,.10);
-    }
+    .modalBody{ padding: 0 18px 16px; font-size: 13.5px; line-height: 1.35; }
     .modalFoot{
       padding: 12px 18px 18px;
       display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;
@@ -431,18 +654,18 @@
       background: rgba(255,255,255,.55);
     }
 
-    /* Win/Gameover overlay */
+    /* Overlays */
     .overlayBack{
       position:fixed; inset:0;
       background: rgba(10,8,18,.45);
       backdrop-filter: blur(10px);
       display:none;
       place-items:center;
-      z-index: 60;
-      padding: 16px;
+      z-index:70;
+      padding:16px;
     }
     .overlay{
-      width:min(560px, 96vw);
+      width:min(600px, 96vw);
       border-radius: 26px;
       background: linear-gradient(135deg, rgba(255,255,255,.96), rgba(255,255,255,.86));
       border:1px solid rgba(255,255,255,.85);
@@ -458,68 +681,131 @@
       border-top:1px solid rgba(255,255,255,.7);
       background: rgba(255,255,255,.55);
     }
+
+    /* Ordering */
+    .gameCard{ order: 1; }
+    .side{ order: 2; }
+
+    /* Fullscreen mode */
+    .fsHud{
+      position:fixed;
+      left:10px; right:10px;
+      top: calc(10px + var(--safeTop));
+      z-index: 9997;
+      display:none;
+      gap:10px;
+      align-items:center;
+      padding:10px 12px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.88);
+      border: 1px solid rgba(255,255,255,.95);
+      box-shadow: 0 18px 60px rgba(0,0,0,.22);
+      backdrop-filter: blur(10px);
+    }
+    .fsHud .mini{
+      font-weight:1000;
+      font-size: 12px;
+      white-space:nowrap;
+    }
+    .fsHud .mini strong{ font-size: 13px; }
+    .fsHud .bar{ flex:1 1 auto; height: 12px; }
+    .fsHud button{ padding:10px 12px; border-radius:14px; }
+
+    body.fsMode .fsHud{ display:flex; }
+    body.fsMode .wrap{ overflow:hidden; }
+    body.fsMode .side,
+    body.fsMode .gameBanner,
+    body.fsMode .hud,
+    body.fsMode #status,
+    body.fsMode .controlsRow{
+      display:none !important;
+    }
+    body.fsMode .boardWrap{
+      position:fixed;
+      inset: calc(70px + var(--safeTop)) 10px calc(16px + var(--safeBottom)) 10px;
+      z-index: 9996;
+      display:grid;
+      place-items:center;
+      padding:0;
+      margin:0;
+    }
+    body.fsMode .board{
+      box-shadow: 0 30px 100px rgba(0,0,0,.35);
+      border: 1px solid rgba(255,255,255,.95);
+    }
+
+    /* Footer */
+    .footer{
+      margin-top: 10px;
+      border-radius: 18px;
+      padding: 12px 12px;
+      background: linear-gradient(135deg, var(--twitch), var(--twitch2));
+      color: rgba(255,255,255,.96);
+      font-weight: 950;
+      text-align:center;
+      box-shadow: 0 14px 34px rgba(0,0,0,.14);
+      border: 1px solid rgba(255,255,255,.18);
+    }
   </style>
 </head>
 
 <body>
+  <div class="rotateOverlay">
+    <div class="box">
+      <h2>📱 Bitte Handy drehen</h2>
+      <p>Dieses Mini-Game ist für <b>Hochkant</b> optimiert.</p>
+    </div>
+  </div>
 
-  <!-- Anleitung -->
+  <div class="bgLuvvies" id="bgLuvvies"></div>
+
+  <!-- Fullscreen Mini HUD -->
+  <div class="fsHud" id="fsHud">
+    <div class="mini">Score <strong id="fsScore">0</strong></div>
+    <div class="mini">Combo <strong id="fsCombo">x1</strong></div>
+    <div class="bar"><div id="fsGoalBar"></div></div>
+    <div class="mini" id="fsGoalPct">0%</div>
+    <button class="ghost" id="fsExit">Exit</button>
+  </div>
+
+  <!-- Intro -->
   <div class="modalBack" id="intro">
     <div class="modal">
       <div class="modalHead">
         <div class="modalTitle">
-          <div class="logo" aria-hidden="true"></div>
-          <div>
-            <h3>Sweet Swap – Anleitung</h3>
-            <div class="sub">Bestätigen, dann startet das Spiel ✨</div>
-          </div>
+          <h3>Luvvies Crush – Anleitung</h3>
+          <div class="tiny">Bestätigen, dann startet das Spiel ✨</div>
         </div>
       </div>
 
       <div class="modalBody">
-        <p><b>Ziel:</b> Tausche 2 benachbarte Candies → mach <b>3+</b> in Reihe/Spalte. Kettenreaktionen erhöhen den <b>Combo</b>-Multiplikator.</p>
+        <p><b>Basic:</b> Tausche 2 benachbarte Luvvies → Match <b>3+</b>.</p>
 
-        <div class="modalGrid">
-          <div class="modalCard">
-            <b>Steuerung</b>
-            <ul style="margin:0; padding-left:18px">
-              <li><b>PC:</b> Klick Candy → Klick Nachbar</li>
-              <li><b>Mobile:</b> Antippen & <b>wischen</b></li>
-              <li><kbd>R</kbd> Neustart, <kbd>H</kbd> Hint</li>
-            </ul>
-          </div>
-          <div class="modalCard">
-            <b>Specials (weniger Spawn)</b>
-            <div style="opacity:.92">
-              <div style="margin:6px 0"><b>Citrussy</b>: Kreuz-Explosion Radius <b>3</b>.</div>
-              <div style="margin:6px 0"><b>Sourworm</b>: löscht <b>ganze Reihe</b> (horizontal).</div>
-              <div style="margin:6px 0"><b>Koala</b>:
-                <ul style="margin:6px 0 0; padding-left:18px">
-                  <li>Koala + Citrussy → <b>Board wipe</b> + Bonus</li>
-                  <li>Koala + Sourworm → wie Citrussy (Radius 3)</li>
-                  <li>Koala + Sweety/Sleepy/Normal/Cry → löscht <b>alle</b> dieser Sorte</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
+        <p style="margin:10px 0 0"><b>Powerups:</b></p>
+        <ul style="margin:6px 0 0; padding-left:18px;">
+          <li><b>4 in einer Linie</b> → <b>Sourworm</b></li>
+          <li><b>5 in einer Linie</b> → <b>Citrussy</b></li>
+          <li><b>T/L-Form (5)</b> → <b>Koala</b> (Color-Magic)</li>
+          <li><b>Mondlie + Sleepy</b> → <b>Shuffle</b> (nur wenn Swap ein Match 3+ auslöst)</li>
+          <li><b>2× Joyce + 1× Smokey</b> (oder umgekehrt) → <b>„Best Buddies“</b></li>
+          <li><b>Donutlie + Happy</b> (2+1) → <b>„Sugar Rush“</b></li>
+          <li><b>Donutlie + Sweety</b> (2+1) → <b>„Sprinkle Beam“</b></li>
+        </ul>
 
-        <div class="help" style="margin-top:12px">
-          <div style="font-weight:900; margin-bottom:6px">Leaderboard (optional)</div>
-          <div style="opacity:.9">
-            Du kannst ein Supabase-Leaderboard aktivieren. Dafür brauchst du <b>URL</b> + <b>Anon Key</b> (nie Secret Key im Browser!).
-          </div>
-        </div>
+        <p style="margin:10px 0 0"><b>Cookie Special:</b> In einer Linie <b>2× Grumpy + 1× Happy</b> → <b>“Therapy Time”</b>:
+          Alle Grumpy → Happy, <b>+3 Moves</b> + Bonus-Punkte.</p>
+
+        <p class="tiny" style="margin:10px 0 0">Leaderboard via Supabase (Tabelle: <b>luvvies_crush_leaderboard</b>).</p>
       </div>
 
       <div class="modalFoot">
-        <button class="ghost" id="introCloseHint">Später nochmal anzeigen</button>
+        <button class="ghost" id="introCloseHint">Schließen</button>
         <button id="introStart">Verstanden, los geht’s! ✨</button>
       </div>
     </div>
   </div>
 
-  <!-- GameOver / LevelUp Overlay -->
+  <!-- Game Over Overlay -->
   <div class="overlayBack" id="overlayBack">
     <div class="overlay">
       <div class="body">
@@ -534,21 +820,36 @@
     </div>
   </div>
 
-  <div class="wrap">
-    <section class="card">
-      <div class="header">
-        <div class="brand">
-          <div class="logo" aria-hidden="true"></div>
-          <div>
-            <h1>Sweet Swap</h1>
-            <div class="sub">Langsamere Swaps, weniger Specials, mehr „Bling & Peng“ ✨💥</div>
-          </div>
+  <!-- Character Info Overlay -->
+  <div class="overlayBack" id="infoBack">
+    <div class="overlay">
+      <div class="body" style="display:flex; gap:12px; align-items:center;">
+        <img id="infoImg" src="" alt="" style="width:70px;height:70px;object-fit:contain;filter:drop-shadow(0 10px 16px rgba(0,0,0,.18));">
+        <div>
+          <h3 id="infoName" style="margin:0 0 6px;">—</h3>
+          <p id="infoAbility" style="margin:0; font-weight:950;">—</p>
         </div>
-        <div class="btns">
-          <button class="ghost" id="howBtn">Anleitung</button>
-          <button id="newBtn">Neues Spiel</button>
-          <button class="secondary" id="hintBtn">Hint</button>
-        </div>
+      </div>
+      <div class="body" style="padding-top:0;">
+        <p id="infoStory" style="margin:0; opacity:.92;">—</p>
+      </div>
+      <div class="foot">
+        <button class="ghost" id="infoClose">Okay 🫶</button>
+      </div>
+    </div>
+  </div>
+
+  <main class="wrap">
+    <section class="card gameCard">
+      <div class="gameBanner">
+        <div class="title">Luvvies Crush</div>
+      </div>
+
+      <div class="controlsRow">
+        <button class="ghost" id="howBtn">Anleitung</button>
+        <button id="newBtn">Neues Spiel</button>
+        <button class="secondary" id="hintBtn">Hint</button>
+        <button class="ghost" id="fsBtn">Vollbild</button>
       </div>
 
       <div class="hud">
@@ -556,35 +857,41 @@
         <div class="stat"><div class="k">Ziel</div><div class="v" id="goal">4000</div></div>
         <div class="stat"><div class="k">Score</div><div class="v" id="score">0</div></div>
         <div class="stat"><div class="k">Moves</div><div class="v" id="moves">30</div></div>
+        <div class="stat"><div class="k">Combo</div><div class="v" id="combo">x1</div></div>
       </div>
 
       <div class="boardWrap">
         <div class="board" id="board">
+          <div class="boardTop">
+            <div class="label">Fortschritt zum Ziel</div>
+            <div class="bar"><div id="goalBar"></div></div>
+            <div class="pct" id="goalPct">0%</div>
+          </div>
+          <div class="fxLayer" id="fx"></div>
           <div class="grid" id="grid"></div>
         </div>
       </div>
 
-      <div class="footerNote">Pro-Tipp: Koala + Sweety entfernt alle Sweeties – KOALA ist jetzt eine echte „Color Bomb“ 🐨✨</div>
+      <div class="tiny" style="text-align:center; padding:0 6px 6px;" id="status">
+        Match ein paar Luvvies ✨
+      </div>
     </section>
 
     <aside class="card side">
       <h2>Quick-Tipps</h2>
       <div class="help">
-        <p style="margin-top:0"><b>Weniger Specials:</b> Sourworm / Citrussy / Koala sind jetzt selten und zusätzlich gecappt, damit nicht nur Würmer spawnen.</p>
-        <p><b>Level-System:</b> Erreiche das Ziel → nächstes Level mit höherem Ziel & Bonus-Moves.</p>
-        <p style="margin-bottom:0"><b>Leaderboard:</b> Poste deinen Score bei „Game Over“ (oder manuell).</p>
-      </div>
-
-      <div class="progress">
-        <div><b>Fortschritt zum Ziel</b></div>
-        <div class="bar"><div id="goalBar"></div></div>
-        <div style="margin-top:10px; font-size:13px; opacity:.9" id="status">Match ein paar Candies ✨</div>
+        <p style="margin:0"><b>Koala-Magic:</b> Koala + Luvvy = löscht alle dieser Sorte (und bannt sie fürs Level).</p>
+        <p style="margin:8px 0 0"><b>Koala + Citrussy:</b> Clears whole board + Extra-Punkte.</p>
+        <p style="margin:8px 0 0"><b>Mondlie + Sleepy:</b> Shuffle nur wenn dein Swap ein Match 3+ auslöst.</p>
+        <p style="margin:8px 0 0"><b>Joyce + Smokey (2+1):</b> „Best Buddies“ → Row+Col Blast + Moves.</p>
+        <p style="margin:8px 0 0"><b>Donutlie + Happy (2+1):</b> „Sugar Rush“ → 3×3 Burst + Worm Spawn.</p>
+        <p style="margin:8px 0 0"><b>Donutlie + Sweety (2+1):</b> „Sprinkle Beam“ → 3 Reihen clear.</p>
       </div>
 
       <div class="leader">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-          <div><b>Leaderboard</b></div>
-          <button class="ghost" id="refreshLb" style="padding:8px 10px; border-radius:12px;">Refresh</button>
+          <div><b>Leaderboard</b> <span class="tiny" id="sbStatus">Supabase: —</span></div>
+          <button class="ghost" id="refreshLb" style="padding:10px 12px; border-radius:14px;">Refresh</button>
         </div>
 
         <div class="row">
@@ -593,7 +900,7 @@
             <input id="playerName" placeholder="z.B. KOALAaufPILLEN" maxlength="24" />
             <div class="tiny" style="margin-top:6px;">
               Auto-Post bei Game Over:
-              <label style="font-weight:800; margin-left:6px;">
+              <label style="font-weight:950; margin-left:6px;">
                 <input type="checkbox" id="autoPost" checked />
                 an
               </label>
@@ -605,94 +912,166 @@
           <button class="ghost" id="postNow">Score posten</button>
         </div>
 
-        <div class="tiny" id="sbStatus" style="margin-top:8px;">
-          Supabase: <b>nicht konfiguriert</b> (unten im Code URL/Key setzen)
-        </div>
-
         <div class="lb" id="lbList" style="margin-top:10px;"></div>
       </div>
 
-      <div class="footerNote">
-        Candy-Bilder werden von Wix geladen (Internet nötig). Für Offline: Base64 einbetten.
+      <div class="luvList" id="luvList">
+        <div><b>Deine Luvvies</b> <span class="tiny">(anklicken für Info & Story)</span></div>
       </div>
     </aside>
-  </div>
+
+    <div class="footer">© KOALAaufPILLEN × Luvvies • All Luvvies loved 🫶</div>
+  </main>
 
 <script>
 (() => {
-  const N = 8;
+  window.addEventListener("error", (e) => {
+    const box = document.createElement("div");
+    box.style.cssText = `
+      position:fixed; inset:12px; z-index:99999;
+      background:rgba(10,8,18,.92); color:#fff;
+      border:2px solid rgba(255,255,255,.25);
+      border-radius:18px; padding:14px; font:14px/1.35 system-ui;
+      box-shadow:0 20px 60px rgba(0,0,0,.45); overflow:auto;`;
+    box.innerHTML = `<b>JS Error</b><br><br>${String(e.message)}<br><br><small>${String(e.filename)}:${e.lineno}:${e.colno}</small>`;
+    document.body.appendChild(box);
+  });
 
-  // --- Candy Images (deine URLs) ---
+  /************
+   * BOARD SIZE
+   ************/
+  const ROWS = 12;
+  const COLS = 12;
+  const FULLSCREEN_TOP_PAD = 12;
+
+  // Images
   const IMG = {
     citrussy: "https://static.wixstatic.com/media/d05122_9cdc763a1ec94a90a3fd91ee3481b2c4~mv2.png",
-    sourworm: "https://static.wixstatic.com/media/d05122_a8e7a37e04694ff2a99b8af60f1567b7~mv2.png",
+    worm:     "https://static.wixstatic.com/media/d05122_a8e7a37e04694ff2a99b8af60f1567b7~mv2.png",
     sweety:   "https://static.wixstatic.com/media/d05122_efe39fec7e5c4d569dfb3fef75e5b6ff~mv2.png",
     sleepy:   "https://static.wixstatic.com/media/d05122_cfd779a0aad04c72bd08efbc0f363f53~mv2.png",
     normal:   "https://static.wixstatic.com/media/d05122_8a7c2f43a31247a6994651163c2898c5~mv2.png",
     cry:      "https://static.wixstatic.com/media/d05122_1950f2496b344e56bcac10ea51286750~mv2.png",
     koala:    "https://static.wixstatic.com/media/d05122_9cb17e901a1a4775819bfda895d0f1c9~mv2.png",
+    grumpy:   "https://static.wixstatic.com/media/d05122_983d59c5911e400e92819d12e27d6073~mv2.png",
+    happy:    "https://static.wixstatic.com/media/d05122_cff843264bd8495aaa9ac0360d72e131~mv2.png",
+    mondlie:  "https://static.wixstatic.com/media/d05122_aea344c0fd954194af2855eea745febf~mv2.png",
+    donutlie: "https://static.wixstatic.com/media/d05122_5041c19e720d4e7e9439e4acf793655c~mv2.png",
+    joyce:    "https://static.wixstatic.com/media/d05122_36a3f8d83be4433082995ee1a8003218~mv2.png",
+    smokey:   "https://static.wixstatic.com/media/d05122_9a607ff042b647b789e3b44cc75bd38d~mv2.png"
   };
 
-  // --- Types ---
-  const T = { SWEETY:0, SLEEPY:1, NORMAL:2, CRY:3, SOUR:4, CIT:5, KOALA:6 };
+  // Types
+  const T = {
+    SWEETY:0, SLEEPY:1, NORMAL:2, CRY:3, HAPPY:4, GRUMPY:5, MOND:6,
+    DONUT:7, JOYCE:8, SMOKEY:9,
+    WORM:10, CIT:11, KOALA:12
+  };
 
-  // Weniger Specials + zusätzlich Caps (damit nicht “nur Würmer”)
-  const CANDIES = [
-    { id:T.SWEETY,   name:"Sweety",   cls:"t-sweety",   img:IMG.sweety,   weight:36, special:false },
-    { id:T.SLEEPY,   name:"Sleepy",   cls:"t-sleepy",   img:IMG.sleepy,   weight:28, special:false },
-    { id:T.NORMAL,   name:"Normal",   cls:"t-normal",   img:IMG.normal,   weight:28, special:false },
-    { id:T.CRY,      name:"Cry",      cls:"t-cry",      img:IMG.cry,      weight:24, special:false },
+  const NORMALS = new Set([T.SWEETY, T.SLEEPY, T.NORMAL, T.CRY, T.HAPPY, T.GRUMPY, T.MOND, T.DONUT, T.JOYCE, T.SMOOKEY]);
 
-    { id:T.SOUR,     name:"Sourworm", cls:"t-sourworm", img:IMG.sourworm, weight:5,  special:true  },
-    { id:T.CIT,      name:"Citrussy", cls:"t-citrussy", img:IMG.citrussy, weight:2,  special:true  },
-    { id:T.KOALA,    name:"Koala",    cls:"t-koala",    img:IMG.koala,    weight:1,  special:true  },
+  // Candy meta (+ weights)
+  const CANDY = [
+    { id:T.SWEETY, name:"Sweety", cls:"t-sweety", img:IMG.sweety, w:22, tag:"normal" },
+    { id:T.SLEEPY, name:"Sleepy", cls:"t-sleepy", img:IMG.sleepy, w:20, tag:"normal" },
+    { id:T.NORMAL, name:"Normal", cls:"t-normal", img:IMG.normal, w:20, tag:"normal" },
+    { id:T.CRY,    name:"Cry",    cls:"t-cry",    img:IMG.cry,    w:16, tag:"normal" },
+    { id:T.HAPPY,  name:"Happy Cookie", cls:"t-happy",  img:IMG.happy,  w:16, tag:"normal" },
+    { id:T.GRUMPY, name:"Grumpy Cookie",cls:"t-grumpy", img:IMG.grumpy, w:16, tag:"normal" },
+    { id:T.MOND,   name:"Mondlie", cls:"t-mond", img:IMG.mondlie, w:12, tag:"special" },
+
+    { id:T.DONUT,  name:"Donutlie", cls:"t-donut", img:IMG.donutlie, w:14, tag:"normal" },
+    { id:T.JOYCE,  name:"Joyce", cls:"t-joyce", img:IMG.joyce, w:14, tag:"normal" },
+    { id:T.SMOKEY, name:"Smokey", cls:"t-smokey", img:IMG.smokey, w:14, tag:"normal" },
+
+    { id:T.WORM,   name:"Sourworm", cls:"t-worm", img:IMG.worm, tag:"powerup" },
+    { id:T.CIT,    name:"Citrussy", cls:"t-cit",  img:IMG.citrussy, tag:"powerup" },
+    { id:T.KOALA,  name:"Koala",    cls:"t-koala",img:IMG.koala, tag:"powerup" },
   ];
+  const meta = (t)=>CANDY.find(x=>x.id===t);
 
-  // Caps per board (hart)
-  const CAPS = { [T.SOUR]: 4, [T.CIT]: 2, [T.KOALA]: 1 };
+  // Character ability + story
+  const CHAR_INFO = {
+    [T.SWEETY]: { ability:"Normal. Match 3+.", story:"Sweety ist die Glitzer-Königin. Sie liebt saubere Swaps und macht bei jeder Kette „bling bling“." },
+    [T.SLEEPY]: { ability:"Normal. Mit Mondlie: Shuffle (nur wenn Swap Match 3+ erzeugt).", story:"Sleepy tut so, als wäre sie müde… aber bei Combos ist sie plötzlich turbo." },
+    [T.NORMAL]: { ability:"Normal. Stabil.", story:"Normal ist der ruhige Held. Er hält das Board zusammen, wenn alles „peng“ geht." },
+    [T.CRY]:    { ability:"Normal. Match 3+.", story:"Cry weint… aber eigentlich nur vor Freude, wenn du Combo x3 knallst." },
+    [T.HAPPY]:  { ability:"Normal. 2× Grumpy + 1× Happy = Therapy Time.", story:"Happy verteilt gute Laune wie Konfetti. Wenn’s brenzlig wird, lächelt er trotzdem." },
+    [T.GRUMPY]: { ability:"Normal. Therapy Time verwandelt Grumpy→Happy.", story:"Grumpy grummelt… aber heimlich liebt er extra Moves." },
+    [T.MOND]:   { ability:"Normal. Mondlie+Sleepy Swap: Shuffle nur bei Match 3+.", story:"Mondlie ist Mond-Magie. Sie sagt: „Neu mischen, neuer Sieg.“ 🌙" },
+    [T.DONUT]:  { ability:"Normal. 2× Donutlie + 1× Happy = Sugar Rush. 2× Donutlie + 1× Sweety = Sprinkle Beam.", story:"Donutlie ist Zucker-Party. Sprinkle überall! 🍩✨" },
+    [T.JOYCE]:  { ability:"Normal. Joyce+Smokey 2+1 = Best Buddies.", story:"Joyce ist loyal & verspielt. Sie bringt Pfoten-Action ins Board 🐶" },
+    [T.SMOKEY]: { ability:"Normal. Smokey+Joyce 2+1 = Best Buddies.", story:"Smokey ist die Boss-Katze. Wenn’s knallt, miaut sie nur: „gut.“ 🐱" },
 
-  // --- Supabase config (FÜLLE DAS AUS) ---
-  // WICHTIG: Nur Anon Key hier rein, niemals Secret Key.
-  const SUPABASE_URL = "";       // z.B. "https://xxxx.supabase.co"
-  const SUPABASE_ANON = "";      // z.B. "eyJhbGciOiJIUzI1NiIs..."
-  // Tabelle (SQL) Vorschlag:
-  // create table leaderboard (
-  //   id uuid primary key default gen_random_uuid(),
-  //   player text not null,
-  //   score int not null,
-  //   level int not null,
-  //   created_at timestamptz not null default now()
-  // );
-  // RLS: an (row level security) + Policies:
-  // - Select: public
-  // - Insert: public
-  // (Oder restriktiver wenn du willst)
+    [T.WORM]:   { ability:"Powerup (4er Match): Clear Row/Column. Worm+Worm = 6-Spalten-Wave.", story:"Sourworm ist klein, aber frech. Wenn er wütend ist, macht er’s richtig sauer!" },
+    [T.CIT]:    { ability:"Powerup (5er Match): Cross-Explosion Radius 3.", story:"Citrussy liebt Drama. Ein Spritzer hier… und BOOM überall." },
+    [T.KOALA]:  { ability:"Powerup (T/L-Form): Koala+Sorte löscht alle dieser Sorte (bannt sie). Koala+Citrussy = Full Clear.", story:"Koala ist der Boss. Er räumt auf – und liebt „Extra-Peng“." },
+  };
 
-  // --- DOM ---
-  const gridEl   = document.getElementById("grid");
-  const boardEl  = document.getElementById("board");
+  // Background talk (3 lines each)
+  const BG_LINES = {
+    [T.SWEETY]: ["Hi hi! Ich glitzer nur für dich ✨","Mach ein Match! Ich feier dich 💖","Bling-Bling-Moment? Das warst du!"],
+    [T.SLEEPY]: ["Zzz… dein Score weckt mich 😴","Langsam… und dann BAM!","Wenn’s bounct… ist das comfy."],
+    [T.NORMAL]: ["Saubere Swaps = bester Flow 😎","Du bist im Rhythmus!","Weiter so – du hast den Run."],
+    [T.CRY]:    ["Ich weine… vor Freude 😭✨","Combo? Ich bin stolz!","Nochmal! Du packst das!"],
+    [T.HAPPY]:  ["Happy Cookie hier! 🫶","Therapy Time? Ich bring Moves!","Noch ein Match!"],
+    [T.GRUMPY]: ["Grumpy… hm.","Okay… das war knuffig.","Therapy Time… vielleicht lächle ich."],
+    [T.MOND]:   ["🌙 Mondlie sagt: Neustart ist Magie!","Shuffle? Nur wenn du’s verdienst 😌","Match first, shuffle later!"],
+    [T.DONUT]:  ["🍩 Sprinkle Party!","Donutlie liebt Combos!","Mehr Zucker, mehr Punkte!"],
+    [T.JOYCE]:  ["🐶 Wuff! Du machst das super!","Bring Smokey dazu… hehe.","Ich rieche eine Combo!"],
+    [T.SMOKEY]: ["🐱 Miau. Das war clean.","Joyce? Ja okay…","Noch ein Swap. Jetzt."],
+    [T.KOALA]:  ["Koala-Boss. Ich kann ALLES löschen 🐨✨","Bring mir eine Sorte… ich räum sie weg.","Koala + Citrussy? PENG deluxe!"]
+  };
+
+  // ========= SUPABASE (NEU) =========
+  const SUPABASE_URL  = "https://qgeddoqvzajpeawlythi.supabase.co";
+  const SUPABASE_ANON = "sb_publishable_EQUOdDGiCGgm8vA3YjN_jg_BwPnAiI_";
+  const TABLE_LB = "luvvies_crush_leaderboard";
+
+  // DOM
+  const gridEl = document.getElementById("grid");
+  const boardEl = document.getElementById("board");
+  const fxEl = document.getElementById("fx");
 
   const levelEl = document.getElementById("level");
   const goalEl  = document.getElementById("goal");
   const scoreEl = document.getElementById("score");
   const movesEl = document.getElementById("moves");
+  const comboEl = document.getElementById("combo");
   const goalBarEl = document.getElementById("goalBar");
+  const goalPctEl = document.getElementById("goalPct");
   const statusEl = document.getElementById("status");
 
-  const newBtn  = document.getElementById("newBtn");
-  const hintBtn = document.getElementById("hintBtn");
-  const howBtn  = document.getElementById("howBtn");
+  // FS HUD
+  const fsHud = document.getElementById("fsHud");
+  const fsScoreEl = document.getElementById("fsScore");
+  const fsComboEl = document.getElementById("fsCombo");
+  const fsGoalBarEl = document.getElementById("fsGoalBar");
+  const fsGoalPctEl = document.getElementById("fsGoalPct");
+  const fsExit = document.getElementById("fsExit");
+  const fsBtn = document.getElementById("fsBtn");
 
   const intro = document.getElementById("intro");
   const introStart = document.getElementById("introStart");
   const introCloseHint = document.getElementById("introCloseHint");
+  const howBtn = document.getElementById("howBtn");
 
   const overlayBack = document.getElementById("overlayBack");
   const overlayTitle = document.getElementById("overlayTitle");
-  const overlayText = document.getElementById("overlayText");
+  const overlayText  = document.getElementById("overlayText");
   const overlaySmall = document.getElementById("overlaySmall");
-  const overlayPlay = document.getElementById("overlayPlay");
-  const overlayPost = document.getElementById("overlayPost");
+  const overlayPlay  = document.getElementById("overlayPlay");
+  const overlayPost  = document.getElementById("overlayPost");
+
+  const infoBack = document.getElementById("infoBack");
+  const infoImg = document.getElementById("infoImg");
+  const infoName = document.getElementById("infoName");
+  const infoAbility = document.getElementById("infoAbility");
+  const infoStory = document.getElementById("infoStory");
+  const infoClose = document.getElementById("infoClose");
+
+  const newBtn = document.getElementById("newBtn");
+  const hintBtn = document.getElementById("hintBtn");
 
   const playerNameEl = document.getElementById("playerName");
   const autoPostEl = document.getElementById("autoPost");
@@ -701,17 +1080,29 @@
   const lbList = document.getElementById("lbList");
   const sbStatus = document.getElementById("sbStatus");
 
-  // Persist name
-  playerNameEl.value = localStorage.getItem("sweetSwap_player") || "";
-  playerNameEl.addEventListener("input", () => localStorage.setItem("sweetSwap_player", playerNameEl.value.trim()));
+  const luvListEl = document.getElementById("luvList");
 
-  // --- State ---
+  // Persist name
+  playerNameEl.value = localStorage.getItem("luvvies_player") || "";
+  playerNameEl.addEventListener("input", () => localStorage.setItem("luvvies_player", playerNameEl.value.trim()));
+
+  // Supabase init
+  let sb = null;
+  try{
+    sb = window.supabase?.createClient?.(SUPABASE_URL, SUPABASE_ANON) || null;
+    sbStatus.textContent = `Supabase: ${sb ? "aktiv ✅" : "nicht aktiv"}`;
+  } catch(e){
+    sb = null;
+    sbStatus.textContent = "Supabase: Fehler";
+  }
+
+  // State
   let board = [];
   let score = 0;
   let moves = 30;
-
   let level = 1;
-  let goal = 4000;
+  let goal  = 4000;
+  let combo = 1;
 
   let busy = false;
   let first = null;
@@ -720,121 +1111,187 @@
   let downCell = null;
   let draggingEl = null;
 
-  // Supabase client
-  let sb = null;
-  function initSupabase(){
-    try{
-      if(SUPABASE_URL && SUPABASE_ANON && window.supabase){
-        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-        sbStatus.innerHTML = `Supabase: <b>aktiv</b> ✅`;
-      } else {
-        sb = null;
-        sbStatus.innerHTML = `Supabase: <b>nicht konfiguriert</b> (unten im Code URL/Key setzen)`;
-      }
-    } catch {
-      sb = null;
-      sbStatus.innerHTML = `Supabase: <b>Fehler</b> (SDK blockiert?)`;
-    }
-  }
-  initSupabase();
+  // Koala ban types
+  let bannedTypes = new Set();
 
-  // --- Utils ---
-  const clamp = (v,min,max) => Math.max(min, Math.min(max, v));
-  const sleep = (ms) => new Promise(res => setTimeout(res, ms));
+  // Utils
+  const clamp = (v,min,max)=>Math.max(min, Math.min(max, v));
+  const sleep = (ms)=>new Promise(r=>setTimeout(r, ms));
+  const keyRC = (r,c)=>`${r},${c}`;
 
-  function toast(text){
-    const t = document.createElement("div");
-    t.className = "toast";
-    t.textContent = text;
-    boardEl.appendChild(t);
-    setTimeout(() => t.remove(), 1100);
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, (m)=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[m]));
   }
-  function setStatus(text){ statusEl.textContent = text; }
+
+  function comboPopup(title, text, imgUrl){
+    const pop = document.createElement("div");
+    pop.className = "comboPopup";
+    pop.innerHTML = `
+      <img src="${imgUrl || ""}" alt="">
+      <div>
+        <div class="t1">${escapeHtml(title)}</div>
+        <div class="t2">${escapeHtml(text)}</div>
+      </div>
+    `;
+    boardEl.appendChild(pop);
+    setTimeout(()=>pop.remove(), 1250);
+  }
+
+  function addScore(points){
+    score += points;
+    updateHUD();
+  }
 
   function updateHUD(){
     levelEl.textContent = level;
     goalEl.textContent  = goal;
     scoreEl.textContent = score;
     movesEl.textContent = moves;
+    comboEl.textContent = "x" + combo;
 
     const pct = clamp((score/goal)*100, 0, 100);
     goalBarEl.style.width = pct.toFixed(1) + "%";
+    goalPctEl.textContent = `${Math.floor(pct)}%`;
 
-    if(moves <= 0){
-      setStatus("⏳ Keine Moves mehr – Game Over!");
-    } else if(score >= goal){
-      setStatus("🎉 Ziel erreicht! Weiter zum nächsten Level!");
-    } else {
-      setStatus("Finde ein Match ✨");
-    }
+    fsScoreEl.textContent = score;
+    fsComboEl.textContent = "x" + combo;
+    fsGoalBarEl.style.width = pct.toFixed(1) + "%";
+    fsGoalPctEl.textContent = `${Math.floor(pct)}%`;
+
+    if(moves <= 0) statusEl.textContent = "⏳ Keine Moves mehr – Game Over!";
+    else if(score >= goal) statusEl.textContent = "🎉 Ziel erreicht! Next Level!";
+    else statusEl.textContent = "Finde ein Match ✨";
   }
 
-  function candyMeta(type){ return CANDIES.find(c => c.id === type); }
-
-  function countTypes(){
-    const counts = {};
-    for(const c of CANDIES) counts[c.id] = 0;
-    for(let r=0;r<N;r++) for(let c=0;c<N;c++){
-      const t = board[r][c];
-      if(t != null) counts[t] = (counts[t]||0) + 1;
-    }
-    return counts;
+  function nextLevel(){
+    level++;
+    goal = Math.round(goal * 1.28 + 1200);
+    moves += 8;
+    comboPopup("🎉 NEXT LEVEL!", "Ziel steigt – du bist im Flow!", IMG.sweety);
+    bannedTypes = new Set();
+    renderLuvList();
+    updateHUD();
   }
 
-  // weighted random with caps
-  function randTypeCapped(counts){
-    // build effective weights
-    let total = 0;
-    const eff = CANDIES.map(c => {
-      let w = c.weight;
-      if(CAPS[c.id] != null && (counts[c.id]||0) >= CAPS[c.id]) w = 0;
-      total += w;
-      return w;
+  // Info overlay
+  function showInfo(t){
+    const m = meta(t);
+    const ci = CHAR_INFO[t] || {ability:"—", story:"—"};
+    infoImg.src = m.img;
+    infoName.textContent = m.name;
+    infoAbility.textContent = ci.ability;
+    infoStory.textContent = ci.story;
+    infoBack.style.display = "grid";
+  }
+  infoClose.addEventListener("click", ()=> infoBack.style.display = "none");
+  infoBack.addEventListener("click", (e)=>{ if(e.target===infoBack) infoBack.style.display="none"; });
+
+  // Luv list
+  function renderLuvList(){
+    const items = [
+      T.SWEETY, T.SLEEPY, T.NORMAL, T.CRY, T.HAPPY, T.GRUMPY, T.MOND,
+      T.DONUT, T.JOYCE, T.SMOKEY,
+      T.WORM, T.CIT, T.KOALA
+    ];
+
+    let html = `<div style="margin-top:8px" class="tiny">Banned (dieses Level): <b>${[...bannedTypes].map(x=>meta(x).name).join(", ") || "—"}</b></div>`;
+    for(const t of items){
+      html += `
+        <div class="luvRow" data-t="${t}" title="Tippe für Ability & Story">
+          <div class="left">
+            <img src="${meta(t).img}" alt="">
+            <div>${meta(t).name}</div>
+          </div>
+          <div class="tag">${meta(t).tag}</div>
+        </div>`;
+    }
+    luvListEl.innerHTML = `<div><b>Deine Luvvies</b> <span class="tiny">(anklicken für Info & Story)</span></div>` + html;
+
+    luvListEl.querySelectorAll(".luvRow").forEach(row=>{
+      row.addEventListener("click", ()=> showInfo(+row.dataset.t));
     });
-
-    // fallback if everything 0 (shouldn't happen)
-    if(total <= 0){
-      return T.SWEETY;
-    }
-
-    let x = Math.random() * total;
-    for(let i=0;i<CANDIES.length;i++){
-      x -= eff[i];
-      if(x <= 0) return CANDIES[i].id;
-    }
-    return CANDIES[0].id;
   }
 
-  function enforceCaps(){
-    const counts = countTypes();
-    for(const [tStr, cap] of Object.entries(CAPS)){
-      const t = +tStr;
-      while(counts[t] > cap){
-        // replace one extra with a normal type
-        let replaced = false;
-        for(let tries=0; tries<200 && !replaced; tries++){
-          const r = Math.floor(Math.random()*N);
-          const c = Math.floor(Math.random()*N);
-          if(board[r][c] === t){
-            // choose a non-special type
-            const normals = [T.SWEETY, T.SLEEPY, T.NORMAL, T.CRY];
-            const nt = normals[Math.floor(Math.random()*normals.length)];
-            board[r][c] = nt;
-            counts[t]--;
-            counts[nt] = (counts[nt]||0)+1;
-            replaced = true;
-          }
-        }
-        if(!replaced) break;
-      }
+  /***********************
+   * BACKGROUND LUVVIES
+   ***********************/
+  const bg = document.getElementById("bgLuvvies");
+  const bgTypes = [T.SWEETY, T.SLEEPY, T.NORMAL, T.CRY, T.HAPPY, T.GRUMPY, T.MOND, T.DONUT, T.JOYCE, T.SMOKEY, T.KOALA];
+  const bgState = new Map();
+
+  function spawnBgLuvvies(){
+    bg.innerHTML = "";
+    bgState.clear();
+
+    const count = 10;
+    const vw = window.innerWidth, vh = window.innerHeight;
+
+    for(let i=0;i<count;i++){
+      const t = bgTypes[i % bgTypes.length];
+
+      const d = document.createElement("div");
+      d.className = "luv";
+
+      const img = document.createElement("img");
+      img.src = meta(t).img;
+      img.alt = "";
+      img.decoding = "async";
+      d.appendChild(img);
+
+      const size = 140 + Math.random()*220;
+      d.style.width  = size + "px";
+      d.style.height = size + "px";
+
+      const pad = 10;
+      const maxLeft = Math.max(pad, vw - size - pad);
+      const maxTop  = Math.max(pad, vh - size - pad);
+
+      d.style.left = (pad + Math.random()*(maxLeft-pad)) + "px";
+      d.style.top  = (pad + Math.random()*(maxTop -pad)) + "px";
+
+      d.style.animationDuration = (7 + Math.random()*10) + "s";
+      d.style.animationDelay = (-Math.random()*10) + "s";
+
+      bg.appendChild(d);
+      bgState.set(d, { t, idx: 0 });
     }
   }
 
-  // --- Grid DOM build (stable elements) ---
+  function sayBubble(){
+    const els = [...bgState.keys()];
+    if(!els.length) return;
+    const pick = els[Math.floor(Math.random()*els.length)];
+    const st = bgState.get(pick);
+    const lines = BG_LINES[st.t] || ["Du machst das super! 💖","Weiter so!","Bling!"];
+    const text = lines[st.idx % lines.length];
+    st.idx++;
+
+    const r = pick.getBoundingClientRect();
+    const b = document.createElement("div");
+    b.className = "luvBubble";
+    b.textContent = text;
+
+    b.style.left = clamp(r.left + r.width*0.08, 10, window.innerWidth - 290) + "px";
+    b.style.top  = clamp(r.top  - 22, 10, window.innerHeight - 90) + "px";
+
+    document.body.appendChild(b);
+    setTimeout(()=>b.remove(), 3400);
+  }
+
+  window.addEventListener("resize", ()=>{ spawnBgLuvvies(); resizeBoard(); });
+  spawnBgLuvvies();
+  setInterval(()=>{ if(Math.random()<0.70) sayBubble(); }, 5200);
+
+  /***********************
+   * GRID / RENDER
+   ***********************/
   function buildGridDom(){
     gridEl.innerHTML = "";
-    for(let r=0;r<N;r++){
-      for(let c=0;c<N;c++){
+    gridEl.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
+    gridEl.style.gridTemplateRows = `repeat(${ROWS}, 1fr)`;
+
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
         const cell = document.createElement("div");
         cell.className = "cell";
         cell.dataset.r = r;
@@ -846,7 +1303,7 @@
         candy.dataset.c = c;
 
         const img = document.createElement("img");
-        img.alt = "candy";
+        img.alt = "luvvy";
         img.draggable = false;
 
         candy.appendChild(img);
@@ -855,472 +1312,887 @@
       }
     }
   }
-  const cellEl = (r,c) => gridEl.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
-  const candyEl = (r,c) => gridEl.querySelector(`.candy[data-r="${r}"][data-c="${c}"]`);
+
+  const cellEl  = (r,c)=>gridEl.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+  const candyEl = (r,c)=>gridEl.querySelector(`.candy[data-r="${r}"][data-c="${c}"]`);
+
+  function setCandyClass(el, t){
+    el.classList.remove(
+      "t-sweety","t-sleepy","t-normal","t-cry","t-happy","t-grumpy","t-mond","t-donut","t-joyce","t-smokey",
+      "t-worm","t-cit","t-koala","comboStripe","swapMoving"
+    );
+    el.classList.add(meta(t).cls);
+    el.querySelector("img").src = meta(t).img;
+    el.style.visibility = "visible";
+  }
 
   function syncCell(r,c){
-    const t = board[r][c];
+    const cell = board[r][c];
     const el = candyEl(r,c);
     if(!el) return;
-
-    el.classList.remove("t-sweety","t-sleepy","t-normal","t-cry","t-sourworm","t-citrussy","t-koala");
-    if(t==null){
-      el.style.visibility = "hidden";
-      return;
-    }
-    el.style.visibility = "visible";
-    const meta = candyMeta(t);
-    el.classList.add(meta.cls);
-    el.querySelector("img").src = meta.img;
+    if(!cell){ el.style.visibility="hidden"; return; }
+    setCandyClass(el, cell.t);
   }
 
   function renderAll(){
-    for(let r=0;r<N;r++) for(let c=0;c<N;c++) syncCell(r,c);
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) syncCell(r,c);
   }
 
-  // --- Matches ---
-  function hasMatchAt(r,c){
-    const t = board[r][c];
-    if(t==null) return false;
+  /***********************
+   * DYNAMIC BOARD SIZE
+   ***********************/
+  function resizeBoard(){
+    const isFS = document.body.classList.contains("fsMode");
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
 
-    // horizontal
+    if(isFS){
+      const hudH = fsHud.getBoundingClientRect().height || 56;
+      const availH = vh - hudH - FULLSCREEN_TOP_PAD - 16;
+      const size = Math.max(260, Math.min(vw - 20, availH));
+      boardEl.style.width = size + "px";
+      boardEl.style.height = size + "px";
+      return;
+    }
+
+    const banner = document.querySelector(".gameBanner");
+    const controls = document.querySelector(".controlsRow");
+    const hud = document.querySelector(".hud");
+    const status = document.getElementById("status");
+
+    const topUsed =
+      (banner?.offsetHeight || 0) +
+      (controls?.offsetHeight || 0) +
+      (hud?.offsetHeight || 0) +
+      38;
+
+    const bottomUsed = (status?.offsetHeight || 0) + 24;
+
+    const availH = vh - topUsed - bottomUsed - 24;
+    const size = Math.max(280, Math.min(vw * 0.94, availH));
+    boardEl.style.width = size + "px";
+    boardEl.style.height = size + "px";
+  }
+
+  /***********************
+   * BOARD LOGIC
+   ***********************/
+  const basePool = CANDY.filter(x=>NORMALS.has(x.id));
+  function randNormal(){
+    const pool = basePool.filter(x=>!bannedTypes.has(x.id));
+    const total = pool.reduce((a,x)=>a+(x.w||0),0) || 1;
+    let x = Math.random()*total;
+    for(const it of pool){
+      x -= (it.w||0);
+      if(x<=0) return it.id;
+    }
+    return pool[0]?.id ?? T.SWEETY;
+  }
+
+  const isMatchable = (cell)=>cell && NORMALS.has(cell.t);
+  const cellType = (r,c)=>board[r][c]?.t;
+
+  function setCell(r,c, t, o){
+    board[r][c] = t==null ? null : { t, ...(o?{o}:{} ) };
+  }
+
+  function inBounds(r,c){ return r>=0 && r<ROWS && c>=0 && c<COLS; }
+
+  function hasMatchAt(r,c){
+    const cell = board[r][c];
+    if(!isMatchable(cell)) return false;
+    const t = cell.t;
+
     let cnt=1;
-    for(let x=c-1; x>=0 && board[r][x]===t; x--) cnt++;
-    for(let x=c+1; x<N && board[r][x]===t; x++) cnt++;
+    for(let x=c-1; x>=0 && cellType(r,x)===t; x--) cnt++;
+    for(let x=c+1; x<COLS && cellType(r,x)===t; x++) cnt++;
     if(cnt>=3) return true;
 
-    // vertical
     cnt=1;
-    for(let y=r-1; y>=0 && board[y][c]===t; y--) cnt++;
-    for(let y=r+1; y<N && board[y][c]===t; y++) cnt++;
+    for(let y=r-1; y>=0 && cellType(y,c)===t; y--) cnt++;
+    for(let y=r+1; y<ROWS && cellType(y,c)===t; y++) cnt++;
     return cnt>=3;
   }
 
-  function findMatches(){
-    const marks = Array.from({length:N}, () => Array(N).fill(false));
-
-    // horizontal
-    for(let r=0;r<N;r++){
-      let c=0;
-      while(c<N){
-        const t = board[r][c];
-        let run=1;
-        while(c+run<N && board[r][c+run]===t) run++;
-        if(t!=null && run>=3){
-          for(let k=0;k<run;k++) marks[r][c+k]=true;
-        }
-        c += run;
+  function makeBoard(){
+    board = Array.from({length:ROWS}, ()=>Array.from({length:COLS}, ()=>null));
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        let t, tries=0;
+        do{
+          t = randNormal();
+          setCell(r,c,t);
+          tries++;
+        } while(tries<60 && hasMatchAt(r,c));
       }
     }
-
-    // vertical
-    for(let c=0;c<N;c++){
-      let r=0;
-      while(r<N){
-        const t = board[r][c];
-        let run=1;
-        while(r+run<N && board[r+run][c]===t) run++;
-        if(t!=null && run>=3){
-          for(let k=0;k<run;k++) marks[r+k][c]=true;
-        }
-        r += run;
-      }
-    }
-
-    const cells=[];
-    for(let r=0;r<N;r++) for(let c=0;c<N;c++){
-      if(marks[r][c]) cells.push({r,c});
-    }
-    return cells;
   }
 
-  // --- Bling ---
-  function addSparkles(r,c, count=6){
+  // FX
+  function sparkleAt(r,c, count=9){
     const el = cellEl(r,c);
     if(!el) return;
     for(let i=0;i<count;i++){
       const s = document.createElement("div");
       s.className = "sparkle";
-      s.style.left = (30 + Math.random()*40) + "%";
-      s.style.top  = (35 + Math.random()*40) + "%";
-      s.style.animationDelay = (Math.random()*90) + "ms";
+      s.style.left = (18 + Math.random()*64) + "%";
+      s.style.top  = (22 + Math.random()*58) + "%";
+      s.style.animationDelay = (Math.random()*140) + "ms";
       el.appendChild(s);
-      setTimeout(()=>s.remove(), 800);
+      setTimeout(()=>s.remove(), 900);
     }
   }
-  function addBoomRing(r,c){
-    const el = cellEl(r,c);
-    if(!el) return;
-    const ring = document.createElement("div");
-    ring.className = "boomRing";
-    el.appendChild(ring);
-    setTimeout(()=>ring.remove(), 820);
+
+  function confettiBurst(centerX, centerY, pieces=26){
+    for(let i=0;i<pieces;i++){
+      const p = document.createElement("div");
+      p.className = "confetti";
+      p.style.left = centerX + "px";
+      p.style.top = centerY + "px";
+      p.style.setProperty("--dx", (Math.random()*260 - 130) + "px");
+      p.style.setProperty("--dy", (Math.random()*260 - 180) + "px");
+      p.style.transform = "translate(-50%,-50%)";
+      fxEl.appendChild(p);
+      setTimeout(()=>p.remove(), 920);
+    }
   }
-  function wobble(r,c){
+
+  function bumperAt(r,c){
     const el = candyEl(r,c);
     if(!el) return;
-    el.classList.remove("wobble");
+    el.classList.remove("bumper");
     void el.offsetWidth;
-    el.classList.add("wobble");
+    el.classList.add("bumper");
   }
 
-  // --- Special clearing patterns ---
-  function addCrossRadius3(set, r, c){
-    for(let d=0; d<=3; d++){
-      if(r-d>=0) set.add(`${r-d},${c}`);
-      if(r+d<N) set.add(`${r+d},${c}`);
-      if(c-d>=0) set.add(`${r},${c-d}`);
-      if(c+d<N) set.add(`${r},${c+d}`);
-    }
-  }
-  function addRow(set, r){
-    for(let c=0;c<N;c++) set.add(`${r},${c}`);
-  }
-  function addAll(set){
-    for(let r=0;r<N;r++) for(let c=0;c<N;c++) set.add(`${r},${c}`);
-  }
-
-  function expandClearsFromSpecials(matchCells){
-    const set = new Set(matchCells.map(p => `${p.r},${p.c}`));
-    for(const p of matchCells){
-      const t = board[p.r][p.c];
-      if(t === T.CIT){
-        addBoomRing(p.r,p.c);
-        addCrossRadius3(set, p.r, p.c);
-      }
-      if(t === T.SOUR){
-        addBoomRing(p.r,p.c);
-        addRow(set, p.r);
-      }
-    }
-    return set;
-  }
-
-  async function animatePopCells(set){
-    for(const key of set){
-      const [r,c] = key.split(",").map(Number);
-      const el = candyEl(r,c);
-      if(el && board[r][c]!=null){
-        el.classList.add("pop");
-        addSparkles(r,c, 6);
-      }
-    }
-    await sleep(300);
-    for(const key of set){
-      const [r,c] = key.split(",").map(Number);
-      const el = candyEl(r,c);
-      if(el) el.classList.remove("pop");
-    }
-  }
-
-  function collapseAndRefill(){
-    // gravity
-    for(let c=0;c<N;c++){
-      let write = N-1;
-      for(let r=N-1;r>=0;r--){
-        if(board[r][c]!=null){
-          board[write][c] = board[r][c];
-          if(write!==r) board[r][c]=null;
-          write--;
-        }
-      }
-      // refill with caps-aware RNG
-      const counts = countTypes();
-      for(let r=write;r>=0;r--){
-        const t = randTypeCapped(counts);
-        board[r][c] = t;
-        counts[t] = (counts[t]||0)+1;
-      }
-    }
-    enforceCaps();
-  }
-
-  function swapBoard(a,b){
-    const tmp = board[a.r][a.c];
-    board[a.r][a.c] = board[b.r][b.c];
-    board[b.r][b.c] = tmp;
-  }
-  function isAdjacent(a,b){
-    const dr = Math.abs(a.r-b.r);
-    const dc = Math.abs(a.c-b.c);
-    return (dr+dc)===1;
-  }
-
-  // Swap animation by measuring actual element positions (works with responsive 1fr grid)
   async function animateSwap(a,b){
     const elA = candyEl(a.r,a.c);
     const elB = candyEl(b.r,b.c);
     if(!elA || !elB) return;
+
+    elA.classList.add("swapMoving");
+    elB.classList.add("swapMoving");
 
     const ra = elA.getBoundingClientRect();
     const rb = elB.getBoundingClientRect();
     const dx = rb.left - ra.left;
     const dy = rb.top  - ra.top;
 
-    elA.style.transform = `translate(${dx}px, ${dy}px)`;
-    elB.style.transform = `translate(${-dx}px, ${-dy}px)`;
-    await sleep(290);
+    elA.style.transform = `translate(${dx}px, ${dy}px) scale(1.06)`;
+    elB.style.transform = `translate(${-dx}px, ${-dy}px) scale(1.06)`;
+
+    await sleep(parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--swapMs")));
     elA.style.transform = "";
     elB.style.transform = "";
+    elA.classList.remove("swapMoving");
+    elB.classList.remove("swapMoving");
     await sleep(10);
   }
 
-  // --- Selection ---
-  function clearSelection(){
-    gridEl.querySelectorAll(".candy.selected").forEach(el => el.classList.remove("selected"));
-    first = null;
+  function animateFallBounce(el, dy, duration, withBounce){
+    if(!el) return;
+    if(!withBounce){
+      el.animate(
+        [{ transform:`translateY(${dy}px) scale(.985)` }, { transform:"translateY(0px) scale(1)" }],
+        { duration, easing:"cubic-bezier(.18,.9,.2,1)" }
+      );
+      return;
+    }
+    el.animate(
+      [
+        { transform:`translateY(${dy}px) scale(.985)` },
+        { transform:`translateY(0px) scale(1.03)`, offset: 0.70 },
+        { transform:`translateY(12px) scale(1.08)`, offset: 0.84 },
+        { transform:`translateY(-7px) scale(1.02)`, offset: 0.92 },
+        { transform:`translateY(0px) scale(1)` }
+      ],
+      { duration: duration + 200, easing:"cubic-bezier(.12,.95,.2,1)" }
+    );
   }
-  function select(r,c){
-    if(moves<=0 || busy) return;
-    clearSelection();
-    first = {r,c};
-    const el = candyEl(r,c);
-    if(el) el.classList.add("selected");
-  }
 
-  // --- Settle loop (cascades) ---
-  async function settle(){
-    let chain = 0;
-    while(true){
-      const matches = findMatches();
-      if(matches.length === 0) break;
-
-      chain++;
-      const clearSet = expandClearsFromSpecials(matches);
-
-      // score
-      const gained = clearSet.size * (12 + chain*2);
-      score += gained;
-      toast(`+${gained} ✨ BLING!`);
-
-      // wobble a few
-      let i=0;
-      for(const k of clearSet){ if(i++<5){ const [r,c]=k.split(",").map(Number); wobble(r,c);} }
-
-      await animatePopCells(clearSet);
-
-      for(const key of clearSet){
-        const [r,c] = key.split(",").map(Number);
-        board[r][c] = null;
+  async function animatePopCells(cells){
+    for(const p of cells){
+      const el = candyEl(p.r,p.c);
+      if(el){
+        el.classList.add("pop");
+        sparkleAt(p.r,p.c, 12);
       }
+    }
+    await sleep(parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--popMs")));
+    for(const p of cells){
+      const el = candyEl(p.r,p.c);
+      if(el) el.classList.remove("pop");
+    }
+  }
 
-      collapseAndRefill();
-      renderAll();
-      await sleep(90);
+  // Runs (same type matches)
+  function scanRuns(){
+    const runs = [];
+    // horizontal
+    for(let r=0;r<ROWS;r++){
+      let c=0;
+      while(c<COLS){
+        const t = cellType(r,c);
+        let run=1;
+        while(c+run<COLS && cellType(r,c+run)===t) run++;
+        if(t!=null && NORMALS.has(t) && run>=3){
+          const cells = [];
+          for(let k=0;k<run;k++) cells.push({r,c:c+k});
+          runs.push({dir:"h", t, len:run, cells});
+        }
+        c += run;
+      }
+    }
+    // vertical
+    for(let c=0;c<COLS;c++){
+      let r=0;
+      while(r<ROWS){
+        const t = cellType(r,c);
+        let run=1;
+        while(r+run<ROWS && cellType(r+run,c)===t) run++;
+        if(t!=null && NORMALS.has(t) && run>=3){
+          const cells = [];
+          for(let k=0;k<run;k++) cells.push({r:r+k,c});
+          runs.push({dir:"v", t, len:run, cells});
+        }
+        r += run;
+      }
+    }
+    return runs;
+  }
+
+  // Special triple recipes in a line (3)
+  function scanTriples(){
+    const triples = [];
+    const read3 = (cells)=>cells.map(p=>cellType(p.r,p.c));
+    const count = (arr, t)=>arr.filter(x=>x===t).length;
+
+    function checkRecipe(types, A, B){
+      const a = count(types, A);
+      const b = count(types, B);
+      return (a===2 && b===1) || (a===1 && b===2);
     }
 
-    updateHUD();
-    await maybeLevelUp();
-    if(moves<=0) await onGameOver();
-  }
+    // iterate horizontal
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<=COLS-3;c++){
+        const cells = [{r,c},{r,c:c+1},{r,c:c+2}];
+        const types = read3(cells);
+        if(types.some(t=>t==null)) continue;
 
-  function anyPossibleMove(){
-    for(let r=0;r<N;r++){
-      for(let c=0;c<N;c++){
-        const a = {r,c};
-        const neigh = [];
-        if(c+1<N) neigh.push({r,c:c+1});
-        if(r+1<N) neigh.push({r:r+1,c});
-        for(const b of neigh){
-          swapBoard(a,b);
-          const ok = findMatches().length>0;
-          swapBoard(a,b);
-          if(ok) return {a,b};
+        if(checkRecipe(types, T.GRUMPY, T.HAPPY)){
+          triples.push({kind:"therapy", dir:"h", cells, center: cells[1]});
+        }
+        if(checkRecipe(types, T.JOYCE, T.SMOKEY)){
+          triples.push({kind:"buddies", dir:"h", cells, center: cells[1]});
+        }
+        if(checkRecipe(types, T.DONUT, T.HAPPY)){
+          triples.push({kind:"sugar", dir:"h", cells, center: cells[1]});
+        }
+        if(checkRecipe(types, T.DONUT, T.SWEETY)){
+          triples.push({kind:"sprinkle", dir:"h", cells, center: cells[1]});
         }
       }
     }
-    return null;
-  }
 
-  // --- Level system ---
-  async function maybeLevelUp(){
-    if(score < goal) return;
+    // vertical
+    for(let c=0;c<COLS;c++){
+      for(let r=0;r<=ROWS-3;r++){
+        const cells = [{r,c},{r:r+1,c},{r:r+2,c}];
+        const types = read3(cells);
+        if(types.some(t=>t==null)) continue;
 
-    // Level complete!
-    overlayTitle.textContent = `🎉 Level ${level} geschafft!`;
-    overlayText.textContent = `Du hast das Ziel ${goal} erreicht. Weiter geht’s!`;
-    overlaySmall.textContent = `Bonus: +8 Moves und neues Ziel.`;
-    overlayBack.style.display = "grid";
-
-    // next level params
-    level++;
-    moves += 8;
-    goal = Math.round(goal * 1.35 + 450);
-
-    // little board sparkle
-    for(let k=0;k<18;k++){
-      const r = Math.floor(Math.random()*N);
-      const c = Math.floor(Math.random()*N);
-      addSparkles(r,c, 7);
-      if(k%5===0) addBoomRing(r,c);
-    }
-
-    updateHUD();
-  }
-
-  async function onGameOver(){
-    if(overlayBack.style.display === "grid") return;
-
-    overlayTitle.textContent = `💀 Game Over`;
-    overlayText.textContent = `Score: ${score} | Level: ${level}`;
-    overlaySmall.textContent = `Wenn du willst: poste deinen Run ins Leaderboard.`;
-    overlayBack.style.display = "grid";
-
-    if(autoPostEl.checked){
-      await postScore();
-    }
-  }
-
-  overlayPlay.addEventListener("click", () => {
-    overlayBack.style.display = "none";
-    if(moves<=0) start(); // new run
-    else updateHUD();     // continue after level-up
-  });
-
-  overlayPost.addEventListener("click", async () => {
-    await postScore();
-  });
-
-  // --- Special activation by swap ("merge") ---
-  async function activateSpecialBySwap(a,b){
-    const tA = board[a.r][a.c];
-    const tB = board[b.r][b.c];
-    const set = new Set();
-
-    const isKoalaA = (tA === T.KOALA);
-    const isKoalaB = (tB === T.KOALA);
-
-    if(isKoalaA || isKoalaB){
-      const koalaPos = isKoalaA ? a : b;
-      const otherPos = isKoalaA ? b : a;
-      const otherT   = isKoalaA ? tB : tA;
-
-      addBoomRing(koalaPos.r, koalaPos.c);
-      addSparkles(koalaPos.r, koalaPos.c, 12);
-
-      if(otherT === T.CIT){
-        addAll(set);
-        score += 900;
-        toast("🐨💥 MEGA WIPE! +900");
-      } else if(otherT === T.SOUR){
-        addCrossRadius3(set, koalaPos.r, koalaPos.c);
-        score += 300;
-        toast("🐨⚡ KOALA BLAST! +300");
-      } else {
-        // remove all of that color/type
-        for(let r=0;r<N;r++) for(let c=0;c<N;c++){
-          if(board[r][c] === otherT) set.add(`${r},${c}`);
+        if(checkRecipe(types, T.GRUMPY, T.HAPPY)){
+          triples.push({kind:"therapy", dir:"v", cells, center: cells[1]});
         }
-        score += 400;
-        toast("🐨✨ FARBE WEG! +400");
+        if(checkRecipe(types, T.JOYCE, T.SMOKEY)){
+          triples.push({kind:"buddies", dir:"v", cells, center: cells[1]});
+        }
+        if(checkRecipe(types, T.DONUT, T.HAPPY)){
+          triples.push({kind:"sugar", dir:"v", cells, center: cells[1]});
+        }
+        if(checkRecipe(types, T.DONUT, T.SWEETY)){
+          triples.push({kind:"sprinkle", dir:"v", cells, center: cells[1]});
+        }
+      }
+    }
+
+    return triples;
+  }
+
+  function detectKoalaSpots(runs){
+    const hMap = new Map();
+    const vMap = new Map();
+    for(const run of runs){
+      for(const p of run.cells){
+        const k = keyRC(p.r,p.c);
+        if(run.dir==="h") hMap.set(k, Math.max(hMap.get(k)||0, run.len));
+        if(run.dir==="v") vMap.set(k, Math.max(vMap.get(k)||0, run.len));
+      }
+    }
+    const spots = [];
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const k = keyRC(r,c);
+        const hl = hMap.get(k)||0;
+        const vl = vMap.get(k)||0;
+        const t = cellType(r,c);
+        if(t!=null && NORMALS.has(t) && hl>=3 && vl>=3){
+          if((hl + vl - 1) >= 5) spots.push({r,c});
+        }
+      }
+    }
+    return spots;
+  }
+
+  function clearCells(cellList){
+    const unique = new Set(cellList.map(p=>keyRC(p.r,p.c)));
+    for(const k of unique){
+      const [r,c] = k.split(",").map(Number);
+      setCell(r,c,null);
+    }
+    return unique.size;
+  }
+
+  function collectCross(r,c, radius=3){
+    const cells = [{r,c}];
+    for(let k=1;k<=radius;k++){
+      if(inBounds(r-k,c)) cells.push({r:r-k,c});
+      if(inBounds(r+k,c)) cells.push({r:r+k,c});
+      if(inBounds(r,c-k)) cells.push({r,c:c-k});
+      if(inBounds(r,c+k)) cells.push({r,c:c+k});
+    }
+    return cells;
+  }
+  function collectRow(r){
+    const cells = [];
+    for(let c=0;c<COLS;c++) cells.push({r,c});
+    return cells;
+  }
+  function collectCol(c){
+    const cells = [];
+    for(let r=0;r<ROWS;r++) cells.push({r,c});
+    return cells;
+  }
+  function collectBand6Cols(centerC){
+    const start = clamp(centerC - 2, 0, COLS-6);
+    const cells = [];
+    for(let c=start; c<start+6; c++){
+      for(let r=0;r<ROWS;r++) cells.push({r,c});
+    }
+    return cells;
+  }
+  function collect3x3(center){
+    const cells = [];
+    for(let dr=-1; dr<=1; dr++){
+      for(let dc=-1; dc<=1; dc++){
+        const rr = center.r + dr, cc = center.c + dc;
+        if(inBounds(rr,cc)) cells.push({r:rr,c:cc});
+      }
+    }
+    return cells;
+  }
+
+  function shuffleBoard(){
+    const cells = [];
+    const positions = [];
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        if(board[r][c]){
+          cells.push(board[r][c]);
+          positions.push({r,c});
+        }
+      }
+    }
+    for(let i=cells.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [cells[i], cells[j]] = [cells[j], cells[i]];
+    }
+    positions.forEach((p, idx)=> board[p.r][p.c] = cells[idx]);
+    renderAll();
+  }
+
+  function collapseAndRefillAnimated(bounceCols){
+    const movesMap = new Map();
+    const anyCell = cellEl(0,0);
+    const gap = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--gap")) || 8;
+    const cellH = anyCell.getBoundingClientRect().height + gap;
+
+    for(let c=0;c<COLS;c++){
+      const col = [];
+      for(let r=ROWS-1;r>=0;r--){
+        if(board[r][c]) col.push({cell: board[r][c], from:r});
+      }
+      let write = ROWS-1;
+      for(const item of col){
+        const to = write;
+        board[to][c] = item.cell;
+        if(to !== item.from){
+          movesMap.set(keyRC(to,c), (item.from - to) * cellH);
+        }
+        write--;
+      }
+      for(let r=write; r>=0; r--){
+        setCell(r,c, randNormal());
+        movesMap.set(keyRC(r,c), (-(r+1)) * cellH);
+      }
+    }
+
+    const fallMs = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--fallMs")) || 660;
+
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const el = candyEl(r,c);
+        if(!board[r][c]){ el.style.visibility="hidden"; continue; }
+        setCandyClass(el, board[r][c].t);
+
+        const dy = movesMap.get(keyRC(r,c));
+        if(dy != null){
+          const doBounce = bounceCols?.has(c) && dy < 0;
+          animateFallBounce(el, dy, fallMs, doBounce);
+          setTimeout(()=>bumperAt(r,c), fallMs - 90);
+        }
+      }
+    }
+  }
+
+  /***********************
+   * POWERUP CAP (reduziert zu viele Worm/Cit/Koala)
+   ***********************/
+  function powerupCount(){
+    let n=0;
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const t = cellType(r,c);
+        if(t===T.WORM || t===T.CIT || t===T.KOALA) n++;
+      }
+    }
+    return n;
+  }
+  function canCreatePowerup(){
+    const cap = Math.max(7, Math.floor(ROWS*COLS*0.055)); // ~7-8 bei 12x12
+    return powerupCount() < cap;
+  }
+
+  /***********************
+   * POWER ACTIVATIONS
+   ***********************/
+  async function activatePower(a,b){
+    const A = board[a.r][a.c];
+    const B = board[b.r][b.c];
+    if(!A || !B) return false;
+
+    const tA = A.t, tB = B.t;
+    const isPower = (t)=> (t===T.WORM || t===T.CIT || t===T.KOALA);
+
+    if(!isPower(tA) && !isPower(tB)) return false;
+
+    const rect = boardEl.getBoundingClientRect();
+    const cx = rect.left + rect.width/2;
+    const cy = rect.top  + rect.height/2;
+
+    if(tA===T.KOALA || tB===T.KOALA){
+      const ko = (tA===T.KOALA) ? a : b;
+      const other = (tA===T.KOALA) ? b : a;
+      const otherType = board[other.r][other.c]?.t;
+
+      if(otherType===T.CIT){
+        comboPopup("🐨🍊 FULL PENG!", "Koala + Citrussy: Ganzes Feld leer!", IMG.koala);
+        confettiBurst(cx, cy, 56);
+        const cells = [];
+        for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) cells.push({r,c});
+        await animatePopCells(cells);
+        const cleared = clearCells(cells);
+        addScore(cleared * 28 + 1300);
+        return true;
       }
 
-      // remove swapped pair too
-      set.add(`${a.r},${a.c}`);
-      set.add(`${b.r},${b.c}`);
-
-      await animateSwap(a,b);
-      moves--;
-      updateHUD();
-
-      for(const k of set){ const [r,c]=k.split(",").map(Number); if(Math.random()<0.35) addBoomRing(r,c); }
-
-      await animatePopCells(set);
-      for(const k of set){
-        const [r,c]=k.split(",").map(Number);
-        board[r][c] = null;
+      if(otherType===T.WORM){
+        comboPopup("🐨🪱 Extra Sauer!", "Koala + Worm: Cross Boom Radius 3!", IMG.worm);
+        const cells = collectCross(ko.r, ko.c, 3);
+        await animatePopCells(cells);
+        const cleared = clearCells(cells);
+        addScore(cleared * 26 + 700);
+        return true;
       }
-      collapseAndRefill();
-      renderAll();
-      await sleep(70);
-      await settle();
+
+      if(otherType===T.KOALA){
+        comboPopup("🐨🐨 ULTRA CLEAR!", "Double Koala: Alles weg. Respekt!", IMG.koala);
+        confettiBurst(cx, cy, 64);
+        const cells = [];
+        for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) cells.push({r,c});
+        await animatePopCells(cells);
+        const cleared = clearCells(cells);
+        addScore(cleared * 34 + 2200);
+        return true;
+      }
+
+      if(otherType!=null && NORMALS.has(otherType)){
+        comboPopup("🐨✨ Color Magic!", `Koala löscht: ${meta(otherType).name} (und bannt sie)!`, IMG.koala);
+        const cells = [];
+        for(let r=0;r<ROWS;r++){
+          for(let c=0;c<COLS;c++){
+            if(cellType(r,c)===otherType) cells.push({r,c});
+          }
+        }
+        cells.push({r:ko.r,c:ko.c});
+
+        await animatePopCells(cells);
+        const cleared = clearCells(cells);
+        bannedTypes.add(otherType);
+        renderLuvList();
+        addScore(cleared * 24 + 600);
+        return true;
+      }
+    }
+
+    if(tA===T.WORM && tB===T.WORM){
+      comboPopup("🪱🪱 Zu sauer!!!", "Worm + Worm: 6-Spalten-Welle!", IMG.worm);
+      const band = collectBand6Cols(Math.round((a.c+b.c)/2));
+      await animatePopCells(band);
+      const cleared = clearCells(band);
+      addScore(cleared * 18 + 1000);
       return true;
     }
 
-    const hasCit  = (tA===T.CIT || tB===T.CIT);
-    const hasSour = (tA===T.SOUR || tB===T.SOUR);
+    if(tA===T.CIT && tB===T.CIT){
+      comboPopup("🍊🍊 DOUBLE BOOM!", "Doppelte Citrussy: BIG Cross!", IMG.citrussy);
+      const cells = [...collectCross(a.r,a.c,3), ...collectCross(b.r,b.c,3)];
+      await animatePopCells(cells);
+      const cleared = clearCells(cells);
+      addScore(cleared * 22 + 1000);
+      return true;
+    }
 
-    if(hasCit || hasSour){
-      await animateSwap(a,b);
-      moves--;
-      updateHUD();
+    if(tA===T.CIT || tB===T.CIT){
+      comboPopup("🍊 Citrussy!", "Cross Boom Radius 3!", IMG.citrussy);
+      const p = (tA===T.CIT) ? a : b;
+      const cells = collectCross(p.r,p.c,3);
+      await animatePopCells(cells);
+      const cleared = clearCells(cells);
+      addScore(cleared * 20 + 520);
+      return true;
+    }
 
-      if(tA===T.CIT) { addBoomRing(a.r,a.c); addCrossRadius3(set, a.r,a.c); }
-      if(tB===T.CIT) { addBoomRing(b.r,b.c); addCrossRadius3(set, b.r,b.c); }
+    if(tA===T.WORM || tB===T.WORM){
+      const p = (tA===T.WORM) ? a : b;
+      const worm = board[p.r][p.c];
+      const o = worm?.o || "h";
+      comboPopup("🪱 Sourworm!", o==="h" ? "Reihe wird gecleared!" : "Spalte wird gecleared!", IMG.worm);
 
-      if(tA===T.SOUR) { addBoomRing(a.r,a.c); addRow(set, a.r); }
-      if(tB===T.SOUR) { addBoomRing(b.r,b.c); addRow(set, b.r); }
-
-      set.add(`${a.r},${a.c}`);
-      set.add(`${b.r},${b.c}`);
-
-      const gained = set.size * 18;
-      score += gained;
-      toast(`+${gained} 💥 PENG!`);
-
-      await animatePopCells(set);
-      for(const k of set){
-        const [r,c]=k.split(",").map(Number);
-        board[r][c]=null;
-      }
-      collapseAndRefill();
-      renderAll();
-      await sleep(70);
-      await settle();
+      const cells = o==="h" ? collectRow(p.r) : collectCol(p.c);
+      await animatePopCells(cells);
+      const cleared = clearCells(cells);
+      addScore(cleared * 16 + 320);
       return true;
     }
 
     return false;
   }
 
+  /***********************
+   * SETTLE / CASCADES
+   ***********************/
+  async function settle(lastSwapA=null, lastSwapB=null){
+    combo = 1;
+
+    while(true){
+      // Special triples
+      const triples = scanTriples();
+      if(triples.length){
+        const t = triples[0];
+
+        if(t.kind==="therapy"){
+          comboPopup("🍪 Therapy Time!", "Grumpy → Happy, +3 Moves!", IMG.happy);
+          await animatePopCells(t.cells);
+          const cleared = clearCells(t.cells);
+          addScore(cleared * 14 + 480);
+          moves += 3;
+
+          for(let r=0;r<ROWS;r++){
+            for(let c=0;c<COLS;c++){
+              if(cellType(r,c)===T.GRUMPY){
+                setCell(r,c, T.HAPPY);
+                sparkleAt(r,c, 7);
+              }
+            }
+          }
+          renderAll();
+          updateHUD();
+          collapseAndRefillAnimated(new Set());
+          renderAll();
+          await sleep(140);
+          continue;
+        }
+
+        if(t.kind==="buddies"){
+          comboPopup("🐾 Best Buddies!", "Joyce + Smokey: Row+Col Blast +2 Moves!", IMG.joyce);
+          const rect = boardEl.getBoundingClientRect();
+          confettiBurst(rect.left + rect.width/2, rect.top + rect.height/2, 40);
+
+          await animatePopCells(t.cells);
+          clearCells(t.cells);
+
+          const blast = [...collectRow(t.center.r), ...collectCol(t.center.c)];
+          await animatePopCells(blast);
+          const cleared = clearCells(blast);
+
+          moves += 2;
+          addScore(cleared * 16 + 820);
+
+          renderAll();
+          collapseAndRefillAnimated(new Set([t.center.c]));
+          renderAll();
+          await sleep(160);
+          continue;
+        }
+
+        if(t.kind==="sugar"){
+          comboPopup("🍩 Sugar Rush!", "Donutlie + Happy: 3×3 Burst + Worm Spawn!", IMG.donutlie);
+          await animatePopCells(t.cells);
+          clearCells(t.cells);
+
+          const area = collect3x3(t.center);
+          await animatePopCells(area);
+          const cleared = clearCells(area);
+
+          const o = (Math.random() < 0.5) ? "h" : "v";
+          setCell(t.center.r, t.center.c, T.WORM, o);
+          sparkleAt(t.center.r, t.center.c, 16);
+
+          addScore(cleared * 14 + 600);
+          moves += 1;
+
+          renderAll();
+          collapseAndRefillAnimated(new Set([t.center.c]));
+          renderAll();
+          await sleep(160);
+          continue;
+        }
+
+        if(t.kind==="sprinkle"){
+          comboPopup("🍩 Sprinkle Beam!", "Donutlie + Sweety: 3 Reihen werden weggesnackt!", IMG.donutlie);
+
+          await animatePopCells(t.cells);
+          clearCells(t.cells);
+
+          const rowsToClear = [t.center.r - 1, t.center.r, t.center.r + 1].filter(r => r>=0 && r<ROWS);
+          const beam = [];
+          for(const rr of rowsToClear) beam.push(...collectRow(rr));
+
+          await animatePopCells(beam);
+          const cleared = clearCells(beam);
+
+          const rect = boardEl.getBoundingClientRect();
+          confettiBurst(rect.left + rect.width/2, rect.top + rect.height/2, 36);
+
+          addScore(cleared * 14 + 760);
+          moves += 1;
+
+          renderAll();
+          collapseAndRefillAnimated(new Set());
+          renderAll();
+          await sleep(160);
+          continue;
+        }
+      }
+
+      const runs = scanRuns();
+      if(!runs.length) break;
+
+      const bounceCols = new Set();
+      for(const run of runs){
+        if(run.dir==="h" && run.len===3){
+          for(const p of run.cells) bounceCols.add(p.c);
+        }
+      }
+
+      const koalaSpots = detectKoalaSpots(runs);
+      const koalaSet = new Set(koalaSpots.map(p=>keyRC(p.r,p.c)));
+
+      const preferCell = (lastSwapA && lastSwapB) ? [lastSwapA, lastSwapB] : [];
+      function chooseCreateCell(cells){
+        for(const p of preferCell){
+          if(cells.some(x=>x.r===p.r && x.c===p.c)) return p;
+        }
+        return cells[Math.floor(cells.length/2)];
+      }
+
+      const clearSet = new Set();
+      const creates = [];
+
+      for(const run of runs){
+        run.cells.forEach(p=>clearSet.add(keyRC(p.r,p.c)));
+
+        if(run.len===4){
+          if(canCreatePowerup()){
+            const createAt = chooseCreateCell(run.cells);
+            creates.push({r:createAt.r,c:createAt.c, type:T.WORM, o: (run.dir==="h" ? "h" : "v")});
+            comboPopup("🪱 Sourworm!", "4er Match! Jetzt wird’s sauer!", IMG.worm);
+          } else addScore(140);
+        } else if(run.len>=5){
+          if(canCreatePowerup()){
+            const createAt = chooseCreateCell(run.cells);
+            creates.push({r:createAt.r,c:createAt.c, type:T.CIT});
+            comboPopup("🍊 Citrussy!", "5er Match! Cross Boom incoming!", IMG.citrussy);
+          } else addScore(260);
+        } else if(run.len===3 && combo>=2){
+          const m = meta(run.t);
+          comboPopup(`✨ Combo x${combo}`, `${m.name} feiert mit!`, m.img);
+        }
+      }
+
+      if(koalaSpots.length && canCreatePowerup()){
+        let place = koalaSpots[0];
+        for(const p of preferCell){
+          if(koalaSet.has(keyRC(p.r,p.c))){ place = p; break; }
+        }
+        creates.push({r:place.r,c:place.c, type:T.KOALA});
+        comboPopup("🐨 KOALA!", "T/L Match! Boss ist da!", IMG.koala);
+      }
+
+      const createKeys = new Set(creates.map(x=>keyRC(x.r,x.c)));
+      for(const k of createKeys) clearSet.delete(k);
+
+      const clearCellsList = [...clearSet].map(k=>{
+        const [r,c]=k.split(",").map(Number);
+        return {r,c};
+      });
+
+      if(combo>=3){
+        clearCellsList.forEach(p=>{
+          const el = candyEl(p.r,p.c);
+          if(el) el.classList.add("comboStripe");
+        });
+      }
+
+      await animatePopCells(clearCellsList);
+      const cleared = clearCells(clearCellsList);
+
+      for(const cr of creates){
+        if(cr.type===T.WORM) setCell(cr.r, cr.c, T.WORM, cr.o);
+        else setCell(cr.r, cr.c, cr.type);
+        sparkleAt(cr.r, cr.c, 14);
+      }
+
+      addScore(cleared * (12 + combo*4) + creates.length * 130);
+      combo = Math.min(9, combo+1);
+
+      renderAll();
+      collapseAndRefillAnimated(bounceCols);
+      renderAll();
+      await sleep(140);
+
+      if(score >= goal) nextLevel();
+    }
+
+    updateHUD();
+    if(moves<=0) await onGameOver();
+  }
+
+  /***********************
+   * SWAP / INPUT
+   ***********************/
+  function isAdjacent(a,b){
+    const dr = Math.abs(a.r-b.r);
+    const dc = Math.abs(a.c-b.c);
+    return (dr+dc)===1;
+  }
+  function swapBoard(a,b){
+    const tmp = board[a.r][a.c];
+    board[a.r][a.c]=board[b.r][b.c];
+    board[b.r][b.c]=tmp;
+  }
+
+  function clearSelection(){
+    gridEl.querySelectorAll(".candy.selected").forEach(el => el.classList.remove("selected"));
+    first=null;
+  }
+  function select(r,c){
+    if(busy || moves<=0) return;
+    clearSelection();
+    first={r,c};
+    const el=candyEl(r,c);
+    if(el) el.classList.add("selected");
+  }
+
+  function cellFromEvent(e){
+    const target = e.target.closest(".candy");
+    if(!target) return null;
+    return { r:+target.dataset.r, c:+target.dataset.c };
+  }
+
+  function pairKey(x,y){ return (x<y? `${x}-${y}`:`${y}-${x}`); }
+  function isMondSleepySwap(tA,tB){ return pairKey(tA,tB) === pairKey(T.MOND, T.SLEEPY); }
+
   async function trySwap(a,b){
     if(busy || moves<=0) return;
     if(!isAdjacent(a,b)) return;
 
+    const preA = board[a.r][a.c]?.t;
+    const preB = board[b.r][b.c]?.t;
+    const mondSleepyAttempt = isMondSleepySwap(preA, preB);
+
     busy = true;
     gridEl.classList.add("blocked");
 
-    const didSpecial = await activateSpecialBySwap(a,b);
-    if(didSpecial){
-      clearSelection();
-      if(!anyPossibleMove() && moves>0){
-        toast("🔄 Keine Züge – Mische neu!");
-        reshuffle();
+    await animateSwap(a,b);
+    swapBoard(a,b);
+    renderAll();
+
+    // Mond+Sleepy: Shuffle nur wenn Swap wirklich Match 3+ erzeugt
+    let doMondShuffleAfter = false;
+    if(mondSleepyAttempt){
+      const hasMatch = (scanRuns().length>0) || (scanTriples().length>0);
+      if(!hasMatch){
+        comboPopup("🌙😴 Nope!", "Mondlie+Sleepy shufflen nur, wenn du ein Match 3+ machst!", IMG.mondlie);
+        await animateSwap(a,b);
+        swapBoard(a,b);
         renderAll();
-        await settle();
+        busy = false;
+        gridEl.classList.remove("blocked");
+        return;
       }
+      doMondShuffleAfter = true;
+    }
+
+    // powerups
+    const didPower = await activatePower(a,b);
+    if(didPower){
+      moves--;
+      updateHUD();
+      collapseAndRefillAnimated(new Set());
+      renderAll();
+      await sleep(160);
+      await settle();
       busy = false;
       gridEl.classList.remove("blocked");
       return;
     }
 
-    // normal swap (must create match)
-    await animateSwap(a,b);
-    swapBoard(a,b);
-    syncCell(a.r,a.c); syncCell(b.r,b.c);
-    await sleep(10);
-
-    const matches = findMatches();
-    if(matches.length===0){
-      toast("❌ Kein Match");
+    // normal match check
+    const runs = scanRuns();
+    const triples = scanTriples();
+    if(!runs.length && !triples.length){
+      comboPopup("❌ Nope!", "Kein Match… nochmal!", IMG.cry);
       await animateSwap(a,b);
       swapBoard(a,b);
-      syncCell(a.r,a.c); syncCell(b.r,b.c);
+      renderAll();
       busy = false;
       gridEl.classList.remove("blocked");
-      updateHUD();
       return;
     }
 
     moves--;
-    clearSelection();
     updateHUD();
-    await settle();
+    await settle(a,b);
 
-    if(!anyPossibleMove() && moves>0){
-      toast("🔄 Keine Züge – Mische neu!");
-      reshuffle();
-      renderAll();
+    // Mondlie+Sleepy shuffle AFTER match
+    if(doMondShuffleAfter){
+      comboPopup("🌙 Dream Shuffle!", "Match geschafft → Jetzt wird neu gemischt!", IMG.mondlie);
+      shuffleBoard();
+      addScore(420);
+      await sleep(120);
       await settle();
     }
 
@@ -1328,47 +2200,28 @@
     gridEl.classList.remove("blocked");
   }
 
-  function reshuffle(){
-    const flat = board.flat();
-    for(let i=flat.length-1;i>0;i--){
-      const j = Math.floor(Math.random()*(i+1));
-      [flat[i],flat[j]] = [flat[j],flat[i]];
-    }
-    for(let r=0;r<N;r++) for(let c=0;c<N;c++){
-      board[r][c] = flat[r*N + c];
-    }
-    enforceCaps();
-  }
-
-  // --- Input handling ---
-  function cellFromEvent(e){
-    const target = e.target.closest(".candy");
-    if(!target) return null;
-    return { r:+target.dataset.r, c:+target.dataset.c };
-  }
-
-  // Click
-  gridEl.addEventListener("click", async (e) => {
+  gridEl.addEventListener("click", async (e)=>{
     if(intro.style.display !== "none") return;
     if(overlayBack.style.display === "grid") return;
+    if(infoBack.style.display === "grid") return;
 
     const p = cellFromEvent(e);
     if(!p || busy || moves<=0) return;
 
     if(!first) select(p.r,p.c);
     else{
-      const a = first;
-      const b = p;
+      const a=first, b=p;
       if(a.r===b.r && a.c===b.c){ clearSelection(); return; }
       if(isAdjacent(a,b)) await trySwap(a,b);
       else select(b.r,b.c);
     }
   });
 
-  // Drag/swipe feel (slower + more “pull”)
-  gridEl.addEventListener("pointerdown", (e) => {
+  // swipe pull
+  gridEl.addEventListener("pointerdown", (e)=>{
     if(intro.style.display !== "none") return;
     if(overlayBack.style.display === "grid") return;
+    if(infoBack.style.display === "grid") return;
     if(busy || moves<=0) return;
 
     const p = cellFromEvent(e);
@@ -1379,34 +2232,29 @@
     select(p.r,p.c);
 
     draggingEl = candyEl(p.r,p.c);
-    if(draggingEl){
-      draggingEl.classList.add("dragging");
-    }
+    if(draggingEl) draggingEl.classList.add("dragging");
   });
 
-  gridEl.addEventListener("pointermove", (e) => {
+  gridEl.addEventListener("pointermove", (e)=>{
     if(!down || !downCell || !draggingEl) return;
     const dx = e.clientX - down.x;
     const dy = e.clientY - down.y;
 
-    // dynamic clamp based on cell size
     const cell = cellEl(downCell.r, downCell.c);
     const rect = cell.getBoundingClientRect();
-    const lim = Math.max(18, rect.width * 0.35);
+    const lim = Math.max(18, rect.width * 0.46);
 
     const tx = clamp(dx, -lim, lim);
     const ty = clamp(dy, -lim, lim);
-    draggingEl.style.transform = `translate(${tx}px, ${ty}px) scale(1.04) rotate(${tx*0.12}deg)`;
+    draggingEl.style.transform = `translate(${tx}px, ${ty}px) scale(1.12) rotate(${tx*0.10}deg)`;
   });
 
-  gridEl.addEventListener("pointerup", async (e) => {
+  gridEl.addEventListener("pointerup", async (e)=>{
     if(!down || !downCell) { down=null; downCell=null; return; }
-
     const dx = e.clientX - down.x;
     const dy = e.clientY - down.y;
     const ax = Math.abs(dx), ay = Math.abs(dy);
 
-    // reset drag style
     if(draggingEl){
       draggingEl.classList.remove("dragging");
       draggingEl.style.transform = "";
@@ -1415,8 +2263,8 @@
 
     if(Math.max(ax,ay) >= 16){
       let dir;
-      if(ax > ay) dir = dx > 0 ? "R" : "L";
-      else dir = dy > 0 ? "D" : "U";
+      if(ax > ay) dir = dx>0 ? "R":"L";
+      else dir = dy>0 ? "D":"U";
 
       const a = downCell;
       const b = {r:a.r, c:a.c};
@@ -1426,8 +2274,7 @@
       if(dir==="U") b.r--;
 
       down=null; downCell=null;
-
-      if(b.r<0 || b.r>=N || b.c<0 || b.c>=N) return;
+      if(!inBounds(b.r,b.c)) return;
       await trySwap(a,b);
       return;
     }
@@ -1436,173 +2283,163 @@
   });
 
   // Hint
+  function anyPossibleMove(){
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const a={r,c};
+        const neigh=[];
+        if(c+1<COLS) neigh.push({r,c:c+1});
+        if(r+1<ROWS) neigh.push({r:r+1,c});
+        for(const b of neigh){
+          swapBoard(a,b);
+          const ok = scanRuns().length>0 || scanTriples().length>0;
+          swapBoard(a,b);
+          if(ok) return {a,b};
+        }
+      }
+    }
+    return null;
+  }
+
   async function hint(){
     if(intro.style.display !== "none") return;
     if(overlayBack.style.display === "grid") return;
+    if(infoBack.style.display === "grid") return;
     if(busy || moves<=0) return;
 
     const mv = anyPossibleMove();
-    if(!mv){ toast("😵 Keine Moves!"); return; }
-    const {a,b} = mv;
-    const ea = candyEl(a.r,a.c);
-    const eb = candyEl(b.r,b.c);
-    if(ea) ea.classList.add("selected");
-    if(eb) eb.classList.add("selected");
-    toast("💡 Versuch diese zwei!");
-    setTimeout(() => {
-      if(ea) ea.classList.remove("selected");
-      if(eb) eb.classList.remove("selected");
+    if(!mv){ comboPopup("😵 Keine Moves!", "Board ist stuck – versuch Sugar Rush oder Koala!", IMG.mondlie); return; }
+    const {a,b}=mv;
+    const ea=candyEl(a.r,a.c), eb=candyEl(b.r,b.c);
+    ea?.classList.add("selected");
+    eb?.classList.add("selected");
+    comboPopup("💡 Hint!", "Diese zwei probieren!", IMG.sweety);
+    setTimeout(()=>{
+      ea?.classList.remove("selected");
+      eb?.classList.remove("selected");
       clearSelection();
-    }, 600);
+    }, 820);
   }
   hintBtn.addEventListener("click", hint);
 
-  // Keyboard
-  window.addEventListener("keydown", (e) => {
-    const k = e.key.toLowerCase();
-    if(k==="r") start();
-    if(k==="h") hint();
-  });
-
   // Intro controls
-  function showIntro(){ intro.style.display = "grid"; }
-  function hideIntro(){ intro.style.display = "none"; }
+  function showIntro(){ intro.style.display="grid"; }
+  function hideIntro(){ intro.style.display="none"; resizeBoard(); }
   howBtn.addEventListener("click", showIntro);
-  introStart.addEventListener("click", () => { localStorage.setItem("sweetSwap_hideIntro","1"); hideIntro(); });
+  introStart.addEventListener("click", ()=>{ hideIntro(); });
   introCloseHint.addEventListener("click", hideIntro);
 
-  // --- Leaderboard ---
+  // Fullscreen toggle (mobile)
+  function enterFS(){
+    document.body.classList.add("fsMode");
+    resizeBoard();
+  }
+  function exitFS(){
+    document.body.classList.remove("fsMode");
+    resizeBoard();
+  }
+  fsBtn.addEventListener("click", enterFS);
+  fsExit.addEventListener("click", exitFS);
+
+  /***********************
+   * Leaderboard
+   ***********************/
   async function fetchLeaderboard(){
-    if(!sb){
-      lbList.innerHTML = `<div class="tiny">Kein Supabase konfiguriert.</div>`;
-      return;
-    }
+    if(!sb){ lbList.innerHTML = `<div class="tiny">Supabase nicht aktiv.</div>`; return; }
     const { data, error } = await sb
-      .from("leaderboard")
+      .from(TABLE_LB)
       .select("player, score, level, created_at")
       .order("score", { ascending:false })
       .limit(10);
 
-    if(error){
-      lbList.innerHTML = `<div class="tiny">Leaderboard Fehler: ${escapeHtml(error.message)}</div>`;
-      return;
-    }
+    if(error){ lbList.innerHTML = `<div class="tiny">Fehler: ${escapeHtml(error.message)}</div>`; return; }
+    if(!data || !data.length){ lbList.innerHTML = `<div class="tiny">Noch keine Scores. Sei der Erste 🫶</div>`; return; }
 
-    if(!data || data.length===0){
-      lbList.innerHTML = `<div class="tiny">Noch keine Scores. Sei der Erste 😄</div>`;
-      return;
-    }
-
-    lbList.innerHTML = data.map((row, idx) => `
+    lbList.innerHTML = data.map((row, idx)=>`
       <div class="lbItem">
         <div class="lbLeft">
           <div class="rank">${idx+1}</div>
           <div>
-            <div style="font-weight:900">${escapeHtml(row.player || "Unknown")}</div>
+            <div style="font-weight:950">${escapeHtml(row.player || "Unknown")}</div>
             <div class="tiny">Lvl ${row.level} · ${new Date(row.created_at).toLocaleString()}</div>
           </div>
         </div>
-        <div style="font-weight:900">${row.score}</div>
+        <div style="font-weight:950">${row.score}</div>
       </div>
     `).join("");
   }
 
   async function postScore(){
     const player = (playerNameEl.value || "").trim();
-    if(!player){
-      toast("✍️ Bitte Namen eingeben");
-      return;
-    }
-    if(!sb){
-      toast("⚠️ Supabase nicht konfiguriert");
-      return;
-    }
+    if(!player){ comboPopup("✍️ Name fehlt", "Bitte Name eingeben, dann posten!", IMG.sweety); return; }
+    if(!sb){ comboPopup("⚠️ Supabase", "Nicht aktiv / Fehler", IMG.cry); return; }
 
     const payload = { player, score, level, created_at: new Date().toISOString() };
-    const { error } = await sb.from("leaderboard").insert(payload);
+    const { error } = await sb.from(TABLE_LB).insert(payload);
 
     if(error){
-      toast("❌ Post fehlgeschlagen");
-      sbStatus.innerHTML = `Supabase: <b>Fehler</b> (${escapeHtml(error.message)})`;
+      comboPopup("❌ Post fail", error.message, IMG.cry);
+      sbStatus.textContent = `Supabase: Fehler (${error.message})`;
       return;
     }
-
-    toast("✅ Score gepostet!");
+    comboPopup("✅ Gepostet!", "Leaderboard ist updated ✨", IMG.happy);
     await fetchLeaderboard();
   }
 
   postNowBtn.addEventListener("click", postScore);
   refreshLbBtn.addEventListener("click", fetchLeaderboard);
 
-  // refresh every 20s (competition feel)
-  setInterval(() => { fetchLeaderboard(); }, 20000);
-
-  function escapeHtml(str){
-    return String(str).replace(/[&<>"']/g, (m)=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[m]));
+  // Game over
+  async function onGameOver(){
+    if(overlayBack.style.display==="grid") return;
+    overlayTitle.textContent = `💀 Game Over`;
+    overlayText.textContent = `Score: ${score} · Level: ${level}`;
+    overlaySmall.textContent = `Poste deinen Run und dominiere das Leaderboard 😄`;
+    overlayBack.style.display="grid";
+    if(autoPostEl.checked) await postScore();
   }
 
-  // --- Start game ---
-  function makeBoard(){
-    board = Array.from({length:N}, () => Array.from({length:N}, () => null));
-    const counts = {};
-    for(const c of CANDIES) counts[c.id]=0;
+  overlayPlay.addEventListener("click", ()=>{
+    overlayBack.style.display="none";
+    if(moves<=0) start();
+    else updateHUD();
+  });
+  overlayPost.addEventListener("click", ()=>postScore());
 
-    for(let r=0;r<N;r++){
-      for(let c=0;c<N;c++){
-        let t, tries=0;
-        do{
-          t = randTypeCapped(counts);
-          board[r][c] = t;
-          tries++;
-        } while(tries<50 && hasMatchAt(r,c));
-        counts[t] = (counts[t]||0)+1;
-      }
-    }
-    enforceCaps();
-  }
-
+  // Start / reset
   async function start(){
     score = 0;
     moves = 30;
     level = 1;
-    goal  = 4000;
+    goal = 4000;
+    combo = 1;
+    bannedTypes = new Set();
 
     busy = true;
     clearSelection();
+    overlayBack.style.display="none";
 
     makeBoard();
     renderAll();
+    renderLuvList();
     updateHUD();
+    resizeBoard();
 
     await settle();
 
-    if(!anyPossibleMove()){
-      reshuffle();
-      renderAll();
-      await settle();
-    }
-
-    busy = false;
-    toast("🍬 Let’s go!");
+    busy=false;
+    comboPopup("🫶 LET’S GO!", "Luvvies Crush startet!", IMG.sweety);
     updateHUD();
-
     await fetchLeaderboard();
   }
 
-  // Boot
   buildGridDom();
-  start();
 
-  // show intro unless hidden before (wenn du’s JEDES MAL willst: diese 2 Zeilen löschen + showIntro() immer)
-  const hide = localStorage.getItem("sweetSwap_hideIntro") === "1";
-  if(!hide) showIntro(); else hideIntro();
+  newBtn.addEventListener("click", ()=>start());
 
-  // New game button
-  newBtn.addEventListener("click", () => {
-    overlayBack.style.display = "none";
-    start();
-  });
-
+  // initial
+  intro.style.display="grid";
+  start().then(()=>resizeBoard());
 })();
 </script>
 </body>
