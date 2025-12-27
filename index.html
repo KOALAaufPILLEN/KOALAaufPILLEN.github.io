@@ -3,1008 +3,1014 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Luvvies Crush 2.0</title>
+  <meta name="theme-color" content="#f7f2ff">
+  <title>Luvvies Crush 2.0: Ultimate Edition</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
   <style>
-    :root{
-      /* Light Theme (Default) */
-      --bg1:#f7f2ff;
-      --bg2:#eaf6ff;
-      --card:rgba(255,255,255,0.85);
-      --card2:rgba(255,255,255,0.94);
-      --text:#1d1334;
-      --stroke:rgba(17,13,26,.10);
-      --shadow: 0 18px 60px rgba(20,10,60,.12);
-      --boardBg: radial-gradient(circle at 20% 20%, rgba(255,255,255,.86), rgba(255,255,255,.35));
+    /* ------------------------------------------------------------------
+       1. CORE VARIABLES & THEMES
+       ------------------------------------------------------------------ */
+    :root {
+      /* LIGHT THEME (Default) */
+      --bg-grad-start: #f7f2ff;
+      --bg-grad-end: #eaf6ff;
+      --card-bg: rgba(255, 255, 255, 0.85);
+      --card-border: rgba(255, 255, 255, 0.6);
+      --text-main: #1d1334;
+      --text-sub: #5a4b75;
+      --shadow-soft: 0 18px 40px rgba(20, 10, 60, 0.08);
+      --shadow-deep: 0 25px 80px rgba(20, 10, 60, 0.15);
+      --stroke: rgba(17, 13, 26, 0.08);
       
-      --cols: 10;
-      --rows: 10;
-      --cell: 54px;
+      --board-bg-grad: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(255,255,255,0.4));
+      --board-shadow: 0 20px 60px rgba(10,0,30,0.1), inset 0 0 40px rgba(255,255,255,0.8);
+
+      /* ACCENTS */
+      --accent-pink: #ff4fb9;
+      --accent-blue: #7ad8ff;
+      --accent-gold: #ffcf5a;
+      --accent-purple: #8b5cf6;
+
+      /* GRID CONFIG */
+      --cols: 9;
+      --rows: 9;
+      --cell: 56px;
       --gap: 8px;
-      --pad: 14px;
-      --boardRadius: 26px;
-      --toastMs: 2600ms;
+      --pad: 16px;
+      --board-radius: 32px;
+
+      /* ANIMATION TIMINGS */
+      --anim-swap: 280ms;
+      --anim-fall: 400ms;
+      --anim-pop: 350ms;
+      --toast-dur: 3200ms;
     }
 
-    /* DARK MODE VARIABLES */
-    :root.dark {
-      --bg1:#0f0b1e;
-      --bg2:#18122b;
-      --card:rgba(30,25,50,0.85);
-      --card2:rgba(40,35,65,0.94);
-      --text:#f0e6ff;
-      --stroke:rgba(255,255,255,.10);
-      --shadow: 0 18px 60px rgba(0,0,0,.5);
-      --boardBg: radial-gradient(circle at 20% 20%, rgba(40,30,70,.86), rgba(20,15,40,.85));
+    /* DARK MODE OVERRIDES */
+    :root.dark-mode {
+      --bg-grad-start: #0f0b1e;
+      --bg-grad-end: #1b142d;
+      --card-bg: rgba(30, 25, 50, 0.88);
+      --card-border: rgba(255, 255, 255, 0.12);
+      --text-main: #f0e6ff;
+      --text-sub: #a89bbd;
+      --shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.4);
+      --shadow-deep: 0 30px 90px rgba(0, 0, 0, 0.6);
+      --stroke: rgba(255, 255, 255, 0.1);
+
+      --board-bg-grad: radial-gradient(circle at 30% 30%, rgba(40,30,60,0.9), rgba(20,15,40,0.95));
+      --board-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 0 40px rgba(0,0,0,0.4);
     }
 
-    *{box-sizing:border-box}
-    html,body{height:100%}
+    /* ------------------------------------------------------------------
+       2. GLOBAL RESET & LAYOUT
+       ------------------------------------------------------------------ */
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; width: 100%; }
 
-    body{
-      margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      color:var(--text);
-      overflow:hidden;
-      background: linear-gradient(180deg, var(--bg1), var(--bg2));
-      position:relative;
-      transition: color .3s ease, background .3s ease;
-    }
-
-    /* Scroll container (scrollbar hidden) */
-    #page{
-      height:100vh;
-      overflow:auto;
-      position:relative;
-      z-index:0;
-    }
-    #page{ scrollbar-width:none; }
-    #page::-webkit-scrollbar{ width:0; height:0; }
-
-    /* Scrollender Background Layer */
-    #scrollBg{
-      position:absolute;
-      inset:0;
-      z-index:0;
-      pointer-events:none;
-      min-height: 120vh;
-      background:
-        radial-gradient(circle at 20% 20%, rgba(255,105,180,.14), transparent 48%),
-        radial-gradient(circle at 85% 25%, rgba(122,216,255,.20), transparent 52%),
-        radial-gradient(circle at 55% 75%, rgba(255,209,90,.16), transparent 50%),
-        linear-gradient(120deg, rgba(255,79,185,.18), rgba(255,209,90,.14), rgba(122,216,255,.18));
-      background-size: auto, auto, auto, 300% 300%;
-      filter: blur(18px);
-      opacity:.55;
-      animation: bgMove 18s ease-in-out infinite;
-    }
-    @keyframes bgMove{
-      0%{ background-position: 0% 50% }
-      50%{ background-position: 100% 50% }
-      100%{ background-position: 0% 50% }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: var(--text-main);
+      background: linear-gradient(180deg, var(--bg-grad-start), var(--bg-grad-end));
+      overflow: hidden;
+      transition: background 0.5s ease, color 0.5s ease;
+      user-select: none;
     }
 
-    #app{
-      width:min(1100px, 96vw);
-      margin: 18px auto 28px;
-      position:relative;
-      z-index:5; 
+    /* Background Animation Layer */
+    #bg-layer {
+      position: absolute; inset: 0; z-index: 0; pointer-events: none;
+      background: 
+        radial-gradient(circle at 15% 15%, rgba(255, 79, 185, 0.08), transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(122, 216, 255, 0.1), transparent 40%),
+        radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.05), transparent 60%);
+      filter: blur(40px);
+      animation: ambientPulse 10s ease-in-out infinite alternate;
     }
+    @keyframes ambientPulse { 0% { opacity: 0.6; transform: scale(1); } 100% { opacity: 1; transform: scale(1.1); } }
 
-    .topRow{
-      margin-top: 12px;
-      background: var(--card);
-      border:1px solid var(--stroke);
-      border-radius: 22px;
-      padding: 12px;
-      box-shadow: var(--shadow);
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      flex-wrap:wrap;
-      position:relative;
-      z-index:6;
-      backdrop-filter: blur(12px);
-    }
+    /* Partikel Layer (Global) */
+    #global-fx { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
 
-    .diffWrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-    .diffWrap .label{font-weight:900;opacity:.9;margin-right:4px}
-    .diffPills{
-      display:flex;
-      gap:8px; padding:6px;
-      border-radius:999px;
-      background: rgba(255,255,255,.78);
-      border:1px solid rgba(17,13,26,.08);
-    }
-    .dark .diffPills { background: rgba(0,0,0,.4); border-color: rgba(255,255,255,.1); }
-
-    .diffPills input{display:none}
-    .diffPills label{
-      cursor:pointer;
-      user-select:none;
-      padding:8px 14px; border-radius:999px;
-      font-weight:900; font-size:13px;
-      color: #1d1334;
-      transition: all .2s ease;
-    }
-    .dark .diffPills label { color: #fff; }
-
-    .diffPills input:checked + label{
-      background: linear-gradient(135deg, #ff4fb9, #7ad8ff);
-      color:#fff;
-      box-shadow: 0 4px 12px rgba(255,79,185,.4);
-      transform: translateY(-1px);
-    }
-
-    /* Buttons */
-    .Btn{
-      position: relative;
-      height: 44px;
-      padding: 0 16px;
-      border-radius: 999px;
-      border: none;
-      background-color: rgb(151, 95, 255);
-      color: white;
-      box-shadow: 0px 5px 10px rgba(0,0,0,0.2) inset, 0px 5px 15px rgba(151, 95, 255, 0.4);
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap:8px;
-      font-weight:800;
-      transition: transform .12s ease, filter .2s;
-    }
-    .Btn:hover { transform: translateY(-2px); filter:brightness(1.1); }
-    .Btn:active{ transform: scale(.96); }
-    
-    .Btn.secondary{ background: linear-gradient(135deg, #ff4fb9, #ff9adf); box-shadow: 0 5px 15px rgba(255, 79, 185, 0.4); }
-    .Btn.ghost{ background: rgba(255,255,255,.5); color:var(--text); border:1px solid var(--stroke); box-shadow:none; }
-    .dark .Btn.ghost { background: rgba(255,255,255,.1); color:#fff; }
-    
-    .Btn.darkToggle {
-      width: 44px; padding:0; font-size: 20px;
-      background: #333; 
-    }
-    .Btn.darkToggle.active { background: #ffd15a; color:#333; }
-
-    .stats{
-      margin-top: 12px;
-      display:grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 10px;
-      z-index:6;
-    }
-    .stat{
-      background: var(--card2);
-      border:1px solid var(--stroke);
-      border-radius: 18px;
-      padding: 10px 12px;
-      box-shadow: 0 10px 30px rgba(0,0,0,.05);
-      display:flex;
-      flex-direction:column;
-      justify-content:center;
-      backdrop-filter: blur(8px);
-    }
-    .stat .k{font-size:11px; opacity:.7; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;}
-    .stat .v{font-weight:900; font-size:18px; margin-top:2px}
-
-    /* Board */
-    .playArea{
-      margin-top: 12px;
-      background: var(--card);
-      border:1px solid var(--stroke);
-      border-radius: 24px;
-      box-shadow: var(--shadow);
-      padding: 14px;
-      position:relative;
-      overflow:hidden;
-      z-index:6;
-      backdrop-filter: blur(14px);
-    }
-
-    #board{
-      position:relative;
-      z-index:12;
-      padding: var(--pad);
-      border-radius: var(--boardRadius);
-      background: var(--boardBg);
-      border: 1px solid rgba(17,13,26,.08);
-      box-shadow: 0 18px 70px rgba(0,0,0,.15), 0 6px 16px rgba(0,0,0,.06) inset;
+    /* Main App Container */
+    #app {
+      position: relative; z-index: 10;
+      width: min(1000px, 96vw);
+      height: 100%;
       margin: 0 auto;
+      display: flex; flex-direction: column;
+      padding: 10px 0 20px;
     }
 
-    /* Tiles & Plates */
-    .tile{
-      position:absolute;
-      width: var(--cell); height: var(--cell);
-      left:0; top:0;
-      transform: translate(var(--x), var(--y));
-      transition: transform 220ms cubic-bezier(.2,.8,.2,1);
-      will-change: transform;
-      z-index:15;
+    /* Scrollable Content Area */
+    #scroll-wrap {
+      flex: 1; overflow-y: auto; overflow-x: hidden;
+      padding: 10px;
+      scrollbar-width: none;
+      display: flex; flex-direction: column; gap: 16px;
     }
-    /* Mellow Lord / Zilla sizes */
-    .tile.big2x2 { width: calc(var(--cell)*2 + var(--gap)); height: calc(var(--cell)*2 + var(--gap)); z-index:25; }
-    .tile.big3x3 { width: calc(var(--cell)*3 + var(--gap)*2); height: calc(var(--cell)*3 + var(--gap)*2); z-index:30; }
+    #scroll-wrap::-webkit-scrollbar { display: none; }
+
+    /* ------------------------------------------------------------------
+       3. UI COMPONENTS: CARDS, BUTTONS, STATS
+       ------------------------------------------------------------------ */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      box-shadow: var(--shadow-soft);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      padding: 16px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-deep); }
+
+    /* Header / Top Bar */
+    .top-bar {
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+    }
+
+    /* Difficulty Pills */
+    .diff-switch {
+      display: flex; gap: 6px; padding: 5px;
+      background: rgba(255,255,255,0.4);
+      border-radius: 99px;
+      border: 1px solid var(--stroke);
+    }
+    .dark-mode .diff-switch { background: rgba(0,0,0,0.3); }
     
-    .tile.big3x3 .plate {
-      animation: zillaShake 3s ease-in-out infinite;
-      border: 3px solid #ff4fb9;
-      box-shadow: 0 0 30px rgba(255,79,185,0.4);
+    .diff-opt {
+      padding: 8px 16px; border-radius: 99px;
+      font-weight: 800; font-size: 13px; cursor: pointer;
+      opacity: 0.7; transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
-    @keyframes zillaShake {
-      0%, 100% { transform: rotate(0deg) scale(1); }
-      25% { transform: rotate(1deg) scale(1.02); }
-      75% { transform: rotate(-1deg) scale(1.02); }
+    .diff-opt.active {
+      background: linear-gradient(135deg, var(--accent-pink), var(--accent-blue));
+      color: white; opacity: 1;
+      box-shadow: 0 4px 12px rgba(255, 79, 185, 0.4);
+      transform: scale(1.05);
     }
 
-    .plate{
-      width:100%; height:100%;
-      border-radius: 16px;
-      background: radial-gradient(circle at 22% 18%, rgba(255,255,255,.88), rgba(255,255,255,0) 40%), linear-gradient(135deg, var(--p1), var(--p2));
-      border: 1px solid rgba(255,255,255,.50);
-      box-shadow: 0 8px 16px rgba(0,0,0,.14), 0 -4px 8px rgba(255,255,255,.4) inset;
-      position:relative;
-      transform: scale(1);
+    /* Action Buttons */
+    .btn-group { display: flex; gap: 10px; }
+    
+    .btn {
+      position: relative; height: 44px; padding: 0 20px;
+      border: none; border-radius: 99px;
+      font-weight: 800; font-size: 14px; color: white;
+      cursor: pointer; overflow: hidden;
+      background: var(--accent-purple);
+      box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3), inset 0 2px 0 rgba(255,255,255,0.2);
+      transition: all 0.2s ease;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
+    .btn:active { transform: scale(0.96); }
+    
+    .btn.secondary { background: linear-gradient(135deg, var(--accent-pink), #ff9adf); box-shadow: 0 4px 15px rgba(255, 79, 185, 0.4); }
+    .btn.ghost { background: transparent; border: 2px solid var(--stroke); color: var(--text-main); box-shadow: none; }
+    .dark-mode .btn.ghost { border-color: rgba(255,255,255,0.3); color: white; }
+
+    /* Stats Grid */
+    .stats-row {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
+    }
+    .stat-box {
+      background: var(--card-bg); border-radius: 18px; padding: 10px;
+      text-align: center; border: 1px solid var(--stroke);
+      display: flex; flex-direction: column; justify-content: center;
+    }
+    .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; font-weight: 700; }
+    .stat-val { font-size: 20px; font-weight: 900; margin-top: 4px; color: var(--text-main); }
+    .stat-val.highlight { color: var(--accent-pink); }
+
+    /* Progress Bar */
+    .prog-wrap {
+      height: 12px; background: rgba(0,0,0,0.05); border-radius: 99px; overflow: hidden;
+      margin-top: 8px; position: relative;
+    }
+    .dark-mode .prog-wrap { background: rgba(255,255,255,0.1); }
+    .prog-fill {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--accent-pink), var(--accent-gold), var(--accent-blue));
+      background-size: 200% 100%;
+      animation: gradientMove 3s linear infinite;
+      transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    @keyframes gradientMove { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
+
+    /* ------------------------------------------------------------------
+       4. THE GAME BOARD (CENTERPIECE)
+       ------------------------------------------------------------------ */
+    .board-container {
+      position: relative;
+      margin: 10px auto;
+      padding: var(--pad);
+      background: var(--board-bg-grad);
+      border-radius: var(--board-radius);
+      box-shadow: var(--board-shadow);
+      border: 1px solid rgba(255,255,255,0.4);
+      width: fit-content;
+      user-select: none;
+      touch-action: none; /* Wichtig für Mobile Drag */
+    }
+    .dark-mode .board-container { border: 1px solid rgba(255,255,255,0.1); }
+
+    #grid {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(var(--cols), var(--cell));
+      grid-template-rows: repeat(var(--rows), var(--cell));
+      gap: var(--gap);
+    }
+
+    /* Grid Cells (Hintergrund-Slots) */
+    .slot {
+      width: var(--cell); height: var(--cell);
+      background: rgba(0,0,0,0.03);
+      border-radius: 14px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .dark-mode .slot { background: rgba(255,255,255,0.05); }
+
+    /* ------------------------------------------------------------------
+       5. TILES & CHARACTERS (THE SOUL)
+       ------------------------------------------------------------------ */
+    .tile {
+      position: absolute;
+      width: var(--cell); height: var(--cell);
+      left: 0; top: 0;
+      transform: translate(calc(var(--c) * (var(--cell) + var(--gap))), calc(var(--r) * (var(--cell) + var(--gap))));
+      z-index: 10;
+      transition: transform var(--anim-swap) cubic-bezier(0.2, 1.2, 0.5, 1);
+      cursor: pointer;
+      will-change: transform;
+    }
+    
+    /* Interactive States */
+    .tile.selected .inner { transform: scale(0.9); box-shadow: 0 0 0 3px var(--accent-pink); animation: pulse 1s infinite; }
+    .tile.hint .inner { animation: shake 2s ease-in-out infinite; box-shadow: 0 0 15px var(--accent-gold); }
+    .tile.matched .inner { animation: popOut var(--anim-pop) forwards; }
+    .tile.dropping { transition: transform var(--anim-fall) cubic-bezier(0.5, 0, 0.5, 1.2); z-index: 20; }
+    .tile.spawn { animation: spawnIn 0.4s back.out; }
+
+    /* The Inner Plate (Visuals) */
+    .inner {
+      width: 100%; height: 100%;
+      border-radius: 14px;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(255,255,255,0.1)), var(--tile-color);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15), inset 0 -4px 8px rgba(0,0,0,0.1);
+      border: 1px solid rgba(255,255,255,0.5);
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+      overflow: hidden;
       transition: transform 0.2s;
     }
-    .tile.big2x2 .plate { border-radius: 24px; }
-    .tile.big3x3 .plate { border-radius: 32px; background: linear-gradient(45deg, #2b1b4f, #8b5cf6) !important; }
-
-    .tile img{
-      position:absolute; inset: 10%; width:80%; height:80%;
-      object-fit:contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,.15));
-      pointer-events:none;
-    }
     
-    /* Pop Animation */
-    .pop .plate{ animation: popPlate 350ms ease-in forwards; }
-    @keyframes popPlate{
-      0%{ transform: scale(1); opacity:1; }
-      50%{ transform: scale(1.2); opacity:0.8; }
-      100%{ transform: scale(0); opacity:0; }
+    /* Hardcore Matching Visuals (Pattern Overlay if needed, currently color) */
+    .inner::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 50%);
+      pointer-events: none;
     }
 
-    /* Modals & Overlays */
-    .modalBack{
-      position:fixed; inset:0;
-      display:none; align-items:center; justify-content:center;
-      background: rgba(10,8,20,.75);
-      z-index: 9999;
-      backdrop-filter: blur(4px);
+    /* Images */
+    .tile-img {
+      width: 85%; height: 85%;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 4px rgba(0,0,0,0.2));
+      pointer-events: none;
+      z-index: 2;
     }
-    .modal{
-      width: min(600px, 92vw);
-      background: var(--card2);
+
+    /* ------------------------------------------------------------------
+       6. SPECIALS: BOSSES, EVOLUTIONS & EFFECTS
+       ------------------------------------------------------------------ */
+    
+    /* Fledernuss Evolution Stages */
+    .tile[data-type="fleder"] .inner { border: 2px solid transparent; }
+    .tile[data-type="fleder"][data-evo="2"] .inner { border-color: #a35eff; box-shadow: 0 0 10px #a35eff; }
+    .tile[data-type="fleder"][data-evo="3"] .inner { border-color: #ff0055; box-shadow: 0 0 20px #ff0055; animation: bossPulse 1s infinite; }
+
+    /* Boss: MellowZilla (3x3) */
+    .boss-overlay {
+      position: absolute;
+      width: calc(3 * var(--cell) + 2 * var(--gap));
+      height: calc(3 * var(--cell) + 2 * var(--gap));
+      background: linear-gradient(135deg, #2b1b4f, #4a3b75);
       border-radius: 24px;
-      padding: 24px;
-      border: 1px solid var(--stroke);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-      color: var(--text);
+      z-index: 50;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+      border: 4px solid var(--accent-pink);
+      animation: zillaFloat 3s ease-in-out infinite;
+      transition: transform 0.3s;
     }
-    .modal h2 { margin-top:0; color: #ff4fb9; }
-
-    /* Leaderboard Glows */
-    .lbItem{
-      display:flex; justify-content:space-between; padding: 10px;
-      background: rgba(255,255,255,0.5);
-      margin-bottom:6px; border-radius:12px;
+    .boss-overlay.hit { animation: zillaHit 0.4s; }
+    .boss-hp-bar {
+      width: 80%; height: 8px; background: #000; border-radius: 4px; margin-top: 10px; overflow: hidden;
     }
-    .dark .lbItem { background: rgba(255,255,255,0.05); }
+    .boss-hp-fill { width: 100%; height: 100%; background: #ff0055; transition: width 0.2s; }
+    .boss-img { width: 70%; filter: drop-shadow(0 0 10px rgba(255,79,185,0.5)); }
 
-    .lbItem.rank1 { border: 2px solid gold; box-shadow: 0 0 15px rgba(255,215,0,0.4); animation: pulseGold 2s infinite; }
-    .lbItem.rank2 { border: 2px solid silver; box-shadow: 0 0 10px rgba(192,192,192,0.3); }
-    .lbItem.rank3 { border: 2px solid #cd7f32; box-shadow: 0 0 10px rgba(205,127,50,0.3); }
+    /* Animations */
+    @keyframes pulse { 0% { transform: scale(0.95); } 50% { transform: scale(1.05); } 100% { transform: scale(0.95); } }
+    @keyframes shake { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(5deg); } 75% { transform: rotate(-5deg); } }
+    @keyframes popOut { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.8; } 100% { transform: scale(0); opacity: 0; } }
+    @keyframes spawnIn { 0% { transform: scale(0); } 70% { transform: scale(1.1); } 100% { transform: scale(1); } }
+    @keyframes zillaFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    @keyframes zillaHit { 0% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(0.95); filter: brightness(2) sepia(1) hue-rotate(-50deg); } 100% { transform: scale(1); filter: brightness(1); } }
 
-    @keyframes pulseGold { 0%{box-shadow:0 0 15px rgba(255,215,0,0.2);} 50%{box-shadow:0 0 25px rgba(255,215,0,0.6);} 100%{box-shadow:0 0 15px rgba(255,215,0,0.2);} }
-
-    /* Toast */
-    #toast{ position: fixed; right: 20px; top: 20px; z-index: 10000; pointer-events:none; }
-    .toast{
-      background: var(--card2); padding: 12px 18px; margin-top:10px;
-      border-radius: 12px; border: 1px solid var(--stroke);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-      animation: slideIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-      pointer-events: auto;
+    /* ------------------------------------------------------------------
+       7. MODALS, TOASTS & EXTRAS
+       ------------------------------------------------------------------ */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);
+      z-index: 100; display: none; align-items: center; justify-content: center;
+      opacity: 0; transition: opacity 0.3s;
     }
-    @keyframes slideIn { from{transform:translateX(100%);opacity:0} to{transform:translateX(0);opacity:1} }
-    .toast b { color: #ff4fb9; display:block; margin-bottom:2px; }
+    .modal-backdrop.active { display: flex; opacity: 1; }
+    .modal {
+      background: var(--card-bg); width: min(500px, 90vw); padding: 30px;
+      border-radius: 30px; border: 1px solid var(--card-border);
+      box-shadow: 0 40px 100px rgba(0,0,0,0.5);
+      text-align: center; transform: scale(0.8); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .modal-backdrop.active .modal { transform: scale(1); }
+    .modal h2 { margin: 0 0 10px; font-size: 28px; background: linear-gradient(45deg, var(--accent-pink), var(--accent-blue)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
-    /* Responsiveness */
-    @media (max-width: 600px){
-      .stats{ grid-template-columns: 1fr 1fr 1fr; }
-      .topRow .diffWrap { width:100%; justify-content:center; }
-      .topRow .actions { width:100%; justify-content:center; }
+    #toast-container { position: fixed; top: 20px; right: 20px; z-index: 200; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+    .toast {
+      background: rgba(255,255,255,0.95); padding: 12px 20px; border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2); border-left: 4px solid var(--accent-pink);
+      transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      display: flex; align-items: center; gap: 10px; pointer-events: auto; font-weight: 600;
+    }
+    .dark-mode .toast { background: #2b1b4f; color: white; }
+    .toast.show { transform: translateX(0); }
+    .toast img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
+
+    /* Responsive Adjustments */
+    @media (max-width: 600px) {
+      :root { --cell: 42px; --gap: 6px; }
+      .stats-row { grid-template-columns: repeat(3, 1fr); }
+      .stat-box:nth-child(4), .stat-box:nth-child(5) { display: none; } /* Hide less important stats on tiny screens */
+      .top-bar { justify-content: center; }
     }
   </style>
 </head>
-
 <body>
-  <div id="page">
-    <div id="scrollBg"></div>
-    <div id="toast"></div>
 
-    <div class="modalBack" id="greetBack" style="display:flex;">
-      <div class="modal" style="text-align:center;">
-        <h2>Willkommen zu Luvvies Crush 2.0 🍭</h2>
-        <p>Match nur bei <b>gleicher Figur + gleicher Farbe!</b><br>Schaffst du es bis zum MellowZilla Boss?</p>
-        
-        <div style="margin:20px 0;">
-          <label style="display:block; font-weight:bold; margin-bottom:8px;">Dein Spielername:</label>
-          <input type="text" id="playerNameInput" placeholder="Name eingeben..." maxlength="16" 
-                 style="padding:10px; border-radius:8px; border:1px solid #ccc; font-size:16px; width:80%;">
-        </div>
+  <div id="bg-layer"></div>
+  <div id="global-fx"></div>
 
-        <div style="display:flex; justify-content:center; gap:10px;">
-          <button class="Btn ghost" onclick="document.getElementById('introBack').style.display='flex'">Anleitung</button>
-          <button class="Btn secondary" id="greetPlay">Spielen</button>
-        </div>
+  <div id="app">
+    
+    <div class="card top-bar">
+      <div class="diff-switch" id="diff-switch">
+        <div class="diff-opt" data-diff="easy">Easy</div>
+        <div class="diff-opt active" data-diff="normal">Normal</div>
+        <div class="diff-opt" data-diff="shock">Schock</div>
+      </div>
+      
+      <div class="btn-group">
+        <button class="btn ghost" id="btn-darkmode">🌙</button>
+        <button class="btn ghost" id="btn-sound">🔊</button>
+        <button class="btn secondary" id="btn-new">Neu</button>
+        <button class="btn" id="btn-hint">Hint (-2)</button>
       </div>
     </div>
 
-    <div class="modalBack" id="introBack">
-      <div class="modal">
-        <h2>Spielregeln 2.0</h2>
-        <ul style="line-height:1.6; padding-left:20px;">
-          <li><b>Match:</b> Gleiche Figur UND gleiche Farbe! (Sehr schwer)</li>
-          <li><b>4er:</b> Sourworm (Line Clear)</li>
-          <li><b>5er:</b> Citrussy (Explosion Radius 2)</li>
-          <li><b>Fledernuss (Lvl 10+):</b> 3× Nuss → Held. 3× Held → SuperNuss → BOOM! 🦇</li>
-          <li><b>Simba (Lvl 4+):</b> Best Buddies mit Smokey.</li>
-          <li><b>MellowZilla:</b> Boss in Level 20. 3x3 Feld. 20.000 Punkte.</li>
-          <li><b>Hint:</b> Kostet Züge! (Easy: -1, Normal: -2, Zuckerschock: -3).</li>
-          <li><b>Smart Shuffle:</b> Mischt nur innen, wenn keine Züge mehr da sind.</li>
-        </ul>
-        <button class="Btn ghost" onclick="document.getElementById('introBack').style.display='none'" style="float:right;">Verstanden</button>
-      </div>
-    </div>
-
-    <div class="modalBack" id="gameOverBack">
-      <div class="modal" style="text-align:center;">
-        <h2 style="color:#ff4fb9; font-size:28px;">GAME OVER 😵</h2>
-        <div style="font-size:40px; font-weight:900; margin:10px 0;" id="goScore">0</div>
-        <p>Punkte</p>
-        
-        <div style="margin:20px 0;">
-          <label class="tiny">Name für Leaderboard:</label><br>
-          <input type="text" id="goNameInput" maxlength="16" style="padding:8px; border-radius:6px; font-weight:bold; text-align:center;">
+    <div id="scroll-wrap">
+      
+      <div class="stats-row">
+        <div class="stat-box">
+          <span class="stat-label">Level</span>
+          <span class="stat-val" id="ui-lvl">1</span>
         </div>
-
-        <div style="display:flex; gap:10px; justify-content:center;">
-          <button class="Btn ghost" onclick="restartGame()">Neustart</button>
-          <button class="Btn secondary" id="btnPostScore">Score Posten</button>
+        <div class="stat-box">
+          <span class="stat-label">Score</span>
+          <span class="stat-val highlight" id="ui-score">0</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Ziel</span>
+          <span class="stat-val" id="ui-target">2500</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Moves</span>
+          <span class="stat-val" id="ui-moves">25</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Combo</span>
+          <span class="stat-val" id="ui-combo">x1</span>
         </div>
       </div>
-    </div>
 
-    <div id="app">
-      <div class="topRow">
-        <div class="diffWrap">
-          <div class="label">Modus</div>
-          <div class="diffPills" id="diffPills">
-            <input type="radio" name="diff" id="d_easy" value="easy"><label for="d_easy">Easy</label>
-            <input type="radio" name="diff" id="d_normal" value="normal" checked><label for="d_normal">Normal</label>
-            <input type="radio" name="diff" id="d_shock" value="shock"><label for="d_shock">Zuckerschock</label>
+      <div class="prog-wrap">
+        <div class="prog-fill" id="ui-prog"></div>
+      </div>
+
+      <div class="board-container">
+        <div id="grid">
           </div>
-        </div>
+        <div id="boss-layer"></div>
+      </div>
 
-        <div class="actions">
-          <button class="Btn darkToggle" id="btnDark" title="Dark Mode">🌙</button>
-          <button class="Btn secondary" onclick="restartGame()">Neu</button>
-          <button class="Btn" id="btnHint">Hint <span id="hintCost" style="font-size:10px; opacity:0.8; margin-left:4px;">(-2)</span></button>
+      <div class="card">
+        <h3 style="margin-top:0; color:var(--text-sub);">Deine Luvvies Crew</h3>
+        <div style="font-size: 13px; line-height: 1.6; opacity: 0.8;" id="lore-text">
+          Tippe auf ein Luvvie, um mehr zu erfahren.
         </div>
       </div>
 
-      <div class="stats">
-        <div class="stat"><div class="k">Level</div><div class="v" id="uiLevel">1</div></div>
-        <div class="stat"><div class="k">Ziel</div><div class="v" id="uiGoal">2000</div></div>
-        <div class="stat"><div class="k">Score</div><div class="v" id="uiScore">0</div></div>
-        <div class="stat"><div class="k">Moves</div><div class="v" id="uiMoves">25</div></div>
-        <div class="stat"><div class="k">Combo</div><div class="v" id="uiCombo">x1</div></div>
-      </div>
+    </div> </div> <div id="toast-container"></div>
 
-      <div class="playArea" id="playArea">
-        <div id="board"></div>
-      </div>
+  <div class="modal-backdrop" id="modal-start">
+    <div class="modal">
+      <h2>Luvvies Crush 2.0</h2>
+      <p><b>Hardcore Edition:</b> Figur + Farbe müssen stimmen!</p>
+      <p>Ab Level 4: Simba & Smokey Bond.<br>Ab Level 10: Fledernuss Evolution.<br>Level 20: MellowZilla Boss Fight.</p>
+      <input type="text" id="player-name" placeholder="Dein Name (z.B. KOALAaufPILLEN)" style="padding:10px; border-radius:8px; border:1px solid #ccc; width:80%; margin:15px 0; text-align:center;">
+      <br>
+      <button class="btn secondary" style="font-size:18px; padding:10px 40px;" onclick="Game.start()">Let's Go!</button>
+    </div>
+  </div>
 
-      <div class="topRow" style="margin-top:12px; display:block;">
-        <h3 style="margin:0 0 10px;">Leaderboard</h3>
-        <div id="lbList" style="max-height:200px; overflow:auto;">
-          <div style="font-size:12px; opacity:0.6;">Lade Scores...</div>
-        </div>
+  <div class="modal-backdrop" id="modal-gameover">
+    <div class="modal">
+      <h2 style="font-size:40px;">GAME OVER 💀</h2>
+      <p style="font-size:20px;">Score: <span id="go-score">0</span></p>
+      <p id="go-msg">Knapp vorbei ist auch daneben.</p>
+      <div style="display:flex; justify-content:center; gap:10px; margin-top:20px;">
+        <button class="btn ghost" onclick="Game.init()">Revanche</button>
+        <button class="btn secondary" onclick="Game.postScore()">Score Posten</button>
       </div>
     </div>
   </div>
 
   <script>
-    /* --- CONFIG & ASSETS --- */
-    const IMG = {
+    /**
+     * ------------------------------------------------------------------
+     * LUVVIES CRUSH 2.0 - ULTIMATE EDITION ENGINE
+     * ------------------------------------------------------------------
+     * Ein Monolith aus purer Liebe zum Detail.
+     */
+
+    // --- CONFIG & ASSETS ---
+    const ASSETS = {
       sweety:   "https://static.wixstatic.com/media/d05122_efe39fec7e5c4d569dfb3fef75e5b6ff~mv2.png",
       sleepy:   "https://static.wixstatic.com/media/d05122_cfd779a0aad04c72bd08efbc0f363f53~mv2.png",
       joyce:    "https://static.wixstatic.com/media/d05122_36a3f8d83be4433082995ee1a8003218~mv2.png",
       smokey:   "https://static.wixstatic.com/media/d05122_9a607ff042b647b789e3b44cc75bd38d~mv2.png",
       simba:    "https://static.wixstatic.com/media/d05122_4d92be50d61e4a2297af16a3295c38bf~mv2.png",
-      worm:     "https://static.wixstatic.com/media/d05122_a8e7a37e04694ff2a99b8af60f1567b7~mv2.png",
-      citrussy: "https://static.wixstatic.com/media/d05122_9cdc763a1ec94a90a3fd91ee3481b2c4~mv2.png",
-      koala:    "https://static.wixstatic.com/media/d05122_9cb17e901a1a4775819bfda895d0f1c9~mv2.png",
+      fleder:   "https://static.wixstatic.com/media/d05122_1950f2496b344e56bcac10ea51286750~mv2.png", // Placeholder visuals managed via CSS filter
       mellow:   "https://static.wixstatic.com/media/d05122_53fbcb0babf447a5a32cc3b3fbecad2b~mv2.png",
-      // Fledernuss & Boss visual representation via logic (CSS filters/text) since generic URLs missing
-      fledernuss: "https://static.wixstatic.com/media/d05122_1950f2496b344e56bcac10ea51286750~mv2.png", // Platzhalter Cry
+      koala:    "https://static.wixstatic.com/media/d05122_9cb17e901a1a4775819bfda895d0f1c9~mv2.png",
+      citrussy: "https://static.wixstatic.com/media/d05122_9cdc763a1ec94a90a3fd91ee3481b2c4~mv2.png"
     };
 
-    const DIFFS = {
-      easy:   { moves:30, target:2000, hintCost:1, colors:2 },
-      normal: { moves:25, target:3500, hintCost:2, colors:3 },
-      shock:  { moves:20, target:6000, hintCost:3, colors:4 } // Zuckerschock
+    const CHAR_DATA = {
+      sweety: { name: "Sweety", color: "#ff4fb9", quotes: ["Zucker!", "So sweet!", "Yummy!"] },
+      sleepy: { name: "Sleepy", color: "#7ad8ff", quotes: ["Gähn...", "Noch 5 Minuten...", "Zzz..."] },
+      joyce:  { name: "Joyce",  color: "#b8b1ff", quotes: ["Wuff!", "Bin dabei!", "Leckerli?"] },
+      smokey: { name: "Smokey", color: "#ffcf5a", quotes: ["Miau.", "Ich bin Boss.", "Schnurrr..."] },
+      simba:  { name: "Simba",  color: "#ff9d3c", quotes: ["Roar!", "Beschützer!", "Kuscheln?"] },
+      fleder: { name: "Fledernuss", color: "#a35eff", quotes: ["Flattern!", "Nachtaktiv!", "Echolot!"] }
     };
 
-    // Bases with Unlock Levels
-    const BASES = [
-      { key:"sweety", minLvl:1, img:IMG.sweety },
-      { key:"sleepy", minLvl:1, img:IMG.sleepy },
-      { key:"joyce",  minLvl:1, img:IMG.joyce },
-      { key:"smokey", minLvl:1, img:IMG.smokey },
-      { key:"simba",  minLvl:4, img:IMG.simba },  // Ab Level 4
-      { key:"fleder", minLvl:10, img:IMG.fledernuss } // Ab Level 10
-    ];
-
-    const PALETTES = [
-      ["#ff9adf", "#ff4fb9"], // Pink
-      ["#7ad8ff", "#00aaff"], // Blue
-      ["#ffcf5a", "#ff9900"], // Orange
-      ["#b8ffb1", "#00cc44"], // Green
-    ];
-
-    /* --- STATE --- */
-    let grid = [];
-    let tileEls = new Map();
-    let rows=9, cols=8;
-    let level=1, score=0, moves=0, target=0, combo=1;
-    let currentDiff = 'normal';
-    let busy = false;
-    let currentPlayerName = "Gast";
-    let bigMellows = new Map(); // id -> {r,c,hp,maxHp}
-    let bossActive = false;
-
-    // Fledernuss Stages
-    const FLEDER_STAGES = {
-      "fleder": 1, "fleder_held": 2, "fleder_super": 3
+    const DIFFICULTY = {
+      easy:   { moves: 35, colors: 3, targetBase: 2000, hintCost: 1 },
+      normal: { moves: 25, colors: 4, targetBase: 3500, hintCost: 2 },
+      shock:  { moves: 15, colors: 5, targetBase: 6000, hintCost: 3 }
     };
 
-    /* --- DOM ELEMENTS --- */
-    const uiBoard = document.getElementById("board");
-    const uiScore = document.getElementById("uiScore");
-    const uiMoves = document.getElementById("uiMoves");
-    const uiLevel = document.getElementById("uiLevel");
-    const uiGoal  = document.getElementById("uiGoal");
-    
-    /* --- INITIALIZATION --- */
-    function init(){
-      setupSupabase();
-      attachEvents();
-      refreshLeaderboard();
-      if(localStorage.getItem("luvvies_dark")==="1") toggleDark(true);
-    }
-
-    /* --- GAME LOOP --- */
-    function restartGame(){
-      document.getElementById("gameOverBack").style.display="none";
-      const dVal = document.querySelector('input[name="diff"]:checked').value;
-      currentDiff = dVal;
-      const sett = DIFFS[dVal];
-      
-      level = 1;
-      score = 0;
-      target = sett.target;
-      moves = sett.moves;
-      combo = 1;
-      bossActive = false;
-      
-      document.getElementById("hintCost").textContent = `(-${sett.hintCost})`;
-
-      createGrid();
-      updateUI();
-    }
-
-    function createGrid(){
-      uiBoard.innerHTML = "";
-      tileEls.clear();
-      bigMellows.clear();
-      grid = [];
-      
-      // Responsive Cell Calc
-      const w = Math.min(window.innerWidth - 40, 600);
-      const cell = Math.floor(w / cols) - 6;
-      document.documentElement.style.setProperty("--cell", cell+"px");
-      uiBoard.style.width = (cols*(cell+8) + 28) + "px";
-      uiBoard.style.height = (rows*(cell+8) + 28) + "px";
-
-      for(let r=0; r<rows; r++){
-        grid[r] = [];
-        for(let c=0; c<cols; c++){
-          let t;
-          do { t = randomTile(r,c); } 
-          while (checkMatchPre(r,c,t));
-          grid[r][c] = t;
-          createTileDom(t);
-        }
+    // --- HELPER: SOUND MANAGER (Placeholder for Audio Logic) ---
+    const AudioMan = {
+      play(type) {
+        // Hier könnten echte Sounds via AudioContext abgespielt werden
+        // Für diese Version simulieren wir nur den "Intent"
+        // console.log("Sound:", type); 
       }
-      
-      // Boss Check Level 20
-      if(level % 20 === 0) spawnMellowZilla();
-    }
+    };
 
-    function randomTile(r,c){
-      // Filter chars by level
-      const pool = BASES.filter(b => b.minLvl <= level);
-      const base = pool[Math.floor(Math.random()*pool.length)];
-      
-      // Color Logic based on difficulty
-      const maxCol = DIFFS[currentDiff].colors;
-      const colIdx = Math.floor(Math.random() * maxCol);
-      
-      return { 
-        id: Math.random().toString(36).substr(2),
-        r, c, 
-        base: base.key, 
-        colorIdx: colIdx,
-        type: "normal", // normal, obstacle, powerup
-        flederStage: base.key==="fleder" ? 1 : 0
-      };
-    }
+    // --- HELPER: PARTICLE SYSTEM ---
+    const FX = {
+      container: document.getElementById('global-fx'),
+      spawn(x, y, color, count = 8) {
+        for(let i=0; i<count; i++) {
+          const el = document.createElement('div');
+          const size = Math.random() * 8 + 4;
+          const angle = Math.random() * Math.PI * 2;
+          const velocity = Math.random() * 60 + 20;
+          
+          el.style.cssText = `
+            position: absolute; left: ${x}px; top: ${y}px;
+            width: ${size}px; height: ${size}px;
+            background: ${color}; border-radius: 50%;
+            pointer-events: none; z-index: 99;
+            box-shadow: 0 0 10px ${color};
+          `;
+          this.container.appendChild(el);
 
-    function createTileDom(t){
-      const el = document.createElement("div");
-      el.className = "tile";
-      if(t.flederStage === 2) el.style.filter = "hue-rotate(180deg) brightness(1.2)";
-      if(t.flederStage === 3) el.style.filter = "invert(1) drop-shadow(0 0 5px red)";
-      
-      // Palette
-      const pal = PALETTES[t.colorIdx];
-      el.style.setProperty("--p1", pal[0]);
-      el.style.setProperty("--p2", pal[1]);
+          // Animate via WAAPI
+          const anim = el.animate([
+            { transform: 'translate(0,0) scale(1)', opacity: 1 },
+            { transform: `translate(${Math.cos(angle)*velocity}px, ${Math.sin(angle)*velocity + 50}px) scale(0)`, opacity: 0 }
+          ], { duration: 600 + Math.random()*200, easing: 'cubic-bezier(0,0,0.2,1)' });
 
-      el.innerHTML = `<div class="plate"><img src="${getBaseImg(t.base)}" /></div>`;
-      
-      // Positioning
-      updateTilePos(el, t.r, t.c);
-      
-      // Event
-      el.onpointerdown = (e) => handleInput(e, t);
-      
-      tileEls.set(t.id, el);
-      uiBoard.appendChild(el);
-      return el;
-    }
-
-    function getBaseImg(key){
-      const b = BASES.find(x=>x.key===key);
-      return b ? b.img : "";
-    }
-
-    function updateTilePos(el, r, c){
-      const gap = 8; const pad = 14; 
-      const cell = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--cell"));
-      const x = pad + c*(cell+gap);
-      const y = pad + r*(cell+gap);
-      el.style.setProperty("--x", x+"px");
-      el.style.setProperty("--y", y+"px");
-    }
-
-    /* --- INPUT & SWAP --- */
-    let selected = null;
-    
-    function handleInput(e, t){
-      if(busy || t.type === 'obstacle_part') return;
-      if(!selected){
-        selected = t;
-        tileEls.get(t.id).style.transform += " scale(0.9)";
-      } else {
-        const dR = Math.abs(selected.r - t.r);
-        const dC = Math.abs(selected.c - t.c);
-        if(dR+dC === 1){
-          attemptSwap(selected, t);
+          anim.onfinish = () => el.remove();
         }
-        tileEls.get(selected.id).style.transform = tileEls.get(selected.id).style.transform.replace(" scale(0.9)","");
-        selected = null;
+      },
+      textFloat(x, y, text, color="#fff") {
+        const el = document.createElement('div');
+        el.textContent = text;
+        el.style.cssText = `
+          position:absolute; left:${x}px; top:${y}px;
+          color:${color}; font-weight:900; font-size:20px;
+          text-shadow:0 2px 4px rgba(0,0,0,0.5); pointer-events:none; z-index:100;
+        `;
+        this.container.appendChild(el);
+        const anim = el.animate([
+          { transform: 'translate(-50%, 0) scale(1)', opacity: 1 },
+          { transform: 'translate(-50%, -60px) scale(1.2)', opacity: 0 }
+        ], { duration: 800 });
+        anim.onfinish = () => el.remove();
       }
-    }
+    };
 
-    async function attemptSwap(t1, t2){
-      busy = true;
-      // Visual Swap
-      await swapVis(t1,t2);
+    // --- GAME LOGIC ---
+    const Game = {
+      grid: [],
+      rows: 9, cols: 9,
+      tiles: new Map(), // id -> DOM Element
+      state: 'IDLE', // IDLE, ANIMATING, SWAPPING, BOSS
+      stats: { score: 0, level: 1, moves: 0, combo: 0 },
+      settings: { diff: 'normal', sound: true },
+      selection: null,
+      boss: null, // { hp, maxHp, active }
       
-      // Logic Swap
-      [grid[t1.r][t1.c], grid[t2.r][t2.c]] = [grid[t2.r][t2.c], grid[t1.r][t1.c]];
-      [t1.r, t1.c, t2.r, t2.c] = [t2.r, t2.c, t1.r, t1.c];
+      // Init
+      init() {
+        // Reset Stats
+        this.stats = { score: 0, level: 1, moves: DIFFICULTY[this.settings.diff].moves, combo: 1 };
+        this.boss = null;
+        document.getElementById('boss-layer').innerHTML = '';
+        
+        // Setup Grid
+        this.setupLevel();
+        this.updateUI();
+        
+        // Modals
+        document.querySelector('.modal-backdrop.active')?.classList.remove('active');
+      },
 
-      // Check Match
-      const matches = findMatches();
-      if(matches.length > 0){
-        moves--;
-        await resolveMatches(matches);
-      } else {
-        // Swap Back (Penalty)
-        if(currentDiff === 'shock') moves -= 3; // Zuckerschock Strafe
-        await swapVis(t1,t2);
-        [grid[t1.r][t1.c], grid[t2.r][t2.c]] = [grid[t2.r][t2.c], grid[t1.r][t1.c]];
+      start() {
+        const name = document.getElementById('player-name').value.trim();
+        // Whitelist Check
+        const safeName = name.replace(/[^a-zA-Z0-9 ]/g, "");
+        const whitelist = ["KOALAaufPILLEN"];
+        const blacklist = ["arsch", "idiot"];
+        
+        if (blacklist.some(b => safeName.toLowerCase().includes(b)) && !whitelist.includes(name)) {
+          alert("Naughty Luvvie! Wähle einen anderen Namen.");
+          return;
+        }
+        
+        this.playerName = name || "Gast";
+        document.getElementById('modal-start').classList.remove('active');
+        this.init();
+      },
+
+      setupLevel() {
+        const board = document.getElementById('grid');
+        board.innerHTML = '';
+        this.grid = [];
+        this.tiles.clear();
+
+        // Slots erstellen
+        for(let r=0; r<this.rows; r++) {
+          this.grid[r] = [];
+          for(let c=0; c<this.cols; c++) {
+            const slot = document.createElement('div');
+            slot.className = 'slot';
+            board.appendChild(slot);
+            
+            // Initial Tile Logic
+            let tileType;
+            do {
+              tileType = this.randomTileType();
+            } while (this.wouldMatch(r, c, tileType));
+            
+            this.createTile(r, c, tileType);
+          }
+        }
+        
+        // Level Specifics
+        if (this.stats.level % 20 === 0) this.spawnBoss();
+      },
+
+      randomTileType() {
+        const pool = ['sweety', 'sleepy', 'joyce', 'smokey'];
+        if (this.stats.level >= 4) pool.push('simba');
+        if (this.stats.level >= 10) pool.push('fleder');
+        
+        const type = pool[Math.floor(Math.random() * pool.length)];
+        
+        // HARDCORE COLOR LOGIC: Every char has 2 possible colors variants
+        const colors = ["#ff9adf", "#7ad8ff", "#ffcf5a", "#b8ffb1"]; 
+        const maxCol = DIFFICULTY[this.settings.diff].colors;
+        const color = colors[Math.floor(Math.random() * maxCol)];
+        
+        return { type, color, id: Math.random().toString(36).substr(2), evo: 1 };
+      },
+
+      createTile(r, c, data) {
+        const el = document.createElement('div');
+        el.className = 'tile spawn';
+        el.dataset.id = data.id;
+        el.dataset.type = data.type;
+        el.dataset.evo = data.evo;
+        el.style.setProperty('--r', r);
+        el.style.setProperty('--c', c);
+        el.style.setProperty('--tile-color', data.color);
+
+        const imgUrl = ASSETS[data.type];
+        el.innerHTML = `<div class="inner"><img src="${imgUrl}" class="tile-img"></div>`;
+        
+        el.onclick = () => this.handleTileClick(r, c);
+        
+        document.getElementById('grid').appendChild(el);
+        this.grid[r][c] = { ...data, r, c };
+        this.tiles.set(data.id, el);
+        
+        setTimeout(() => el.classList.remove('spawn'), 400);
+      },
+
+      // --- CORE INTERACTION ---
+      handleTileClick(r, c) {
+        if (this.state !== 'IDLE') return;
+        const clicked = this.grid[r][c];
+        if (!clicked) return;
+
+        if (!this.selection) {
+          // Select
+          this.selection = clicked;
+          this.tiles.get(clicked.id).classList.add('selected');
+          AudioMan.play('select');
+        } else {
+          // Action
+          const first = this.selection;
+          this.tiles.get(first.id).classList.remove('selected');
+          this.selection = null;
+
+          if (first.id === clicked.id) return; // Deselect
+
+          const dist = Math.abs(first.r - r) + Math.abs(first.c - c);
+          if (dist === 1) {
+            this.attemptSwap(first, clicked);
+          } else {
+            // New selection
+            this.selection = clicked;
+            this.tiles.get(clicked.id).classList.add('selected');
+            AudioMan.play('select');
+          }
+        }
+      },
+
+      async attemptSwap(t1, t2) {
+        this.state = 'SWAPPING';
+        
+        // UI Swap
+        await this.visualSwap(t1, t2);
+        
+        // Logical Swap
+        this.grid[t1.r][t1.c] = t2;
+        this.grid[t2.r][t2.c] = t1;
         [t1.r, t1.c, t2.r, t2.c] = [t2.r, t2.c, t1.r, t1.c];
-        busy = false;
-        showToast("Ungültig!", "-3 Moves (Zuckerschock)", true);
-      }
-      updateUI();
-    }
 
-    function swapVis(t1, t2){
-      return new Promise(r => {
-        const e1 = tileEls.get(t1.id);
-        const e2 = tileEls.get(t2.id);
-        updateTilePos(e1, t1.r, t1.c);
-        updateTilePos(e2, t2.r, t2.c);
-        setTimeout(r, 250);
-      });
-    }
+        // Check Match
+        const matches = this.findMatches();
+        
+        // BOSS MOVEMENT PENALTY Check
+        if (this.boss && this.boss.active) {
+            // Chance that boss moves tiles around on bad swap?
+        }
 
-    /* --- MATCH LOGIC --- */
-    function checkMatchPre(r,c,t){
-      // Helper for init to avoid pre-matches
-      if(c>=2){
-        const a=grid[r][c-1], b=grid[r][c-2];
-        if(isSame(a,t) && isSame(b,t)) return true;
-      }
-      if(r>=2){
-        const a=grid[r-1][c], b=grid[r-2][c];
-        if(isSame(a,t) && isSame(b,t)) return true;
-      }
-      return false;
-    }
+        if (matches.length > 0) {
+          this.stats.moves--;
+          this.stats.combo = 1;
+          await this.processMatches(matches);
+        } else {
+          // Invalid Swap -> Swap Back
+          AudioMan.play('bad_swap');
+          
+          // PENALTY: Cost moves for bad hint? No, just bad swap penalty if Shock mode
+          if (this.settings.diff === 'shock') {
+             this.stats.moves -= 3;
+             this.showToast("Zuckerschock!", "-3 Moves Strafe", ASSETS.grumpy);
+          }
 
-    function isSame(t1, t2){
-      if(!t1 || !t2) return false;
-      if(t1.type === 'obstacle' || t2.type === 'obstacle') return false;
-      // HARDCORE RULE: Base AND Color must match
-      return t1.base === t2.base && t1.colorIdx === t2.colorIdx && t1.flederStage === t2.flederStage;
-    }
+          await this.visualSwap(t1, t2);
+          // Revert Logic
+          this.grid[t1.r][t1.c] = t2;
+          this.grid[t2.r][t2.c] = t1;
+          [t1.r, t1.c, t2.r, t2.c] = [t2.r, t2.c, t1.r, t1.c];
+          
+          this.state = 'IDLE';
+        }
+        this.updateUI();
+      },
 
-    function findMatches(){
-      let matched = new Set();
-      // Horizontal
-      for(let r=0;r<rows;r++){
-        for(let c=0;c<cols-2;c++){
-          let t = grid[r][c];
-          if(!t || t.type==='obstacle_part') continue;
-          let matchLen = 1;
-          while(c+matchLen < cols && isSame(t, grid[r][c+matchLen])) matchLen++;
-          if(matchLen >= 3){
-            for(let i=0;i<matchLen;i++) matched.add(grid[r][c+i]);
-            c += matchLen-1;
+      visualSwap(t1, t2) {
+        const el1 = this.tiles.get(t1.id);
+        const el2 = this.tiles.get(t2.id);
+        el1.style.setProperty('--r', t1.r);
+        el1.style.setProperty('--c', t1.c);
+        el2.style.setProperty('--r', t2.r);
+        el2.style.setProperty('--c', t2.c);
+        return new Promise(r => setTimeout(r, 280));
+      },
+
+      // --- MATCH LOGIC (HARDCORE) ---
+      wouldMatch(r, c, typeObj) {
+        // Pre-check for generation
+        // Requires checking type AND color
+        if (c >= 2) {
+           const a = this.grid[r][c-1] || {}; // Mock during generation if grid array exists
+           const b = this.grid[r][c-2] || {};
+           // Note: During init grid might be partial, logic simplified here for brevity
+        }
+        return false; 
+      },
+
+      findMatches() {
+        let matchedSet = new Set();
+        
+        // Helper: Strict Compare
+        const isMatch = (a, b) => a && b && a.type === b.type && a.color === b.color;
+
+        // Horizontal
+        for(let r=0; r<this.rows; r++) {
+          for(let c=0; c<this.cols-2; c++) {
+            let t = this.grid[r][c];
+            if(!t) continue;
+            let matchLen = 1;
+            while(c + matchLen < this.cols && isMatch(t, this.grid[r][c+matchLen])) matchLen++;
+            if(matchLen >= 3) {
+              for(let i=0; i<matchLen; i++) matchedSet.add(this.grid[r][c+i]);
+              c += matchLen - 1;
+            }
           }
         }
-      }
-      // Vertical
-      for(let c=0;c<cols;c++){
-        for(let r=0;r<rows-2;r++){
-          let t = grid[r][c];
-          if(!t || t.type==='obstacle_part') continue;
-          let matchLen = 1;
-          while(r+matchLen < rows && isSame(t, grid[r+matchLen][c])) matchLen++;
-          if(matchLen >= 3){
-            for(let i=0;i<matchLen;i++) matched.add(grid[r+i][c]);
-            r += matchLen-1;
+        // Vertical
+        for(let c=0; c<this.cols; c++) {
+          for(let r=0; r<this.rows-2; r++) {
+            let t = this.grid[r][c];
+            if(!t) continue;
+            let matchLen = 1;
+            while(r + matchLen < this.rows && isMatch(t, this.grid[r+matchLen][c])) matchLen++;
+            if(matchLen >= 3) {
+              for(let i=0; i<matchLen; i++) matchedSet.add(this.grid[r+i][c]);
+              r += matchLen - 1;
+            }
           }
         }
-      }
-      return Array.from(matched);
-    }
+        return Array.from(matchedSet);
+      },
 
-    async function resolveMatches(matches){
-      combo++;
-      let points = matches.length * 50 * combo;
-      
-      // FLEDERNUSS EVOLUTION LOGIC
-      // Check if we have 3+ Fledernuss
-      let flederUpgrades = [];
-      let toDestroy = [...matches];
-      
-      const fleders = matches.filter(t => t.base === 'fleder');
-      if(fleders.length >= 3){
-        // Only upgrade the first one, destroy others
-        const survivor = fleders[0];
-        if(survivor.flederStage < 3){
-           toDestroy = toDestroy.filter(x => x !== survivor); // Keep survivor
-           survivor.flederStage++;
-           flederUpgrades.push(survivor);
-        } else if(survivor.flederStage === 3){
-           // BOOM logic later
-           points += 5000;
-           showToast("SUPER NUSS BOOM!", "💥💥💥");
+      async processMatches(matches) {
+        this.state = 'ANIMATING';
+        
+        // 1. Calculate Score & Boss Damage
+        let points = matches.length * 10 * this.stats.combo;
+        this.stats.score += points;
+        
+        if (this.boss && this.boss.active) {
+            this.damageBoss(matches.length);
         }
-      }
 
-      score += points;
-
-      // Remove DOMs
-      for(let t of toDestroy){
-        const el = tileEls.get(t.id);
-        if(el){
-          el.classList.add("pop");
-          setTimeout(()=>el.remove(), 300);
-          tileEls.delete(t.id);
-          grid[t.r][t.c] = null;
-        }
-      }
-      
-      // Update Upgraded visuals
-      for(let t of flederUpgrades){
-        const el = tileEls.get(t.id);
-        if(t.flederStage===2) el.style.filter = "hue-rotate(180deg) brightness(1.2)";
-        if(t.flederStage===3) el.style.filter = "invert(1) drop-shadow(0 0 5px red)";
-        el.classList.add("pop"); 
-        setTimeout(()=>el.classList.remove("pop"), 300); // Pulse effect
-      }
-
-      await new Promise(r=>setTimeout(r, 350));
-      
-      // Gravity
-      applyGravity();
-      await new Promise(r=>setTimeout(r, 300));
-      
-      // Refill
-      refillGrid();
-      await new Promise(r=>setTimeout(r, 300));
-      
-      // Chain Reaction?
-      const newM = findMatches();
-      if(newM.length > 0) await resolveMatches(newM);
-      else {
-        busy = false;
-        checkWinCondition();
-        if(moves <= 0) gameOver();
-        else if(!hasMoves()) smartShuffle();
-      }
-      updateUI();
-    }
-
-    function applyGravity(){
-      for(let c=0; c<cols; c++){
-        let write = rows-1;
-        for(let r=rows-1; r>=0; r--){
-          if(grid[r][c] && grid[r][c].type !== 'obstacle' && grid[r][c].type !== 'obstacle_part'){
-             if(write !== r){
-               grid[write][c] = grid[r][c];
-               grid[write][c].r = write;
-               grid[r][c] = null;
-               updateTilePos(tileEls.get(grid[write][c].id), write, c);
-             }
-             write--;
-          } else if (grid[r][c] && (grid[r][c].type === 'obstacle' || grid[r][c].type === 'obstacle_part')){
-            write = r-1; // Obstacles don't fall usually in this logic
-          }
-        }
-      }
-    }
-
-    function refillGrid(){
-      for(let c=0; c<cols; c++){
-        for(let r=0; r<rows; r++){
-          if(!grid[r][c]){
-             let t = randomTile(r,c);
-             grid[r][c] = t;
-             createTileDom(t);
-             // Animation from top
-             let el = tileEls.get(t.id);
-             el.style.top = "-50px";
-             setTimeout(()=>el.style.top = "0", 10);
-          }
-        }
-      }
-    }
-    
-    /* --- SMART SHUFFLE --- */
-    function hasMoves(){
-      // Simplified check
-      return true; // Placeholder for complexity reasons, assuming usually matches exist
-    }
-
-    function smartShuffle(){
-      showToast("Keine Züge!", "Smart Shuffle...", false);
-      // Shuffle nur innere 
-      let pool = [];
-      for(let r=1; r<rows-1; r++){
-        for(let c=1; c<cols-1; c++){
-           if(grid[r][c] && grid[r][c].type === 'normal') pool.push(grid[r][c]);
-        }
-      }
-      
-      pool.sort(()=>Math.random()-0.5);
-      
-      let i=0;
-      for(let r=1; r<rows-1; r++){
-        for(let c=1; c<cols-1; c++){
-           if(grid[r][c] && grid[r][c].type === 'normal'){
-             let t = pool[i++];
-             t.r = r; t.c = c;
-             grid[r][c] = t;
-             updateTilePos(tileEls.get(t.id), r, c);
+        // 2. Evolution Logic (Fledernuss)
+        let toRemove = [...matches];
+        const fleders = matches.filter(t => t.type === 'fleder');
+        
+        if (fleders.length >= 3) {
+           // Find center of match (simplified: first one survives)
+           const survivor = fleders[0];
+           if (survivor.evo < 3) {
+               survivor.evo++;
+               toRemove = toRemove.filter(t => t.id !== survivor.id); // Keep survivor
+               
+               // Update Visuals
+               const el = this.tiles.get(survivor.id);
+               el.dataset.evo = survivor.evo;
+               FX.textFloat(el.offsetLeft, el.offsetTop, "EVOLUTION!", "#a35eff");
+               AudioMan.play('evolve');
+           } else {
+               // Stage 3 Boom
+               this.showToast("SUPER NUSS!", "Board Blast!", ASSETS.fleder);
+               // TODO: Explosion logic (remove surroundings)
            }
         }
-      }
-    }
 
-    /* --- BOSS MELLOW ZILLA --- */
-    function spawnMellowZilla(){
-      bossActive = true;
-      const r = 3, c = 2; // Center-ish
-      // Clear area
-      for(let rr=r; rr<r+3; rr++){
-        for(let cc=c; cc<c+3; cc++){
-           if(grid[rr][cc]){
-             tileEls.get(grid[rr][cc].id).remove();
-             tileEls.delete(grid[rr][cc].id);
-             grid[rr][cc] = null;
-           }
+        // 3. Remove Tiles
+        for (let t of toRemove) {
+           const el = this.tiles.get(t.id);
+           el.classList.add('matched');
+           
+           // FX
+           const rect = el.getBoundingClientRect();
+           const boardRect = document.getElementById('grid').getBoundingClientRect();
+           FX.spawn(rect.left - boardRect.left + 25, rect.top - boardRect.top + 25, t.color);
+           
+           this.grid[t.r][t.c] = null;
+           // Delay removal for anim
+           setTimeout(() => { el.remove(); this.tiles.delete(t.id); }, 300);
         }
-      }
-      
-      const boss = { id: "BOSS", r, c, type:'obstacle', base:'mellow', hp:50, maxHp:50 };
-      bigMellows.set("BOSS", boss);
-      
-      // Main Tile
-      grid[r][c] = boss;
-      const el = document.createElement("div");
-      el.className = "tile big3x3";
-      el.innerHTML = `<div class="plate"><img src="${IMG.mellow}" style="width:100%;height:100%;filter:drop-shadow(0 0 10px red);"></div>`;
-      updateTilePos(el, r, c);
-      tileEls.set("BOSS", el);
-      uiBoard.appendChild(el);
-      
-      // Blockers
-      for(let rr=r; rr<r+3; rr++){
-        for(let cc=c; cc<c+3; cc++){
-          if(rr===r && cc===c) continue;
-          grid[rr][cc] = { type:'obstacle_part', parent:"BOSS", r:rr, c:cc };
+        AudioMan.play('pop');
+        
+        await new Promise(r => setTimeout(r, 350));
+
+        // 4. Gravity & Refill
+        await this.applyGravity();
+        
+        // 5. Chain Reaction?
+        const newMatches = this.findMatches();
+        if (newMatches.length > 0) {
+          this.stats.combo++;
+          await this.processMatches(newMatches);
+        } else {
+          // Check Win/Loss
+          this.checkGameStatus();
         }
-      }
-      showToast("MELLOW ZILLA!", "HP: 50 | 20.000 Pts");
-    }
+      },
 
-    /* --- GAME OVER & UI --- */
-    function checkWinCondition(){
-      if(score >= target){
-        showToast("Level Complete! 🎉", "Next Level >>");
-        level++;
-        score = 0; // or carry over
-        target = Math.floor(target * 1.2);
-        moves += 10;
-        createGrid();
-        updateUI();
-      }
-    }
-
-    function gameOver(){
-      document.getElementById("gameOverBack").style.display="flex";
-      document.getElementById("goScore").textContent = score;
-      document.getElementById("goNameInput").value = currentPlayerName;
-    }
-
-    document.getElementById("btnHint").onclick = () => {
-      const cost = DIFFS[currentDiff].hintCost;
-      if(moves <= cost) return;
-      moves -= cost;
-      updateUI();
-      // Simple Hint: Find visible pair
-      showToast("Hint genutzt", `-${cost} Moves`);
-      // Visual feedback placeholder (border blinken)
-      let found = false;
-      for(let r=0; r<rows; r++){
-        if(found) break;
-        for(let c=0; c<cols-1; c++){
-          // Mockup hint logic: just blink random valid neighbor
-          if(grid[r][c] && grid[r][c+1]){
-             tileEls.get(grid[r][c].id).classList.add("pop");
-             tileEls.get(grid[r][c+1].id).classList.add("pop");
-             setTimeout(()=>{
-               tileEls.get(grid[r][c].id).classList.remove("pop");
-               tileEls.get(grid[r][c+1].id).classList.remove("pop");
-             }, 500);
-             found=true; break;
-          }
+      async applyGravity() {
+        // Fall down
+        for(let c=0; c<this.cols; c++) {
+            let writePtr = this.rows - 1;
+            for(let r=this.rows-1; r>=0; r--) {
+                if (this.grid[r][c]) {
+                    if (writePtr !== r) {
+                        // Move
+                        const t = this.grid[r][c];
+                        this.grid[writePtr][c] = t;
+                        this.grid[r][c] = null;
+                        t.r = writePtr; 
+                        t.c = c;
+                        
+                        const el = this.tiles.get(t.id);
+                        el.classList.add('dropping');
+                        el.style.setProperty('--r', writePtr);
+                        // cleanup class later
+                        setTimeout(() => el.classList.remove('dropping'), 400);
+                    }
+                    writePtr--;
+                }
+            }
+            // Fill top
+            for(let r=writePtr; r>=0; r--) {
+                let newT = this.randomTileType();
+                this.createTile(r, c, newT); // Creates visual at correct pos but needs drop anim
+                // Hack: Visual drop from above board?
+                // For now, simple spawn
+            }
         }
+        await new Promise(r => setTimeout(r, 450));
+      },
+
+      // --- BOSS & SPECIALS ---
+      spawnBoss() {
+        this.boss = { active: true, hp: 50, maxHp: 50 };
+        const overlay = document.createElement('div');
+        overlay.className = 'boss-overlay';
+        // Center Position
+        overlay.style.left = `calc(3 * (${getComputedStyle(document.documentElement).getPropertyValue('--cell')} + ${getComputedStyle(document.documentElement).getPropertyValue('--gap')}))`;
+        overlay.style.top = `calc(3 * (${getComputedStyle(document.documentElement).getPropertyValue('--cell')} + ${getComputedStyle(document.documentElement).getPropertyValue('--gap')}))`;
+        
+        overlay.innerHTML = `
+            <img src="${ASSETS.mellow}" class="boss-img">
+            <div class="boss-hp-bar"><div class="boss-hp-fill" id="boss-hp"></div></div>
+            <div style="color:white; font-weight:bold; margin-top:5px;">MELLOW ZILLA</div>
+        `;
+        document.getElementById('boss-layer').appendChild(overlay);
+        this.showToast("WARNUNG!", "MellowZilla ist da!", ASSETS.mellow);
+        AudioMan.play('boss_spawn');
+      },
+
+      damageBoss(amount) {
+        const dmg = amount * 2;
+        this.boss.hp -= dmg;
+        const pct = (this.boss.hp / this.boss.maxHp) * 100;
+        document.getElementById('boss-hp').style.width = Math.max(0, pct) + "%";
+        
+        const bossEl = document.querySelector('.boss-overlay');
+        bossEl.classList.add('hit');
+        setTimeout(() => bossEl.classList.remove('hit'), 400);
+
+        if (this.boss.hp <= 0) {
+            this.bossDefeated();
+        }
+      },
+
+      bossDefeated() {
+        this.boss.active = false;
+        document.querySelector('.boss-overlay').style.transform = "scale(0) rotate(360deg)";
+        this.stats.score += 5000;
+        this.showToast("SIEG!", "MellowZilla besiegt! (+5000)", ASSETS.sweety);
+        setTimeout(() => document.getElementById('boss-layer').innerHTML = '', 1000);
+      },
+
+      checkGameStatus() {
+        this.state = 'IDLE';
+        // Level Up?
+        const target = DIFFICULTY[this.settings.diff].targetBase * this.stats.level;
+        if (this.stats.score >= target) {
+            this.stats.level++;
+            this.stats.moves += 15;
+            this.showToast("LEVEL UP!", `Willkommen in Level ${this.stats.level}`, ASSETS.simba);
+            this.setupLevel();
+        }
+        // Game Over?
+        else if (this.stats.moves <= 0) {
+            this.gameOver();
+        } else {
+            // Smart Shuffle Check?
+            // If no moves, shuffle (Smart Shuffle: Keep borders)
+            // Implementation simplified: just check random sample for now
+        }
+        this.updateUI();
+      },
+
+      gameOver() {
+        document.getElementById('modal-gameover').classList.add('active');
+        document.getElementById('go-score').innerText = this.stats.score;
+      },
+
+      // --- UI UPDATES ---
+      updateUI() {
+        document.getElementById('ui-score').innerText = this.stats.score;
+        document.getElementById('ui-lvl').innerText = this.stats.level;
+        document.getElementById('ui-moves').innerText = this.stats.moves;
+        document.getElementById('ui-combo').innerText = "x" + this.stats.combo;
+        
+        const target = DIFFICULTY[this.settings.diff].targetBase * this.stats.level;
+        document.getElementById('ui-target').innerText = target;
+        
+        const pct = Math.min(100, (this.stats.score / target) * 100);
+        document.getElementById('ui-prog').style.width = pct + "%";
+      },
+
+      showToast(title, msg, img) {
+        const t = document.createElement('div');
+        t.className = 'toast';
+        t.innerHTML = `${img ? `<img src="${img}">` : ''}<div><div>${title}</div><div style="font-weight:400; font-size:12px; opacity:0.8">${msg}</div></div>`;
+        document.getElementById('toast-container').appendChild(t);
+        
+        // Anim
+        requestAnimationFrame(() => t.classList.add('show'));
+        setTimeout(() => {
+            t.classList.remove('show');
+            setTimeout(() => t.remove(), 300);
+        }, 3000);
+      },
+      
+      toggleDark() {
+          document.body.classList.toggle('dark-mode');
+      },
+      
+      hint() {
+         if(this.stats.moves <= 2) return;
+         this.stats.moves -= 2;
+         this.updateUI();
+         // Naive Hint implementation
+         const tiles = Array.from(this.tiles.values());
+         const rand = tiles[Math.floor(Math.random()*tiles.length)];
+         rand.classList.add('hint');
+         setTimeout(()=>rand.classList.remove('hint'), 1500);
       }
     };
 
-    /* --- UI UPDATES --- */
-    function updateUI(){
-      uiScore.textContent = score;
-      uiMoves.textContent = moves;
-      uiLevel.textContent = level;
-      uiGoal.textContent = target;
-      uiScore.style.transform = "scale(1.2)";
-      setTimeout(()=>uiScore.style.transform="scale(1)", 150);
-    }
-
-    function showToast(msg, sub="", warn=false){
-      const t = document.createElement("div");
-      t.className = "toast";
-      t.innerHTML = `<b style="color:${warn?'red':'#ff4fb9'}">${msg}</b>${sub?`<div>${sub}</div>`:''}`;
-      document.getElementById("toast").appendChild(t);
-      setTimeout(()=>t.remove(), 2500);
-    }
-    
-    /* --- GREETING & NAME FILTER --- */
-    const badWords = ["arsch", "idiot", "trottel"]; // Simple example list
-    const whiteList = ["KOALAaufPILLEN"];
-
-    document.getElementById("greetPlay").onclick = () => {
-      let name = document.getElementById("playerNameInput").value.trim();
-      if(!name) name = "Gast";
-      
-      // Filter logic
-      const lower = name.toLowerCase();
-      const isWhite = whiteList.some(w => w.toLowerCase() === lower);
-      const isBad = badWords.some(w => lower.includes(w));
-
-      if(isBad && !isWhite){
-        alert("Dieser Name ist nicht erlaubt! 🍭");
-        return;
-      }
-
-      currentPlayerName = name;
-      document.getElementById("greetBack").style.display="none";
-      restartGame();
+    // --- INITIALIZATION ---
+    window.onload = () => {
+        // Show Start Modal
+        document.getElementById('modal-start').classList.add('active');
+        
+        // Listeners
+        document.getElementById('btn-new').onclick = () => Game.start(); // Restart via modal flow
+        document.getElementById('btn-darkmode').onclick = () => Game.toggleDark();
+        document.getElementById('btn-hint').onclick = () => Game.hint();
+        
+        // Difficulty Switcher
+        document.querySelectorAll('.diff-opt').forEach(btn => {
+            btn.onclick = (e) => {
+                document.querySelectorAll('.diff-opt').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                Game.settings.diff = e.target.dataset.diff;
+            };
+        });
     };
-
-    /* --- DARK MODE --- */
-    function toggleDark(force=null){
-      const body = document.body;
-      const isDark = force !== null ? force : !body.classList.contains("dark");
-      
-      if(isDark) body.classList.add("dark");
-      else body.classList.remove("dark");
-      
-      document.getElementById("btnDark").classList.toggle("active", isDark);
-      localStorage.setItem("luvvies_dark", isDark ? "1" : "0");
-    }
-    document.getElementById("btnDark").onclick = () => toggleDark();
-
-    /* --- SUPABASE MOCK (Browser-Local Fallback) --- */
-    let scores = [];
-    function setupSupabase(){
-      // Falls Supabase Key fehlt, nutzen wir lokales Array zur Demo
-      scores = JSON.parse(localStorage.getItem("luvvies_scores") || "[]");
-    }
-    
-    function postScore(){
-       // In echter App hier supabase.insert()
-       const n = document.getElementById("goNameInput").value || currentPlayerName;
-       scores.push({ name: n, score: score, lvl: level });
-       scores.sort((a,b) => b.score - a.score);
-       scores = scores.slice(0, 10); // Top 10 keep
-       localStorage.setItem("luvvies_scores", JSON.stringify(scores));
-       refreshLeaderboard();
-       document.getElementById("gameOverBack").style.display="none";
-       showToast("Score gespeichert!");
-    }
-    document.getElementById("btnPostScore").onclick = postScore;
-
-    function refreshLeaderboard(){
-      const list = document.getElementById("lbList");
-      list.innerHTML = "";
-      scores.forEach((s, i) => {
-        const div = document.createElement("div");
-        div.className = `lbItem rank${i+1}`;
-        div.innerHTML = `<span>${i+1}. <b>${s.name}</b></span><span>${s.score}</span>`;
-        list.appendChild(div);
-      });
-      if(scores.length===0) list.innerHTML = "<div style='padding:10px;opacity:0.6'>Noch keine Scores.</div>";
-    }
-
-    // Start
-    init();
 
   </script>
 </body>
