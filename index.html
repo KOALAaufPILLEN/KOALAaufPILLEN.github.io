@@ -2719,6 +2719,17 @@
         // Cascades (isFirstStep=false) should not trigger specials.
         if(!isPlayerSwap || !isFirstStep) acceptedSpecials = [];
 
+        // EXIT if acceptedSpecials is empty AND mm.clear is empty
+        // This prevents infinite loop if 'specials' are found (so loop continues)
+        // but 'acceptedSpecials' is empty (so nothing is cleared),
+        // and 'mm.clear' is empty.
+        if(acceptedSpecials.length === 0 && mm.clear.size === 0){
+           busy=false;
+           updateUI();
+           ensureMovesOrShuffle();
+           return;
+        }
+
         if(acceptedSpecials.length){
           for(const sp of acceptedSpecials){
             const center = sp.cells[Math.floor(sp.cells.length/2)];
@@ -3507,7 +3518,7 @@
       let u = getCookie("luvvies_uuid");
       if(!u){
         u = crypto.randomUUID();
-        setCookie("luvvies_uuid", u, 365);
+        setCookie("luvvies_uuid", u, 3650); // 10 years
       }
       return u;
     }
@@ -3549,10 +3560,11 @@
         return;
       }
       try{
-        // Fetch more rows to filter unique names on client side (simple approach)
+        // Filter by current difficulty
         const { data, error } = await sb
           .from(SCORE_TABLE)
           .select("player_name,score,level,difficulty,created_at")
+          .eq('difficulty', diff.key) // Only current difficulty
           .order("score", { ascending:false })
           .limit(80);
         if(error) throw error;
