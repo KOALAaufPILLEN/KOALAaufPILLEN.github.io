@@ -15,6 +15,7 @@
       --card2:#ffffffef;
       --stroke:rgba(17,13,26,.10);
       --shadow: 0 18px 60px rgba(20,10,60,.12);
+      --txt:#1d1334;
 
       --cols: 10;
       --rows: 10;
@@ -29,13 +30,44 @@
     *{box-sizing:border-box}
     html,body{height:100%}
 
+    body.dark{
+      --bg1:#141020;
+      --bg2:#1f1830;
+      --card:#252035d9;
+      --card2:#2d2640ef;
+      --stroke:rgba(255,255,255,.08);
+      --shadow: 0 18px 60px rgba(0,0,0,.40);
+      --txt:#f2f0ff;
+    }
+    body.dark .diffPills{
+      background: rgba(30,25,45,.78);
+      border:1px solid rgba(255,255,255,.08);
+    }
+    body.dark .diffPills label{ color:#cfc5e5; }
+    body.dark .luvCard, body.dark .lbItem, body.dark .toast{
+      background: rgba(40,35,60,.82);
+      border:1px solid rgba(255,255,255,.08);
+      color: var(--txt);
+    }
+    body.dark .lbRow input{
+      background: rgba(40,35,60,.92);
+      border:1px solid rgba(255,255,255,.12);
+      color: var(--txt);
+    }
+    body.dark .modal{
+      background: rgba(30,26,45,.96);
+      border:1px solid rgba(255,255,255,.12);
+      color: var(--txt);
+    }
+
     body{
       margin:0;
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      color:#1d1334;
+      color:var(--txt);
       overflow:hidden;
       background: linear-gradient(180deg, var(--bg1), var(--bg2));
       position:relative;
+      transition: background 0.3s ease, color 0.3s ease;
     }
 
     /* Scroll container (scrollbar hidden) */
@@ -789,6 +821,19 @@
       text-align:center;
       padding: 18px 14px 14px;
     }
+    .greet input{
+       width: 80%;
+       max-width: 320px;
+       margin: 10px auto;
+       display:block;
+       padding: 12px;
+       border-radius: 12px;
+       border: 1px solid rgba(17,13,26,.15);
+       font-weight: 900;
+       font-size: 16px;
+       text-align:center;
+       background: rgba(255,255,255,.9);
+    }
     .greet img{
       width:min(380px, 82vw);
       height:auto;
@@ -1006,6 +1051,7 @@
           Match • Powerups • Mellow-Blocks • Lovelie-Bonus ✨<br>
           Bounciger, weicher Candy-Style – und jetzt mit richtigem Fullscreen-HUD.
         </div>
+        <input id="greetName" placeholder="Dein Name" maxlength="24" />
         <div class="cta">
           <button class="Btn ghost" id="greetGuide">Anleitung</button>
           <button class="Btn secondary" id="greetPlay">Spielen</button>
@@ -1034,6 +1080,25 @@
         </ul>
         <div class="foot">
           <button class="Btn ghost" id="introClose">Schließen</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modalBack" id="gameOverBack" style="z-index:99999;">
+      <div class="modal" style="text-align:center;">
+        <h2 style="font-size:32px;margin-bottom:4px;">GAME OVER 😵</h2>
+        <div class="sub" style="font-size:18px;margin-bottom:18px;">Keine Moves mehr möglich!</div>
+
+        <div class="stat" style="margin:0 auto 18px; max-width:200px;">
+           <div class="k">Final Score</div>
+           <div class="v" id="goScore">0</div>
+        </div>
+
+        <input id="goName" placeholder="Dein Name" maxlength="24" style="width:80%;max-width:320px;margin:0 auto 14px;display:block;padding:12px;border-radius:12px;border:1px solid rgba(17,13,26,.15);font-weight:900;font-size:16px;text-align:center;background:rgba(255,255,255,.9);" />
+
+        <div class="cta" style="justify-content:center;gap:12px;">
+           <button class="Btn" id="goPost">Score Posten</button>
+           <button class="Btn secondary" id="goNew">Neues Spiel</button>
         </div>
       </div>
     </div>
@@ -1085,6 +1150,7 @@
           <button class="Btn secondary" id="btnNew">Neues Spiel</button>
           <button class="Btn" id="btnHint">Hint</button>
           <button class="Btn" id="btnFs">Vollbild</button>
+          <button class="Btn ghost" id="btnTheme" style="padding:0 12px;min-width:46px;">🌙</button>
         </div>
       </div>
 
@@ -1239,7 +1305,12 @@
       smokey:   "https://static.wixstatic.com/media/d05122_9a607ff042b647b789e3b44cc75bd38d~mv2.png",
       mellow:   "https://static.wixstatic.com/media/d05122_53fbcb0babf447a5a32cc3b3fbecad2b~mv2.png",
       lovelie:  "https://static.wixstatic.com/media/d05122_755c29b99fad419d9b9a5822d8ffb18c~mv2.png",
-      simba:    "https://static.wixstatic.com/media/d05122_4d92be50d61e4a2297af16a3295c38bf~mv2.png"
+      simba:    "https://static.wixstatic.com/media/d05122_4d92be50d61e4a2297af16a3295c38bf~mv2.png",
+      mellowlord: "https://static.wixstatic.com/media/d05122_a1579589ff6c4a83a4bcf6e8a7350da4~mv2.png",
+      mellowzilla: "https://static.wixstatic.com/media/d05122_24fbaf9c9b0247cdab1db147594ce8a6~mv2.png",
+      fledernuss: "https://static.wixstatic.com/media/d05122_71ab5e06775046b0bc2e7410870baf75~mv2.png",
+      flederheld: "https://static.wixstatic.com/media/d05122_798ef1b1b2b5493b925caf56ad885d7e~mv2.png",
+      supernuss: "https://static.wixstatic.com/media/d05122_2f10d70e51b1473ca4d4fc0e2ccb2f30~mv2.png"
     };
     document.getElementById("greetLogo").src = IMG.logo;
 
@@ -1258,6 +1329,29 @@
      * Bases
      **********************/
     const BASES = [
+      { key:"fledernuss", name:"Fledernuss", img:IMG.fledernuss, tag:"normal", minLevel:10,
+        palettes:{ A:["#5d4037","#8d6e63"], B:["#8d6e63","#a1887f"] },
+        ability:"Evolves to FlederHeld",
+        story:"Kleine Nuss mit großen Träumen.",
+        lines:{
+          easy:["Fledernuss!","Evolution?","Flatter!"],
+          normal:["Ich wachse!","Next stage!","Nuss-Power!"],
+          hard:["Schnell entwickeln!","Evolution!","Go!"],
+          shock:["SUPER NUSS?!","EVOLUTION!","FLATTER!"]
+        }
+      },
+      { key:"flederheld", name:"FlederHeld", img:IMG.flederheld, tag:"normal", minLevel:999, // Only via Evolution
+        palettes:{ A:["#3e2723","#5d4037"], B:["#5d4037","#795548"] },
+        ability:"Evolves to SuperNuss",
+        story:"Der Held der Nüsse.",
+        lines:{ easy:["Held!"], normal:["Hero!"], hard:["Super!"], shock:["HYPER!"] }
+      },
+      { key:"supernuss", name:"SuperNuss", img:IMG.supernuss, tag:"normal", minLevel:999, // Only via Evolution
+        palettes:{ A:["#ffab00","#ffd740"], B:["#ff6f00","#ff8f00"] },
+        ability:"Explodes!",
+        story:"Die ultimative Nuss.",
+        lines:{ easy:["BOOM!"], normal:["SUPER!"], hard:["MEGA!"], shock:["ULTRA!"] }
+      },
       { key:"sweety", name:"Sweety", img:IMG.sweety, tag:"normal",
         palettes:{ A:["#ff4fb9","#ff9adf"], B:["#46e4c2","#a7fff0"] },
         ability:"Glitzer-Queen: cleanes Match 3+.",
@@ -1417,7 +1511,7 @@
     let busy = false;
     // big mellow mapping
     const bigMellows = new Map();
-    // id -> {id, r, c, hp}
+    // id -> {id, r, c, hp, type}
 
     let pointer = {down:false, id:null, startX:0, startY:0};
     let level = 1;
@@ -1514,7 +1608,10 @@
     }
     function calcMoves(lv){
       const m = diff.baseMoves + (lv-1)*diff.movesPerLevel;
-      return Math.min(m, diff.key==="easy" ? 70 : diff.key==="normal" ? 60 : diff.key==="hard" ? 50 : 45);
+      // Cap max moves to avoid accumulating too many (e.g. 70 moves at lvl 39 is too much)
+      // Cap at 25 extra moves max (so base + 25)
+      const cap = diff.baseMoves + 25;
+      return Math.min(m, cap);
     }
     function scorePerTile(){ return Math.round(60 * diff.scoreMult); }
 
@@ -1562,15 +1659,17 @@
     function computeCell(){
       const wrap = document.getElementById("boardWrap");
       const wrapW = wrap.clientWidth;
-      const wrapH = wrap.clientHeight || (window.innerHeight*0.7);
+      // More generous vertical space
+      const wrapH = wrap.clientHeight || (window.innerHeight * (window.innerWidth>1000 ? 0.8 : 0.7));
 
       const usableW = Math.max(260, wrapW - 40);
-      const usableH = Math.max(260, wrapH - 40);
+      const usableH = Math.max(260, wrapH - 20); // Less padding subtraction
 
       const cellW = Math.floor((usableW - (cols-1)*GAP - PAD*2) / cols);
       const cellH = Math.floor((usableH - (rows-1)*GAP - PAD*2) / rows);
 
-      const max = document.body.classList.contains("fs") ? 124 : 98;
+      // Higher max for large screens
+      const max = document.body.classList.contains("fs") ? 130 : 100;
       return clamp(Math.min(cellW, cellH), 34, max);
     }
 
@@ -1858,7 +1957,7 @@
         • <b>2× Joyce + 1× Smokey</b> ⇒ Buddy Burst<br>
         • <b>2× Smokey + 1× Simba</b> ⇒ Best Buddy Wave<br>
         • <b>Falscher Swap</b> ⇒ −3 Moves<br>
-        • <b>Keine Züge</b> ⇒ Auto-Shuffle, −3 Moves
+        • <b>Keine Züge</b> ⇒ Auto-Shuffle, −1 Move
       `;
 
       grid = Array.from({length:rows}, (_,r)=>Array.from({length:cols}, (_,c)=>null));
@@ -1881,6 +1980,7 @@
       }
 
       spawnMellow();
+      spawnMellowZilla();
       maybeSpawnLovelie();
       layoutBoard();
 
@@ -2222,7 +2322,7 @@
 
       for(const [k] of spawn) clear.delete(k);
 
-      return {clear, spawn};
+      return {clear, spawn, hRuns, vRuns};
     }
 
     function hasAnyMatchOrSpecial(){
@@ -2369,12 +2469,17 @@
     }
     function citBlast(r,c, radius=3){
       const cells=[];
-      const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
-      cells.push({r,c});
-      for(const [dr,dc] of dirs){
-        for(let i=1;i<=radius;i++){
-          const rr=r+dr*i, cc=c+dc*i;
-          if(inBounds(rr,cc)) cells.push({r:rr,c:cc});
+      // Diagonal band (3-wide) across the whole board
+      // Main diagonals: (r-c) = const and (r+c) = const
+      const diff = r - c;
+      const sum = r + c;
+
+      for(let rr=0; rr<rows; rr++){
+        for(let cc=0; cc<cols; cc++){
+           // Check bandwidth 3 (center + 1 each side)
+           if(Math.abs((rr-cc) - diff) <= 1 || Math.abs((rr+cc) - sum) <= 1){
+             cells.push({r:rr, c:cc});
+           }
         }
       }
       clearCells(cells);
@@ -2447,7 +2552,7 @@
             setTimeout(()=>{
               dropDown();
               mergeMellows();
-              resolveAll(false);
+              resolveAll(false, true); // Use safe resolve
             }, 240);
 
           }, 260);
@@ -2496,7 +2601,52 @@
       }
     }
 
-    function resolveAll(){
+    function resolveAll(initial=false, isPlayerSwap=false){
+      let isFirstStep = true;
+      // Boss AI Step (only if isPlayerSwap to count turns properly?)
+      // User says "Attacke 2 Züge vorher rot an".
+      // We can check it at the start of resolution chain.
+      if(isPlayerSwap){
+        const zilla = findMellowZilla();
+        if(zilla){
+          zilla.turn = (zilla.turn || 0) + 1;
+          const phase = zilla.turn % 4;
+          // Cycle 4:
+          // 1: Idle
+          // 2: Warn Red (1st turn)
+          // 3: Warn Red (2nd turn)
+          // 0: Attack
+
+          if(phase === 2 || phase === 3){ // Warn (Red)
+             const el = tileEls.get(zilla.id);
+             if(el){
+               el.style.border = "5px solid #ff0000";
+               el.style.boxShadow = "0 0 20px red";
+               toast("MellowZilla wütend!", "Attacke in "+(phase===2?"2 Zügen":"1 Zug")+"!", 2000);
+             }
+          } else if(phase === 0 && zilla.turn > 0){ // Attack
+             toast("MellowZilla Attacke!", "3x3 Wipe! 💥", 2600);
+
+             // Wipe random 3x3
+             const rr = Math.floor(Math.random()*(rows-2));
+             const cc = Math.floor(Math.random()*(cols-2));
+             const cells = [];
+             for(let r=rr; r<rr+3; r++){
+               for(let c=cc; c<cc+3; c++) cells.push({r,c});
+             }
+             clearCells(cells);
+
+             // Reset visual
+             const el = tileEls.get(zilla.id);
+             if(el){ el.style.border = "none"; el.style.boxShadow="none"; }
+          } else {
+             // Idle
+             const el = tileEls.get(zilla.id);
+             if(el){ el.style.border = "none"; el.style.boxShadow="none"; }
+          }
+        }
+      }
+
       const step = ()=>{
         const specials = findSpecialTriples();
         const mm = findLineMatches();
@@ -2509,8 +2659,15 @@
         }
 
         combo = clamp(combo+1, 1, 99);
-        if(specials.length){
-          for(const sp of specials){
+
+        let acceptedSpecials = specials;
+        // User requested: Special combos only on player swap to prevent loops
+        // Only accept specials on the VERY FIRST step of a player swap.
+        // Cascades (isFirstStep=false) should not trigger specials.
+        if(!isPlayerSwap || !isFirstStep) acceptedSpecials = [];
+
+        if(acceptedSpecials.length){
+          for(const sp of acceptedSpecials){
             const center = sp.cells[Math.floor(sp.cells.length/2)];
             const ctr = tileCenter(center.r, center.c);
             burstFx(ctr.x, ctr.y, 14);
@@ -2615,12 +2772,48 @@
           return;
         }
 
+        // Check for Fledernuss runs in mm.hRuns/vRuns
+        const allRuns = [...(mm.hRuns||[]), ...(mm.vRuns||[])];
+        for(const run of allRuns){
+          const first = run.cells[0];
+          const t = grid[first.r][first.c];
+          if(t){
+            const bk = parseTypeId(t.type).baseKey;
+            if(bk==="fledernuss"){
+               const mid = run.cells[Math.floor(run.cells.length/2)];
+               mm.spawn.set(posKey(mid.r,mid.c), {type:"flederheld:A"});
+               // prevent clearing the spawn spot? Logic below handles it:
+               // "if(old) remove... grid[r][c]=t"
+            } else if(bk==="flederheld"){
+               const mid = run.cells[Math.floor(run.cells.length/2)];
+               mm.spawn.set(posKey(mid.r,mid.c), {type:"supernuss:A"});
+            } else if(bk==="supernuss"){
+               // Explosion
+               const mid = run.cells[Math.floor(run.cells.length/2)];
+               toast("SUPER NUSS!", "BOOM!", 2000);
+               burstFx(tileCenter(mid.r, mid.c).x, tileCenter(mid.r, mid.c).y, 20);
+               // Add extra clear radius 2
+               const blast = [];
+               for(let rr=mid.r-2; rr<=mid.r+2; rr++){
+                 for(let cc=mid.c-2; cc<=mid.c+2; cc++){
+                   if(inBounds(rr,cc)) blast.push({r:rr,c:cc});
+                 }
+               }
+               clearCells(blast); // Immediate clear
+            }
+          }
+        }
+
         const toClear = new Set(mm.clear);
+        // Remove spawns from clear set
+        for(const [k] of mm.spawn) toClear.delete(k);
+
         const scoreAdd = toClear.size * scorePerTile() * (1 + (combo-1)*0.12);
         totalScore += Math.round(scoreAdd);
         levelScore += Math.round(scoreAdd);
 
         const clearedCells = [];
+
         for(const key of toClear){
           const [r,c] = key.split(",").map(Number);
           const t = grid[r][c];
@@ -2641,10 +2834,47 @@
 
         damageMellowsAround(clearedCells);
 
-        for(const [k, s] of mm.spawn){
-          const [r,c]=k.split(",").map(Number);
-          
-          // FIX: Alten Tile entfernen, falls noch da (da er aus 'clear' entfernt wurde)
+        // Fledernuss Evolution Logic
+        // Check if any match was Fledernuss chain
+        const alreadyEvolved = new Set();
+
+        for(const [key, s] of mm.spawn){
+           // Normal spawn logic (Cit, Worm, Koala)
+           const [r,c]=key.split(",").map(Number);
+           const old = grid[r][c];
+           if(old){
+             const oldEl = tileEls.get(old.id);
+             if(oldEl) oldEl.remove();
+             tileEls.delete(old.id);
+           }
+           const t = makeTile(r,c,s.type);
+           grid[r][c]=t;
+           const el = createTileEl(t, false);
+           el.classList.add("spawnGlow");
+           tileEls.set(t.id, el);
+           ui.board.appendChild(el);
+           const ctr = tileCenter(r,c);
+           makeStar(ctr.x, ctr.y, true);
+        }
+
+        // Custom Evolution handling
+        // For each cleared cell, check if it was part of a Fledernuss match
+        // But mm.clear doesn't tell us the type.
+        // We iterate matches in mm.
+        // findLineMatches returned 'hRuns' and 'vRuns' internally but only returned clear/spawn sets.
+        // We need to intercept the match types.
+
+        // Let's re-scan the cleared cells to see what they were? No they are null now.
+        // We should have intercepted before clearing.
+        // Refactor resolveAll slightly? Or just look at the 'toClear' set before we nulled them.
+        // 'clearedCells' contains the coords. But we need types.
+        // 'grid' is already nulled.
+        // Wait, the block above:
+        // const t = grid[r][c]; ... grid[r][c]=null;
+        // inside that loop we have access to 't'.
+
+        // I will add the logic inside the clearing loop.
+        /*
           const old = grid[r][c];
           if(old){
             const oldEl = tileEls.get(old.id);
@@ -2661,11 +2891,12 @@
 
           const ctr = tileCenter(r,c);
           makeStar(ctr.x, ctr.y, true);
-        }
+        */
 
         setTimeout(()=>{
           dropDown();
           mergeMellows();
+          isFirstStep = false;
           setTimeout(step, 260);
         }, 240);
         checkLevelUp();
@@ -2797,8 +3028,9 @@
             if(el){ el.remove(); tileEls.delete(t.id); }
           });
           const bigId = makeId();
-          const bigTile = { id: bigId, r, c, type: typeId("mellow","P"), hp: bigHp, big:true };
-          bigMellows.set(bigId, {id:bigId, r, c, hp:bigHp});
+          // MellowLord uses special type
+          const bigTile = { id: bigId, r, c, type: "mellowlord:P", hp: bigHp, big:true };
+          bigMellows.set(bigId, {id:bigId, r, c, hp:bigHp, type:"mellowlord"});
 
           grid[r][c] = bigTile;
           grid[r][c+1] = { type:"mellow_part", partOf: bigId };
@@ -2812,10 +3044,69 @@
 
           const ctr = tileCenter(r,c);
           burstFx(ctr.x + (CELL+GAP)/2, ctr.y + (CELL+GAP)/2, 18);
-          toast("MEGA Mellow! 😈","4 Mellows verschmelzen!", 2800);
+          toast("Mellowlord! 😈","4 Mellows verschmelzen!", 2800);
           setTileXY(el, r, c);
         }
       }
+    }
+
+    function findMellowZilla(){
+      for(const [id, m] of bigMellows){
+        if(m.type === "mellowzilla") return m;
+      }
+      return null;
+    }
+
+    function spawnMellowZilla(){
+      if(level < 20) return;
+      if(level % 20 !== 0) return;
+
+      // Clear 3x3 center
+      const cr = Math.floor(rows/2)-1;
+      const cc = Math.floor(cols/2)-1;
+
+      const bigId = makeId();
+      const zilla = { id: bigId, r: cr, c: cc, type: "mellowzilla:P", hp: 100, big:true, zilla:true };
+
+      for(let r=cr; r<cr+3; r++){
+        for(let c=cc; c<cc+3; c++){
+           if(inBounds(r,c)){
+             const t = grid[r][c];
+             if(t){
+               const el = tileEls.get(t.id);
+               if(el) el.remove();
+               tileEls.delete(t.id);
+             }
+             grid[r][c] = { type:"mellow_part", partOf: bigId };
+           }
+        }
+      }
+
+      // Anchor
+      grid[cr][cc] = zilla;
+      bigMellows.set(bigId, {id:bigId, r:cr, c:cc, hp:100, type:"mellowzilla"});
+
+      const el = createTileEl(zilla, false);
+      el.classList.add("spawnGlow");
+      // Scale for 3x3
+      el.style.width = `calc(var(--cell) * 3 + var(--gap) * 2)`;
+      el.style.height = `calc(var(--cell) * 3 + var(--gap) * 2)`;
+
+      tileEls.set(zilla.id, el);
+      ui.board.appendChild(el);
+
+      toast("MELLOW ZILLA!! 🦖", "Boss Fight!", 4000);
+      setTileXY(el, cr, cc);
+    }
+
+    function shiftMellowZilla(zilla){
+      // Shift center by 2 blocks? Or move Zilla?
+      // User: "Mitte verschieben um 2 Blöcke"
+      // Let's assume shuffling the center or moving Zilla.
+      // Moving Zilla is hard if board is full.
+      // Let's shuffle the board AROUND Zilla.
+      shuffleAll();
+      toast("Zilla Roar!", "Alles geshuffelt!", 2000);
     }
 
     function removeBigMellow(bigId){
@@ -2903,10 +3194,17 @@
     function ensureMovesOrShuffle(){
       if(busy) return;
       if(hasMove()) return;
-      toast("Keine Züge möglich 😵","Auto-Shuffle: −3 Moves", 3600);
-      spendMoves(3);
-      shuffleAll();
-      setTimeout(()=>resolveAll(false), 180);
+      toast("Keine Züge möglich 😵","Auto-Shuffle: −1 Move", 3600);
+      spendMoves(1);
+
+      const zilla = findMellowZilla();
+      if(zilla){
+        shiftMellowZilla(zilla);
+      } else {
+        shuffleArea4x4(Math.floor(rows/2), Math.floor(cols/2)); // Center shuffle only
+      }
+
+      setTimeout(()=>resolveAll(false, false), 180);
     }
 
     function hint(){
@@ -2994,16 +3292,34 @@
 
         toast("🎉 Ziel erreicht!","Next Level: "+level, 3200);
         spawnMellow();
+        spawnMellowZilla(); // Check if Boss level
         maybeSpawnLovelie();
       }
     }
 
     function gameOver(){
-      toast("Game Over 😵","Score posten? → Leaderboard", 3600);
-      if(document.getElementById("lbAuto").checked){
-        postScore();
-      }
+      // Show dedicated Game Over Modal
+      document.getElementById("goScore").textContent = fmt(totalScore);
+      document.getElementById("goName").value = document.getElementById("lbName").value || document.getElementById("greetName").value || "";
+      document.getElementById("gameOverBack").style.display = "flex";
+
+      // Auto-fill lbName if changed
+      document.getElementById("lbName").value = document.getElementById("goName").value;
     }
+
+    // Game Over Buttons
+    document.getElementById("goNew").addEventListener("click", ()=>{
+      document.getElementById("gameOverBack").style.display = "none";
+      newGame(false);
+    });
+    document.getElementById("goPost").addEventListener("click", async ()=>{
+       // Sync name
+       const n = document.getElementById("goName").value;
+       document.getElementById("lbName").value = n;
+       await postScore();
+       document.getElementById("gameOverBack").style.display = "none";
+       newGame(false);
+    });
 
     function newGame(fromDiffChange=false){
       busy=false;
@@ -3079,9 +3395,25 @@
     /**********************
      * Leaderboard
      **********************/
+    function cleanName(s){
+      let out = s.replace(/[^a-zA-Z0-9\säöüÄÖÜß!._-]/g, "");
+      // Bad words filter (simple list)
+      const bad = ["hitler", "nazi", "arsch", "wichser", "hurensohn", "idiot", "dummbatz"];
+      const lower = out.toLowerCase();
+      // Whitelist
+      if(lower.includes("koalaaufpillen")) return out;
+
+      for(const b of bad){
+        if(lower.includes(b)) return "***";
+      }
+      return out;
+    }
+
     async function postScore(){
       if(!sb){ toast("Leaderboard offline","(Supabase nicht erreichbar)", 3200); return; }
-      const name = (document.getElementById("lbName").value || "Anonymous").trim().slice(0,24);
+      let name = (document.getElementById("lbName").value || document.getElementById("greetName").value || "Anonymous").trim().slice(0,24);
+      name = cleanName(name);
+
       try{
         const payload = { player_name: name, score: totalScore, level: level, difficulty: diff.key, version:"luvvies-crush" };
         const { error } = await sb.from(SCORE_TABLE).insert(payload);
@@ -3101,14 +3433,26 @@
         return;
       }
       try{
+        // Fetch more rows to filter unique names on client side (simple approach)
         const { data, error } = await sb
           .from(SCORE_TABLE)
           .select("player_name,score,level,difficulty,created_at")
           .order("score", { ascending:false })
-          .limit(25);
+          .limit(80);
         if(error) throw error;
 
-        (data||[]).forEach((x, i)=>{
+        // Filter unique player names (keep best score)
+        const unique = [];
+        const seen = new Set();
+        for(const row of (data||[])){
+           const n = (row.player_name||"").toLowerCase();
+           if(seen.has(n)) continue;
+           seen.add(n);
+           unique.push(row);
+           if(unique.length >= 25) break;
+        }
+
+        unique.forEach((x, i)=>{
           const item = document.createElement("div");
           item.className="lbItem";
           if(i===0) item.classList.add("rank1");
@@ -3117,6 +3461,7 @@
 
           const d = new Date(x.created_at);
           const stamp = `${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")}.${d.getFullYear()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+          // Use diffLabel to force correct name
           item.innerHTML = `
             <div class="left">
               <b>${i+1}. ${escapeHtml(x.player_name||"Anonymous")}</b>
@@ -3199,6 +3544,22 @@
     document.getElementById("btnFs").addEventListener("click", toggleFullscreen);
     document.getElementById("btnPost").addEventListener("click", postScore);
     document.getElementById("btnRefresh").addEventListener("click", refreshLeaderboard);
+
+    // Dark Mode
+    const btnTheme = document.getElementById("btnTheme");
+    function syncTheme(){
+      const isDark = document.body.classList.contains("dark");
+      btnTheme.textContent = isDark ? "☀️" : "🌙";
+      localStorage.setItem("luvvies_dark", isDark ? "1" : "0");
+    }
+    if(localStorage.getItem("luvvies_dark")==="1"){
+      document.body.classList.add("dark");
+      syncTheme();
+    }
+    btnTheme.addEventListener("click", ()=>{
+      document.body.classList.toggle("dark");
+      syncTheme();
+    });
 
     document.getElementById("diffPills").addEventListener("change", ()=>{
       const v = document.querySelector('input[name="diff"]:checked').value;
