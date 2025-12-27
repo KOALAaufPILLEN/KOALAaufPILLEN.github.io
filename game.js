@@ -601,11 +601,15 @@
         if(r<=0){ pick = x.b; break; }
       }
 
-      // Background Variants Logic (using variants A/B)
+      // Background Variants Logic (Smoother Probability Curve)
       const variants = Array.from(unlocked[pick.key]);
       let v="A";
       if(variants.includes("B")){
-        v = (Math.random() < 0.28) ? "B" : "A";
+        // Progression: 10% at Lvl 5, up to 40% at Lvl 15
+        const chance = clamp(0.10 + (level - 5) * 0.03, 0.10, 0.40);
+        if(Math.random() < chance) {
+            v = "B";
+        }
       }
       return typeId(pick.key, v);
     }
@@ -1434,6 +1438,28 @@
         document.getElementById("btnFs").addEventListener("click", toggleFullscreen);
         document.getElementById("btnPost").addEventListener("click", postScore);
         document.getElementById("btnRefresh").addEventListener("click", refreshLeaderboard);
+
+    // Theme Toggle
+    const themeBtn = document.getElementById("themeToggle");
+    const storedTheme = getCookie("luvvies_theme");
+    if (storedTheme === "dark") {
+        document.body.setAttribute("data-theme", "dark");
+        themeBtn.textContent = "☀️";
+    } else {
+        themeBtn.textContent = "🌙";
+    }
+
+    themeBtn.addEventListener("click", () => {
+        if (document.body.getAttribute("data-theme") === "dark") {
+            document.body.removeAttribute("data-theme");
+            themeBtn.textContent = "🌙";
+            setCookie("luvvies_theme", "light", 30);
+        } else {
+            document.body.setAttribute("data-theme", "dark");
+            themeBtn.textContent = "☀️";
+            setCookie("luvvies_theme", "dark", 30);
+        }
+    });
 
         document.getElementById("diffPills").addEventListener("change", ()=>{
           const v = document.querySelector('input[name="diff"]:checked').value;
