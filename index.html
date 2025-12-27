@@ -3,1015 +3,1101 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="theme-color" content="#f7f2ff">
-  <title>Luvvies Crush 2.0: Ultimate Edition</title>
+  <title>Luvvies Crush</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <style>
-    /* ------------------------------------------------------------------
-       1. CORE VARIABLES & THEMES
-       ------------------------------------------------------------------ */
-    :root {
-      /* LIGHT THEME (Default) */
-      --bg-grad-start: #f7f2ff;
-      --bg-grad-end: #eaf6ff;
-      --card-bg: rgba(255, 255, 255, 0.85);
-      --card-border: rgba(255, 255, 255, 0.6);
-      --text-main: #1d1334;
-      --text-sub: #5a4b75;
-      --shadow-soft: 0 18px 40px rgba(20, 10, 60, 0.08);
-      --shadow-deep: 0 25px 80px rgba(20, 10, 60, 0.15);
-      --stroke: rgba(17, 13, 26, 0.08);
-      
-      --board-bg-grad: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(255,255,255,0.4));
-      --board-shadow: 0 20px 60px rgba(10,0,30,0.1), inset 0 0 40px rgba(255,255,255,0.8);
+    :root{
+      --bg1:#f7f2ff;
+      --bg2:#eaf6ff;
+      --card:#ffffffd9;
+      --card2:#ffffffef;
+      --text:#1d1334;
+      --stroke:rgba(17,13,26,.10);
+      --shadow: 0 18px 60px rgba(20,10,60,.12);
+      --accent: #975fff;
 
-      /* ACCENTS */
-      --accent-pink: #ff4fb9;
-      --accent-blue: #7ad8ff;
-      --accent-gold: #ffcf5a;
-      --accent-purple: #8b5cf6;
+      --cols: 10;
+      --rows: 10;
+      --cell: 54px;
+      --gap: 6px;
+      --pad: 12px;
+      --boardRadius: 26px;
 
-      /* GRID CONFIG */
-      --cols: 9;
-      --rows: 9;
-      --cell: 56px;
-      --gap: 8px;
-      --pad: 16px;
-      --board-radius: 32px;
-
-      /* ANIMATION TIMINGS */
-      --anim-swap: 280ms;
-      --anim-fall: 400ms;
-      --anim-pop: 350ms;
-      --toast-dur: 3200ms;
+      --toastMs: 2600ms;
     }
 
-    /* DARK MODE OVERRIDES */
-    :root.dark-mode {
-      --bg-grad-start: #0f0b1e;
-      --bg-grad-end: #1b142d;
-      --card-bg: rgba(30, 25, 50, 0.88);
-      --card-border: rgba(255, 255, 255, 0.12);
-      --text-main: #f0e6ff;
-      --text-sub: #a89bbd;
-      --shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.4);
-      --shadow-deep: 0 30px 90px rgba(0, 0, 0, 0.6);
-      --stroke: rgba(255, 255, 255, 0.1);
-
-      --board-bg-grad: radial-gradient(circle at 30% 30%, rgba(40,30,60,0.9), rgba(20,15,40,0.95));
-      --board-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 0 40px rgba(0,0,0,0.4);
+    /* DARK MODE VARIABLES */
+    body.dark-mode {
+      --bg1:#121212;
+      --bg2:#1a1a2e;
+      --card:#242424f2;
+      --card2:#2a2a2af2;
+      --text:#f0e6ff;
+      --stroke:rgba(255,255,255,.12);
+      --shadow: 0 18px 60px rgba(0,0,0,.45);
+      --accent: #d94fff; /* Neon Pink/Purple */
     }
 
-    /* ------------------------------------------------------------------
-       2. GLOBAL RESET & LAYOUT
-       ------------------------------------------------------------------ */
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html, body { height: 100%; width: 100%; }
+    *{box-sizing:border-box}
+    html,body{height:100%}
 
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      color: var(--text-main);
-      background: linear-gradient(180deg, var(--bg-grad-start), var(--bg-grad-end));
-      overflow: hidden;
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      color: var(--text);
+      overflow:hidden;
+      background: linear-gradient(180deg, var(--bg1), var(--bg2));
+      position:relative;
       transition: background 0.5s ease, color 0.5s ease;
-      user-select: none;
     }
 
-    /* Background Animation Layer */
-    #bg-layer {
-      position: absolute; inset: 0; z-index: 0; pointer-events: none;
-      background: 
-        radial-gradient(circle at 15% 15%, rgba(255, 79, 185, 0.08), transparent 40%),
-        radial-gradient(circle at 85% 85%, rgba(122, 216, 255, 0.1), transparent 40%),
-        radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.05), transparent 60%);
-      filter: blur(40px);
-      animation: ambientPulse 10s ease-in-out infinite alternate;
+    /* Scroll container */
+    #page{
+      height:100vh;
+      overflow:auto;
+      position:relative;
+      z-index:0;
+      scrollbar-width:none;
     }
-    @keyframes ambientPulse { 0% { opacity: 0.6; transform: scale(1); } 100% { opacity: 1; transform: scale(1.1); } }
+    #page::-webkit-scrollbar{ width:0; height:0; }
 
-    /* Partikel Layer (Global) */
-    #global-fx { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
-
-    /* Main App Container */
-    #app {
-      position: relative; z-index: 10;
-      width: min(1000px, 96vw);
-      height: 100%;
-      margin: 0 auto;
-      display: flex; flex-direction: column;
-      padding: 10px 0 20px;
+    /* Animated Background */
+    #scrollBg{
+      position:absolute; inset:0; z-index:0; pointer-events:none;
+      min-height: 120vh;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255,105,180,.14), transparent 48%),
+        radial-gradient(circle at 85% 25%, rgba(122,216,255,.20), transparent 52%),
+        radial-gradient(circle at 55% 75%, rgba(255,209,90,.16), transparent 50%);
+      filter: blur(28px);
+      opacity:.55;
+      animation: bgMove 18s ease-in-out infinite;
     }
-
-    /* Scrollable Content Area */
-    #scroll-wrap {
-      flex: 1; overflow-y: auto; overflow-x: hidden;
-      padding: 10px;
-      scrollbar-width: none;
-      display: flex; flex-direction: column; gap: 16px;
+    body.dark-mode #scrollBg {
+      opacity: 0.25; /* Weniger Hintergrund im Darkmode */
     }
-    #scroll-wrap::-webkit-scrollbar { display: none; }
-
-    /* ------------------------------------------------------------------
-       3. UI COMPONENTS: CARDS, BUTTONS, STATS
-       ------------------------------------------------------------------ */
-    .card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 24px;
-      box-shadow: var(--shadow-soft);
-      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-      padding: 16px;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-deep); }
-
-    /* Header / Top Bar */
-    .top-bar {
-      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+    @keyframes bgMove{
+      0%{ background-position: 0% 50% }
+      50%{ background-position: 100% 50% }
+      100%{ background-position: 0% 50% }
     }
 
-    /* Difficulty Pills */
-    .diff-switch {
-      display: flex; gap: 6px; padding: 5px;
-      background: rgba(255,255,255,0.4);
-      border-radius: 99px;
-      border: 1px solid var(--stroke);
+    #globalBg{ position:absolute; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+
+    /* Floating Luvvies */
+    .bgLuv{
+      position:absolute; width: clamp(100px, 15vw, 260px);
+      filter: drop-shadow(0 18px 40px rgba(0,0,0,.10));
+      opacity:.60;
+      animation: floaty 18s ease-in-out infinite;
+      z-index:0; pointer-events:none;
     }
-    .dark-mode .diff-switch { background: rgba(0,0,0,0.3); }
-    
-    .diff-opt {
-      padding: 8px 16px; border-radius: 99px;
-      font-weight: 800; font-size: 13px; cursor: pointer;
-      opacity: 0.7; transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-    }
-    .diff-opt.active {
-      background: linear-gradient(135deg, var(--accent-pink), var(--accent-blue));
-      color: white; opacity: 1;
-      box-shadow: 0 4px 12px rgba(255, 79, 185, 0.4);
-      transform: scale(1.05);
+    .bgLuv img{ width:100%; height:auto; display:block; }
+    @keyframes floaty{
+      0%{ transform: translate(0,0) rotate(-1deg); opacity:.54; }
+      50%{ transform: translate(10px,-16px) rotate(1.2deg); opacity:.72; }
+      100%{ transform: translate(0,0) rotate(-1deg); opacity:.54; }
     }
 
-    /* Action Buttons */
-    .btn-group { display: flex; gap: 10px; }
-    
-    .btn {
-      position: relative; height: 44px; padding: 0 20px;
-      border: none; border-radius: 99px;
-      font-weight: 800; font-size: 14px; color: white;
-      cursor: pointer; overflow: hidden;
-      background: var(--accent-purple);
-      box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3), inset 0 2px 0 rgba(255,255,255,0.2);
-      transition: all 0.2s ease;
-      display: flex; align-items: center; justify-content: center; gap: 8px;
+    #app{
+      width:min(1100px, 98vw);
+      margin: 10px auto 20px;
+      position:relative; z-index:5;
     }
-    .btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
-    .btn:active { transform: scale(0.96); }
-    
-    .btn.secondary { background: linear-gradient(135deg, var(--accent-pink), #ff9adf); box-shadow: 0 4px 15px rgba(255, 79, 185, 0.4); }
-    .btn.ghost { background: transparent; border: 2px solid var(--stroke); color: var(--text-main); box-shadow: none; }
-    .dark-mode .btn.ghost { border-color: rgba(255,255,255,0.3); color: white; }
+
+    /* Top Bar */
+    .topRow{
+      margin-top: 8px;
+      background: var(--card);
+      border:1px solid var(--stroke);
+      border-radius: 22px;
+      padding: 10px 14px;
+      box-shadow: var(--shadow);
+      display:flex; align-items:center; justify-content:space-between;
+      gap:12px; flex-wrap:wrap;
+      position:relative; z-index:6;
+    }
+
+    .diffPills{
+      display:flex; gap:6px; padding:4px;
+      border-radius:999px;
+      background: rgba(255,255,255,.4);
+      border:1px solid var(--stroke);
+    }
+    body.dark-mode .diffPills { background: rgba(0,0,0,0.3); }
+    .diffPills input{display:none}
+    .diffPills label{
+      cursor:pointer; user-select:none;
+      padding:8px 12px; border-radius:999px;
+      font-weight:800; font-size:13px;
+      color: var(--text); opacity: 0.7;
+      transition: all .2s ease;
+    }
+    .diffPills input:checked + label{
+      background: linear-gradient(135deg, #ff4fb9, #7ad8ff);
+      opacity: 1; color:#fff;
+      box-shadow: 0 4px 12px rgba(255,79,185,.3);
+    }
+
+    /* Buttons */
+    .Btn{
+      height: 42px; padding: 0 16px; border-radius: 999px;
+      border: none; background-color: var(--accent);
+      color: white; font-weight:800; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      transition: transform .1s;
+    }
+    .Btn:hover { transform: translateY(-2px); }
+    .Btn:active{ transform: scale(.96); }
+    .Btn.ghost{ background: rgba(255,255,255,.2); color: var(--text); border:1px solid var(--stroke); box-shadow:none; }
+    .Btn.secondary{ background: linear-gradient(135deg, #ff4fb9, #ff9adf); }
 
     /* Stats Grid */
-    .stats-row {
-      display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
+    .stats{
+      margin-top: 10px;
+      display:grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px; position:relative; z-index:6;
     }
-    .stat-box {
-      background: var(--card-bg); border-radius: 18px; padding: 10px;
-      text-align: center; border: 1px solid var(--stroke);
-      display: flex; flex-direction: column; justify-content: center;
+    .stat{
+      background: var(--card2); border:1px solid var(--stroke);
+      border-radius: 16px; padding: 8px 10px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+      display:flex; flex-direction:column; justify-content:center;
     }
-    .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; font-weight: 700; }
-    .stat-val { font-size: 20px; font-weight: 900; margin-top: 4px; color: var(--text-main); }
-    .stat-val.highlight { color: var(--accent-pink); }
+    .stat .k{font-size:11px; opacity:.6; font-weight:700; text-transform:uppercase;}
+    .stat .v{font-weight:900; font-size:18px;}
 
     /* Progress Bar */
-    .prog-wrap {
-      height: 12px; background: rgba(0,0,0,0.05); border-radius: 99px; overflow: hidden;
-      margin-top: 8px; position: relative;
+    .progressRow{
+      margin-top: 8px; background: var(--card2);
+      border:1px solid var(--stroke); border-radius: 16px;
+      padding: 8px 12px; display:flex; align-items:center; gap:10px;
+      z-index:6; position:relative;
     }
-    .dark-mode .prog-wrap { background: rgba(255,255,255,0.1); }
-    .prog-fill {
-      height: 100%; width: 0%;
-      background: linear-gradient(90deg, var(--accent-pink), var(--accent-gold), var(--accent-blue));
-      background-size: 200% 100%;
-      animation: gradientMove 3s linear infinite;
-      transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    .bar{
+      flex:1; height: 10px; border-radius:999px;
+      background: rgba(120,120,120,.15); overflow:hidden;
     }
-    @keyframes gradientMove { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
+    .bar > i{
+      display:block; height:100%; width:0%;
+      background: linear-gradient(90deg, #ff4fb9, #ffcf5a, #7ad8ff);
+      transition: width .3s ease;
+    }
+    .pct{ font-weight:800; font-size:14px; min-width:40px; text-align:right;}
 
-    /* ------------------------------------------------------------------
-       4. THE GAME BOARD (CENTERPIECE)
-       ------------------------------------------------------------------ */
-    .board-container {
-      position: relative;
-      margin: 10px auto;
-      padding: var(--pad);
-      background: var(--board-bg-grad);
-      border-radius: var(--board-radius);
-      box-shadow: var(--board-shadow);
-      border: 1px solid rgba(255,255,255,0.4);
-      width: fit-content;
-      user-select: none;
-      touch-action: none; /* Wichtig für Mobile Drag */
+    /* Board Area */
+    .playArea{
+      margin-top: 10px; background: var(--card);
+      border:1px solid var(--stroke); border-radius: 24px;
+      box-shadow: var(--shadow); padding: 10px;
+      position:relative; overflow:hidden; z-index:6;
     }
-    .dark-mode .board-container { border: 1px solid rgba(255,255,255,0.1); }
-
-    #grid {
-      position: relative;
-      display: grid;
-      grid-template-columns: repeat(var(--cols), var(--cell));
-      grid-template-rows: repeat(var(--rows), var(--cell));
-      gap: var(--gap);
+    #boardWrap{
+      position:relative; width:100%;
+      /* Better sizing for 1920px logic: utilize vh heavily */
+      min-height: 60vh;
+      display:flex; align-items:center; justify-content:center;
+      z-index:10; padding: 4px; touch-action: none;
     }
 
-    /* Grid Cells (Hintergrund-Slots) */
-    .slot {
-      width: var(--cell); height: var(--cell);
-      background: rgba(0,0,0,0.03);
-      border-radius: 14px;
-      box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+    #board{
+      position:relative; z-index:12;
+      padding: var(--pad); border-radius: var(--boardRadius);
+      background: rgba(255,255,255,0.4);
+      border: 1px solid rgba(255,255,255,0.3);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
     }
-    .dark-mode .slot { background: rgba(255,255,255,0.05); }
+    body.dark-mode #board {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.05);
+    }
 
-    /* ------------------------------------------------------------------
-       5. TILES & CHARACTERS (THE SOUL)
-       ------------------------------------------------------------------ */
-    .tile {
+    /* The Tiles */
+    .tile{
+      position:absolute; width: var(--cell); height: var(--cell);
+      left:0; top:0; transform: translate(var(--x), var(--y));
+      transition: transform 0.2s cubic-bezier(.2,.8,.2,1);
+      will-change: transform; z-index:15;
+    }
+    /* Big Mellow (2x2) */
+    .tile.bigMellow{
+      width: calc(var(--cell) * 2 + var(--gap));
+      height: calc(var(--cell) * 2 + var(--gap));
+      z-index: 20;
+    }
+    /* MellowZilla (3x3 Boss) */
+    #mellowZilla{
       position: absolute;
-      width: var(--cell); height: var(--cell);
-      left: 0; top: 0;
-      transform: translate(calc(var(--c) * (var(--cell) + var(--gap))), calc(var(--r) * (var(--cell) + var(--gap))));
-      z-index: 10;
-      transition: transform var(--anim-swap) cubic-bezier(0.2, 1.2, 0.5, 1);
-      cursor: pointer;
-      will-change: transform;
+      width: calc(var(--cell) * 3 + var(--gap) * 2);
+      height: calc(var(--cell) * 3 + var(--gap) * 2);
+      z-index: 40;
+      pointer-events: none; /* Klicks gehen auf Grid darunter */
+      animation: shake 3s ease-in-out infinite;
+      filter: drop-shadow(0 20px 30px rgba(0,0,0,0.4));
+      display:none;
+      transition: opacity 0.5s;
     }
+    #mellowZilla img { width:100%; height:100%; object-fit:contain; }
+    @keyframes shake {
+      0%, 100% { transform: translate(var(--zx), var(--zy)) rotate(0deg); }
+      25% { transform: translate(var(--zx), var(--zy)) rotate(-2deg); }
+      75% { transform: translate(var(--zx), var(--zy)) rotate(2deg); }
+    }
+
+    .plate{
+      width:100%; height:100%; border-radius: 14px;
+      background: linear-gradient(135deg, var(--p1), var(--p2));
+      box-shadow: 0 4px 10px rgba(0,0,0,.15), inset 0 2px 5px rgba(255,255,255,0.4);
+      position:relative; overflow:hidden;
+      transition: transform 0.2s, opacity 0.2s;
+    }
+    .tile.bigMellow .plate { border-radius: 24px; }
     
-    /* Interactive States */
-    .tile.selected .inner { transform: scale(0.9); box-shadow: 0 0 0 3px var(--accent-pink); animation: pulse 1s infinite; }
-    .tile.hint .inner { animation: shake 2s ease-in-out infinite; box-shadow: 0 0 15px var(--accent-gold); }
-    .tile.matched .inner { animation: popOut var(--anim-pop) forwards; }
-    .tile.dropping { transition: transform var(--anim-fall) cubic-bezier(0.5, 0, 0.5, 1.2); z-index: 20; }
-    .tile.spawn { animation: spawnIn 0.4s back.out; }
-
-    /* The Inner Plate (Visuals) */
-    .inner {
-      width: 100%; height: 100%;
-      border-radius: 14px;
-      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(255,255,255,0.1)), var(--tile-color);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.15), inset 0 -4px 8px rgba(0,0,0,0.1);
-      border: 1px solid rgba(255,255,255,0.5);
-      display: flex; align-items: center; justify-content: center;
-      position: relative;
-      overflow: hidden;
-      transition: transform 0.2s;
-    }
-    
-    /* Hardcore Matching Visuals (Pattern Overlay if needed, currently color) */
-    .inner::after {
-      content: ''; position: absolute; inset: 0;
-      background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 50%);
-      pointer-events: none;
+    .tile img{
+      position:absolute; inset: 5%; width:90%; height:90%;
+      object-fit:contain; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.15));
+      pointer-events:none;
     }
 
-    /* Images */
-    .tile-img {
-      width: 85%; height: 85%;
-      object-fit: contain;
-      filter: drop-shadow(0 4px 4px rgba(0,0,0,0.2));
-      pointer-events: none;
-      z-index: 2;
+    /* Mellow HP */
+    .hp{
+      position:absolute; right:4px; top:2px;
+      font-weight:900; font-size: 14px; color: #fff;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5); z-index:30;
     }
-
-    /* ------------------------------------------------------------------
-       6. SPECIALS: BOSSES, EVOLUTIONS & EFFECTS
-       ------------------------------------------------------------------ */
-    
-    /* Fledernuss Evolution Stages */
-    .tile[data-type="fleder"] .inner { border: 2px solid transparent; }
-    .tile[data-type="fleder"][data-evo="2"] .inner { border-color: #a35eff; box-shadow: 0 0 10px #a35eff; }
-    .tile[data-type="fleder"][data-evo="3"] .inner { border-color: #ff0055; box-shadow: 0 0 20px #ff0055; animation: bossPulse 1s infinite; }
-
-    /* Boss: MellowZilla (3x3) */
-    .boss-overlay {
-      position: absolute;
-      width: calc(3 * var(--cell) + 2 * var(--gap));
-      height: calc(3 * var(--cell) + 2 * var(--gap));
-      background: linear-gradient(135deg, #2b1b4f, #4a3b75);
-      border-radius: 24px;
-      z-index: 50;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-      border: 4px solid var(--accent-pink);
-      animation: zillaFloat 3s ease-in-out infinite;
-      transition: transform 0.3s;
-    }
-    .boss-overlay.hit { animation: zillaHit 0.4s; }
-    .boss-hp-bar {
-      width: 80%; height: 8px; background: #000; border-radius: 4px; margin-top: 10px; overflow: hidden;
-    }
-    .boss-hp-fill { width: 100%; height: 100%; background: #ff0055; transition: width 0.2s; }
-    .boss-img { width: 70%; filter: drop-shadow(0 0 10px rgba(255,79,185,0.5)); }
+    .tile.bigMellow .hp { font-size: 24px; right:10px; top:6px; }
 
     /* Animations */
-    @keyframes pulse { 0% { transform: scale(0.95); } 50% { transform: scale(1.05); } 100% { transform: scale(0.95); } }
-    @keyframes shake { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(5deg); } 75% { transform: rotate(-5deg); } }
-    @keyframes popOut { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.8; } 100% { transform: scale(0); opacity: 0; } }
-    @keyframes spawnIn { 0% { transform: scale(0); } 70% { transform: scale(1.1); } 100% { transform: scale(1); } }
-    @keyframes zillaFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-    @keyframes zillaHit { 0% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(0.95); filter: brightness(2) sepia(1) hue-rotate(-50deg); } 100% { transform: scale(1); filter: brightness(1); } }
+    .pop .plate{ animation: pop 0.4s ease forwards; }
+    @keyframes pop{ to{ transform: scale(0); opacity:0; } }
 
-    /* ------------------------------------------------------------------
-       7. MODALS, TOASTS & EXTRAS
-       ------------------------------------------------------------------ */
-    .modal-backdrop {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);
-      z-index: 100; display: none; align-items: center; justify-content: center;
-      opacity: 0; transition: opacity 0.3s;
+    .spawnGlow .plate{ animation: glow 0.6s ease-out; }
+    @keyframes glow{ 0%{ filter: brightness(2); transform: scale(1.1); } 100%{ filter: brightness(1); transform: scale(1); } }
+    
+    /* Layout Logic below board */
+    .below{
+      margin-top: 12px; display:grid; grid-template-columns: 1fr 1fr;
+      gap: 12px;
     }
-    .modal-backdrop.active { display: flex; opacity: 1; }
-    .modal {
-      background: var(--card-bg); width: min(500px, 90vw); padding: 30px;
-      border-radius: 30px; border: 1px solid var(--card-border);
-      box-shadow: 0 40px 100px rgba(0,0,0,0.5);
-      text-align: center; transform: scale(0.8); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    .modal-backdrop.active .modal { transform: scale(1); }
-    .modal h2 { margin: 0 0 10px; font-size: 28px; background: linear-gradient(45deg, var(--accent-pink), var(--accent-blue)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    @media (max-width: 800px){ .below{ grid-template-columns:1fr; } }
 
-    #toast-container { position: fixed; top: 20px; right: 20px; z-index: 200; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
-    .toast {
-      background: rgba(255,255,255,0.95); padding: 12px 20px; border-radius: 12px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.2); border-left: 4px solid var(--accent-pink);
-      transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-      display: flex; align-items: center; gap: 10px; pointer-events: auto; font-weight: 600;
+    .panel{
+      background: var(--card2); border:1px solid var(--stroke);
+      border-radius: 18px; padding: 12px; box-shadow: var(--shadow);
     }
-    .dark-mode .toast { background: #2b1b4f; color: white; }
-    .toast.show { transform: translateX(0); }
-    .toast img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
+    .luvGrid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap:8px; }
+    .luvCard{
+      display:flex; gap:8px; align-items:center; padding:8px;
+      background: rgba(255,255,255,0.5); border-radius:12px;
+      cursor:pointer; border:1px solid transparent;
+    }
+    body.dark-mode .luvCard { background: rgba(255,255,255,0.05); }
+    .luvCard:hover{ border-color: var(--accent); }
+    .luvCard img{ width:48px; height:48px; object-fit:contain; }
 
-    /* Responsive Adjustments */
-    @media (max-width: 600px) {
-      :root { --cell: 42px; --gap: 6px; }
-      .stats-row { grid-template-columns: repeat(3, 1fr); }
-      .stat-box:nth-child(4), .stat-box:nth-child(5) { display: none; } /* Hide less important stats on tiny screens */
-      .top-bar { justify-content: center; }
+    /* Modal & Greeting */
+    .modalBack{
+      position:fixed; inset:0; z-index:1000;
+      background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+      display:none; align-items:center; justify-content:center;
     }
+    .modal{
+      background: var(--bg1); color: var(--text);
+      width: min(600px, 90vw); padding: 24px; border-radius: 24px;
+      border: 1px solid var(--stroke);
+      max-height: 90vh; overflow-y:auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    input.niceInput {
+      width: 100%; padding: 12px; border-radius: 12px;
+      border: 1px solid var(--stroke); background: rgba(255,255,255,0.1);
+      color: var(--text); font-size: 16px; font-weight: bold; margin-bottom: 10px;
+    }
+
+    /* Toast */
+    #toast{
+      position:fixed; top: 100px; right: 20px; z-index: 2000;
+      pointer-events:none; display:flex; flex-direction:column; gap:8px;
+    }
+    .toast{
+      background: var(--card); color: var(--text);
+      padding: 12px 18px; border-radius: 12px;
+      border: 1px solid var(--stroke);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      animation: slideIn 0.3s cubic-bezier(0.2, 1, 0.3, 1);
+    }
+    @keyframes slideIn { from{ transform: translateX(100%); opacity:0; } }
   </style>
 </head>
 <body>
+  <div id="page">
+    <div id="scrollBg"></div>
+    <div id="globalBg"></div>
+    <div id="toast"></div>
 
-  <div id="bg-layer"></div>
-  <div id="global-fx"></div>
+    <div class="modalBack" id="greetBack" style="display:flex;">
+      <div class="modal greet" style="text-align:center;">
+        <img id="greetLogo" style="width:200px; margin:0 auto 10px;" alt="Logo" />
+        <h2 style="margin:0;">Luvvies Crush 🍭</h2>
+        <p style="opacity:0.7;">Candy-Style Puzzle Action</p>
+        
+        <div style="margin: 20px 0; text-align:left;">
+          <label style="font-size:12px; font-weight:bold; margin-bottom:4px; display:block;">Wie heißt du? (Fürs Leaderboard)</label>
+          <input type="text" id="startName" class="niceInput" placeholder="Dein Name..." maxlength="16">
+        </div>
 
-  <div id="app">
-    
-    <div class="card top-bar">
-      <div class="diff-switch" id="diff-switch">
-        <div class="diff-opt" data-diff="easy">Easy</div>
-        <div class="diff-opt active" data-diff="normal">Normal</div>
-        <div class="diff-opt" data-diff="shock">Schock</div>
-      </div>
-      
-      <div class="btn-group">
-        <button class="btn ghost" id="btn-darkmode">🌙</button>
-        <button class="btn ghost" id="btn-sound">🔊</button>
-        <button class="btn secondary" id="btn-new">Neu</button>
-        <button class="btn" id="btn-hint">Hint (-2)</button>
+        <div style="display:flex; gap:10px; justify-content:center;">
+          <button class="Btn ghost" id="greetGuide">Anleitung</button>
+          <button class="Btn secondary" id="greetPlay">Spielen</button>
+        </div>
       </div>
     </div>
 
-    <div id="scroll-wrap">
-      
-      <div class="stats-row">
-        <div class="stat-box">
-          <span class="stat-label">Level</span>
-          <span class="stat-val" id="ui-lvl">1</span>
-        </div>
-        <div class="stat-box">
-          <span class="stat-label">Score</span>
-          <span class="stat-val highlight" id="ui-score">0</span>
-        </div>
-        <div class="stat-box">
-          <span class="stat-label">Ziel</span>
-          <span class="stat-val" id="ui-target">2500</span>
-        </div>
-        <div class="stat-box">
-          <span class="stat-label">Moves</span>
-          <span class="stat-val" id="ui-moves">25</span>
-        </div>
-        <div class="stat-box">
-          <span class="stat-label">Combo</span>
-          <span class="stat-val" id="ui-combo">x1</span>
-        </div>
+    <div class="modalBack" id="introBack">
+      <div class="modal">
+        <h2>Anleitung & Specials</h2>
+        <ul style="line-height:1.6; font-weight:500;">
+          <li><b>Match 3</b>: Standard.</li>
+          <li><b>Match 4 (Reihe)</b>: Sourworm (Löscht Reihe/Spalte).</li>
+          <li><b>Match 4 (Quadrat)</b>: <b>MellowLord</b> (2x2 Riese).</li>
+          <li><b>Match 5</b>: <b>Citrussy</b> (Großes X über das Feld).</li>
+          <li><b>Fledernuss (Lvl 10+)</b>: Nuss → Held → SuperNuss → <b>BÄM</b> (3 Koalas!).</li>
+          <li><b>Best Buddies</b>: 2x Smokey + 1x Simba = Riesen Welle.</li>
+          <li><b>Koala + Citrussy</b>: 2x Feld leeren + Doppelte Punkte!</li>
+          <li><b>MellowZilla</b>: Boss alle 20 Level. Besiege ihn durch Matches daneben!</li>
+        </ul>
+        <button class="Btn ghost" id="introClose" style="float:right;">Schließen</button>
       </div>
+    </div>
 
-      <div class="prog-wrap">
-        <div class="prog-fill" id="ui-prog"></div>
-      </div>
-
-      <div class="board-container">
-        <div id="grid">
+    <div class="modalBack" id="infoBack">
+      <div class="modal">
+        <div style="display:flex; gap:15px; align-items:center;">
+          <img id="infoImg" src="" style="width:100px; height:100px; object-fit:contain;">
+          <div>
+            <h2 id="infoName" style="margin:0;"></h2>
+            <p id="infoTag" style="opacity:0.6; margin:4px 0;"></p>
           </div>
-        <div id="boss-layer"></div>
+        </div>
+        <p id="infoAbility" style="background:rgba(127,127,127,0.1); padding:10px; border-radius:8px; margin-top:15px; font-weight:bold;"></p>
+        <p id="infoStory" style="opacity:0.8;"></p>
+        <button class="Btn ghost" id="infoClose" style="width:100%; margin-top:10px;">Zurück</button>
       </div>
+    </div>
 
-      <div class="card">
-        <h3 style="margin-top:0; color:var(--text-sub);">Deine Luvvies Crew</h3>
-        <div style="font-size: 13px; line-height: 1.6; opacity: 0.8;" id="lore-text">
-          Tippe auf ein Luvvie, um mehr zu erfahren.
+    <div id="app">
+      <div class="topRow">
+        <div class="diffPills" id="diffPills">
+          <input type="radio" name="diff" id="d_easy" value="easy" checked><label for="d_easy">Easy</label>
+          <input type="radio" name="diff" id="d_normal" value="normal"><label for="d_normal">Normal</label>
+          <input type="radio" name="diff" id="d_hard" value="hard"><label for="d_hard">Hard</label>
+          <input type="radio" name="diff" id="d_shock" value="shock"><label for="d_shock">Zuckerschock</label>
+        </div>
+        <div style="display:flex; gap:8px;">
+           <button class="Btn ghost" id="btnDark">🌙</button>
+           <button class="Btn ghost" id="btnIntro">Hilfe</button>
+           <button class="Btn secondary" id="btnNew">Neu</button>
+           <button class="Btn" id="btnFs">Vollbild</button>
         </div>
       </div>
 
-    </div> </div> <div id="toast-container"></div>
+      <div class="stats">
+        <div class="stat"><div class="k">Level</div><div class="v" id="uiLevel">1</div></div>
+        <div class="stat"><div class="k">Ziel</div><div class="v" id="uiGoal">4k</div></div>
+        <div class="stat"><div class="k">Score</div><div class="v" id="uiScore">0</div></div>
+        <div class="stat"><div class="k">Moves</div><div class="v" id="uiMoves">30</div></div>
+        <div class="stat"><div class="k">Combo</div><div class="v" id="uiCombo">x1</div></div>
+      </div>
 
-  <div class="modal-backdrop" id="modal-start">
-    <div class="modal">
-      <h2>Luvvies Crush 2.0</h2>
-      <p><b>Hardcore Edition:</b> Figur + Farbe müssen stimmen!</p>
-      <p>Ab Level 4: Simba & Smokey Bond.<br>Ab Level 10: Fledernuss Evolution.<br>Level 20: MellowZilla Boss Fight.</p>
-      <input type="text" id="player-name" placeholder="Dein Name (z.B. KOALAaufPILLEN)" style="padding:10px; border-radius:8px; border:1px solid #ccc; width:80%; margin:15px 0; text-align:center;">
-      <br>
-      <button class="btn secondary" style="font-size:18px; padding:10px 40px;" onclick="Game.start()">Let's Go!</button>
-    </div>
-  </div>
+      <div class="progressRow">
+        <b>Fortschritt</b>
+        <div class="bar"><i id="uiBar"></i></div>
+        <div class="pct" id="uiPct">0%</div>
+      </div>
 
-  <div class="modal-backdrop" id="modal-gameover">
-    <div class="modal">
-      <h2 style="font-size:40px;">GAME OVER 💀</h2>
-      <p style="font-size:20px;">Score: <span id="go-score">0</span></p>
-      <p id="go-msg">Knapp vorbei ist auch daneben.</p>
-      <div style="display:flex; justify-content:center; gap:10px; margin-top:20px;">
-        <button class="btn ghost" onclick="Game.init()">Revanche</button>
-        <button class="btn secondary" onclick="Game.postScore()">Score Posten</button>
+      <div class="playArea" id="playArea">
+        <div id="boardWrap">
+          <div id="mellowZilla">
+             <img src="https://static.wixstatic.com/media/d05122_24fbaf9c9b0247cdab1db147594ce8a6~mv2.png" alt="MellowZilla">
+             <div class="hp" style="left:50%; top:50%; transform:translate(-50%,-50%); font-size:40px; text-shadow:0 0 10px #000;">30</div>
+          </div>
+          <div id="board"></div>
+        </div>
+      </div>
+
+      <div class="below">
+        <div class="panel">
+          <h3 style="margin-top:0;">Sammlung</h3>
+          <div class="luvGrid" id="luvMenu"></div>
+        </div>
+        <div class="panel">
+          <h3 style="margin-top:0;">Leaderboard</h3>
+          <div id="lbList" style="max-height:250px; overflow:auto;">
+            <div style="opacity:0.5; font-size:13px;">Lade...</div>
+          </div>
+          <button class="Btn ghost" id="btnPost" style="width:100%; margin-top:10px;">Score Senden</button>
+        </div>
       </div>
     </div>
   </div>
-
   <script>
-    /**
-     * ------------------------------------------------------------------
-     * LUVVIES CRUSH 2.0 - ULTIMATE EDITION ENGINE
-     * ------------------------------------------------------------------
-     * Ein Monolith aus purer Liebe zum Detail.
-     */
-
-    // --- CONFIG & ASSETS ---
-    const ASSETS = {
+    /* ================= SETUP & CONFIG ================= */
+    const IMG = {
+      logo:     "https://static.wixstatic.com/media/d05122_7c445c8b5f3d46cdb778711661f2351e~mv2.png",
       sweety:   "https://static.wixstatic.com/media/d05122_efe39fec7e5c4d569dfb3fef75e5b6ff~mv2.png",
       sleepy:   "https://static.wixstatic.com/media/d05122_cfd779a0aad04c72bd08efbc0f363f53~mv2.png",
+      normal:   "https://static.wixstatic.com/media/d05122_8a7c2f43a31247a6994651163c2898c5~mv2.png",
+      cry:      "https://static.wixstatic.com/media/d05122_1950f2496b344e56bcac10ea51286750~mv2.png",
+      koala:    "https://static.wixstatic.com/media/d05122_9cb17e901a1a4775819bfda895d0f1c9~mv2.png",
+      citrussy: "https://static.wixstatic.com/media/d05122_9cdc763a1ec94a90a3fd91ee3481b2c4~mv2.png",
+      worm:     "https://static.wixstatic.com/media/d05122_a8e7a37e04694ff2a99b8af60f1567b7~mv2.png",
+      grumpy:   "https://static.wixstatic.com/media/d05122_983d59c5911e400e92819d12e27d6073~mv2.png",
+      happy:    "https://static.wixstatic.com/media/d05122_cff843264bd8495aaa9ac0360d72e131~mv2.png",
+      mond:     "https://static.wixstatic.com/media/d05122_aea344c0fd954194af2855eea745febf~mv2.png",
+      donut:    "https://static.wixstatic.com/media/d05122_5041c19e720d4e7e9439e4acf793655c~mv2.png",
       joyce:    "https://static.wixstatic.com/media/d05122_36a3f8d83be4433082995ee1a8003218~mv2.png",
       smokey:   "https://static.wixstatic.com/media/d05122_9a607ff042b647b789e3b44cc75bd38d~mv2.png",
-      simba:    "https://static.wixstatic.com/media/d05122_4d92be50d61e4a2297af16a3295c38bf~mv2.png",
-      fleder:   "https://static.wixstatic.com/media/d05122_1950f2496b344e56bcac10ea51286750~mv2.png", // Placeholder visuals managed via CSS filter
       mellow:   "https://static.wixstatic.com/media/d05122_53fbcb0babf447a5a32cc3b3fbecad2b~mv2.png",
-      koala:    "https://static.wixstatic.com/media/d05122_9cb17e901a1a4775819bfda895d0f1c9~mv2.png",
-      citrussy: "https://static.wixstatic.com/media/d05122_9cdc763a1ec94a90a3fd91ee3481b2c4~mv2.png"
+      lovelie:  "https://static.wixstatic.com/media/d05122_755c29b99fad419d9b9a5822d8ffb18c~mv2.png",
+      simba:    "https://static.wixstatic.com/media/d05122_4d92be50d61e4a2297af16a3295c38bf~mv2.png",
+      bigMellow:"https://static.wixstatic.com/media/d05122_a1579589ff6c4a83a4bcf6e8a7350da4~mv2.png",
+      zilla:    "https://static.wixstatic.com/media/d05122_24fbaf9c9b0247cdab1db147594ce8a6~mv2.png",
+      fleder1:  "https://static.wixstatic.com/media/d05122_71ab5e06775046b0bc2e7410870baf75~mv2.png",
+      fleder2:  "https://static.wixstatic.com/media/d05122_798ef1b1b2b5493b925caf56ad885d7e~mv2.png",
+      fleder3:  "https://static.wixstatic.com/media/d05122_2f10d70e51b1473ca4d4fc0e2ccb2f30~mv2.png"
     };
+    document.getElementById("greetLogo").src = IMG.logo;
 
-    const CHAR_DATA = {
-      sweety: { name: "Sweety", color: "#ff4fb9", quotes: ["Zucker!", "So sweet!", "Yummy!"] },
-      sleepy: { name: "Sleepy", color: "#7ad8ff", quotes: ["Gähn...", "Noch 5 Minuten...", "Zzz..."] },
-      joyce:  { name: "Joyce",  color: "#b8b1ff", quotes: ["Wuff!", "Bin dabei!", "Leckerli?"] },
-      smokey: { name: "Smokey", color: "#ffcf5a", quotes: ["Miau.", "Ich bin Boss.", "Schnurrr..."] },
-      simba:  { name: "Simba",  color: "#ff9d3c", quotes: ["Roar!", "Beschützer!", "Kuscheln?"] },
-      fleder: { name: "Fledernuss", color: "#a35eff", quotes: ["Flattern!", "Nachtaktiv!", "Echolot!"] }
-    };
-
-    const DIFFICULTY = {
-      easy:   { moves: 35, colors: 3, targetBase: 2000, hintCost: 1 },
-      normal: { moves: 25, colors: 4, targetBase: 3500, hintCost: 2 },
-      shock:  { moves: 15, colors: 5, targetBase: 6000, hintCost: 3 }
-    };
-
-    // --- HELPER: SOUND MANAGER (Placeholder for Audio Logic) ---
-    const AudioMan = {
-      play(type) {
-        // Hier könnten echte Sounds via AudioContext abgespielt werden
-        // Für diese Version simulieren wir nur den "Intent"
-        // console.log("Sound:", type); 
+    /* Bad Words Filter */
+    const BAD_WORDS = ["arsch","ass","bitch","dick","cock","shit","fuck","hurensohn","wichser","nazi","hitler","fotze","cunt","pussy"];
+    const WHITE_LIST = ["KOALAaufPILLEN"];
+    function cleanName(name){
+      if(WHITE_LIST.includes(name)) return name;
+      let lower = name.toLowerCase();
+      for(let bad of BAD_WORDS){
+        if(lower.includes(bad)) return "***";
       }
+      return name;
+    }
+
+    const DIFFS = {
+      easy:   { key:"easy",   name:"Easy",        rows:10, cols:10, scoreMult:1.0,  moves:30, cap:25, targetBase:3000 },
+      normal: { key:"normal", name:"Normal",      rows: 9, cols: 9, scoreMult:1.25, moves:26, cap:20, targetBase:4000 },
+      hard:   { key:"hard",   name:"Hard",        rows: 9, cols: 8, scoreMult:1.6,  moves:24, cap:15, targetBase:5000 },
+      shock:  { key:"shock",  name:"Zuckerschock",rows: 8, cols: 8, scoreMult:2.0,  moves:20, cap:10, targetBase:6500 }
+    };
+    let diff = DIFFS.easy;
+
+    const BASES = [
+      { key:"sweety", name:"Sweety", img:IMG.sweety, p:["#ff4fb9","#ff9adf"], min:1 },
+      { key:"sleepy", name:"Sleepy", img:IMG.sleepy, p:["#7ad8ff","#b7f0ff"], min:1 },
+      { key:"normal", name:"Normal", img:IMG.normal, p:["#7b7bff","#cbbcff"], min:1 },
+      { key:"cry",    name:"Cry",    img:IMG.cry,    p:["#1fd1ff","#b8b1ff"], min:1 },
+      { key:"happy",  name:"Happy",  img:IMG.happy,  p:["#5ef2b5","#b6ffd6"], min:1 },
+      { key:"grumpy", name:"Grumpy", img:IMG.grumpy, p:["#ff6b6b","#ffb3b3"], min:1 },
+      { key:"mond",   name:"Mondlie",img:IMG.mond,   p:["#2b2b2b","#9b59ff"], min:2 },
+      { key:"donut",  name:"Donut",  img:IMG.donut,  p:["#ffd1f2","#c9fffb"], min:2 },
+      { key:"joyce",  name:"Joyce",  img:IMG.joyce,  p:["#7ad8ff","#b8b1ff"], min:1 },
+      { key:"smokey", name:"Smokey", img:IMG.smokey, p:["#ffcf5a","#ffd9a5"], min:1 },
+      { key:"simba",  name:"Simba",  img:IMG.simba,  p:["#ff9d3c","#ffd1a1"], min:4, ability:"Best Buddies mit Smokey" },
+      { key:"fleder", name:"Fledernuss", img:IMG.fleder1, p:["#6a4c93","#b5a6ca"], min:10, ability:"Entwickelt sich (3 Stufen)" }
+    ];
+
+    /* Game State */
+    let grid = [];
+    let tileEls = new Map();
+    let rows=10, cols=10;
+    let level=1, score=0, levelScore=0, target=3000, moves=30, combo=1;
+    let busy=false, pointer={down:false, id:null, sx:0, sy:0};
+    let playerName = "Player";
+    let zillaActive = false;
+    let zillaHP = 0;
+
+    /* Supabase Setup */
+    const SUPABASE_URL = "https://qgeddoqvzajpeawlythi.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_EQUOdDGiCGgm8vA3YjN_jg_BwPnAiI_";
+    const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
+    /* DOM Cache */
+    const ui = {
+      board: document.getElementById("board"),
+      wrap:  document.getElementById("boardWrap"),
+      zilla: document.getElementById("mellowZilla"),
+      menu:  document.getElementById("luvMenu"),
+      toast: document.getElementById("toast")
     };
 
-    // --- HELPER: PARTICLE SYSTEM ---
-    const FX = {
-      container: document.getElementById('global-fx'),
-      spawn(x, y, color, count = 8) {
-        for(let i=0; i<count; i++) {
-          const el = document.createElement('div');
-          const size = Math.random() * 8 + 4;
-          const angle = Math.random() * Math.PI * 2;
-          const velocity = Math.random() * 60 + 20;
+    /* ================= CORE LOGIC ================= */
+
+    function initGame(reset=true){
+      rows = diff.rows;
+      cols = diff.cols;
+      if(reset){
+        level = 1; score = 0; levelScore = 0;
+        target = diff.targetBase;
+        moves = diff.moves;
+      }
+      combo = 1; zillaActive = false;
+      ui.zilla.style.display = "none";
+
+      buildGrid();
+      layout();
+      updateStats();
+      if(reset) spawnLovelies(); 
+    }
+
+    function buildGrid(){
+      grid = []; tileEls.clear(); ui.board.innerHTML = "";
+      for(let r=0; r<rows; r++){
+        let row = [];
+        for(let c=0; c<cols; c++){
+          let type; let safe = 0;
+          do{
+            type = randType();
+            safe++;
+          } while( (checkMatch(r,c,type,row)) && safe < 50 );
           
-          el.style.cssText = `
-            position: absolute; left: ${x}px; top: ${y}px;
-            width: ${size}px; height: ${size}px;
-            background: ${color}; border-radius: 50%;
-            pointer-events: none; z-index: 99;
-            box-shadow: 0 0 10px ${color};
-          `;
-          this.container.appendChild(el);
-
-          // Animate via WAAPI
-          const anim = el.animate([
-            { transform: 'translate(0,0) scale(1)', opacity: 1 },
-            { transform: `translate(${Math.cos(angle)*velocity}px, ${Math.sin(angle)*velocity + 50}px) scale(0)`, opacity: 0 }
-          ], { duration: 600 + Math.random()*200, easing: 'cubic-bezier(0,0,0.2,1)' });
-
-          anim.onfinish = () => el.remove();
+          let t = { id:uid(), r, c, type, hp:0, stage:0 }; 
+          row.push(t);
+          createTileEl(t);
         }
-      },
-      textFloat(x, y, text, color="#fff") {
-        const el = document.createElement('div');
-        el.textContent = text;
-        el.style.cssText = `
-          position:absolute; left:${x}px; top:${y}px;
-          color:${color}; font-weight:900; font-size:20px;
-          text-shadow:0 2px 4px rgba(0,0,0,0.5); pointer-events:none; z-index:100;
-        `;
-        this.container.appendChild(el);
-        const anim = el.animate([
-          { transform: 'translate(-50%, 0) scale(1)', opacity: 1 },
-          { transform: 'translate(-50%, -60px) scale(1.2)', opacity: 0 }
-        ], { duration: 800 });
-        anim.onfinish = () => el.remove();
+        grid.push(row);
       }
-    };
+    }
 
-    // --- GAME LOGIC ---
-    const Game = {
-      grid: [],
-      rows: 9, cols: 9,
-      tiles: new Map(), // id -> DOM Element
-      state: 'IDLE', // IDLE, ANIMATING, SWAPPING, BOSS
-      stats: { score: 0, level: 1, moves: 0, combo: 0 },
-      settings: { diff: 'normal', sound: true },
-      selection: null,
-      boss: null, // { hp, maxHp, active }
+    function randType(){
+      const pool = BASES.filter(b => b.min <= level);
+      const b = pool[Math.floor(Math.random()*pool.length)];
+      return b.key;
+    }
+
+    function checkMatch(r, c, type, currentGridRow){
+      if(c>=2 && currentGridRow[c-1].type === type && currentGridRow[c-2].type === type) return true;
+      if(r>=2 && grid[r-1][c].type === type && grid[r-2][c].type === type) return true;
+      return false;
+    }
+
+    function createTileEl(t){
+      const el = document.createElement("div");
+      el.className = "tile";
+      if(t.type === "mellowLord") el.className += " bigMellow";
       
-      // Init
-      init() {
-        // Reset Stats
-        this.stats = { score: 0, level: 1, moves: DIFFICULTY[this.settings.diff].moves, combo: 1 };
-        this.boss = null;
-        document.getElementById('boss-layer').innerHTML = '';
-        
-        // Setup Grid
-        this.setupLevel();
-        this.updateUI();
-        
-        // Modals
-        document.querySelector('.modal-backdrop.active')?.classList.remove('active');
-      },
+      const b = BASES.find(x => x.key === t.type) || {img:"", p:["#ccc","#eee"]};
+      
+      let imgSrc = b.img;
+      if(t.type === "fleder"){
+        if(t.stage === 1) imgSrc = IMG.fleder2;
+        if(t.stage === 2) imgSrc = IMG.fleder3;
+      }
+      if(t.type === "mellowLord") imgSrc = IMG.bigMellow;
+      if(t.type === "worm") imgSrc = IMG.worm;
+      if(t.type === "cit") imgSrc = IMG.citrussy;
+      if(t.type === "koala") imgSrc = IMG.koala;
+      if(t.type === "mellow") imgSrc = IMG.mellow;
+      if(t.type === "lovelie") imgSrc = IMG.lovelie;
 
-      start() {
-        const name = document.getElementById('player-name').value.trim();
-        // Whitelist Check
-        const safeName = name.replace(/[^a-zA-Z0-9 ]/g, "");
-        const whitelist = ["KOALAaufPILLEN"];
-        const blacklist = ["arsch", "idiot"];
-        
-        if (blacklist.some(b => safeName.toLowerCase().includes(b)) && !whitelist.includes(name)) {
-          alert("Naughty Luvvie! Wähle einen anderen Namen.");
-          return;
+      el.style.setProperty("--p1", b.p[0]);
+      el.style.setProperty("--p2", b.p[1]);
+      
+      el.innerHTML = `<div class="plate"><img src="${imgSrc}"></div>`;
+      if(t.hp > 0){
+        el.innerHTML += `<div class="hp">${t.hp}</div>`;
+      }
+      
+      el.dataset.id = t.id;
+      el.onpointerdown = onDown;
+      
+      ui.board.appendChild(el);
+      tileEls.set(t.id, el);
+      posTile(t, el);
+    }
+
+    function posTile(t, el){
+      const s = getCellSize();
+      const x = t.c * (s + 6) + 12; 
+      const y = t.r * (s + 6) + 12;
+      el.style.setProperty("--x", x+"px");
+      el.style.setProperty("--y", y+"px");
+    }
+
+    function getCellSize(){
+      const maxW = Math.min(1100, window.innerWidth - 20);
+      const availW = maxW - 40; 
+      const availH = window.innerHeight * 0.65; 
+      
+      const w = Math.floor(availW / cols) - 6;
+      const h = Math.floor(availH / rows) - 6;
+      return Math.min(w, h, 70); 
+    }
+
+    function layout(){
+      const s = getCellSize();
+      document.documentElement.style.setProperty("--cell", s+"px");
+      
+      const w = cols * (s+6) + 24 - 6;
+      const h = rows * (s+6) + 24 - 6;
+      ui.board.style.width = w+"px";
+      ui.board.style.height = h+"px";
+
+      if(zillaActive){
+        const zc = Math.floor(cols/2)-1;
+        const zr = Math.floor(rows/2)-1;
+        const zx = zc * (s+6) + 12;
+        const zy = zr * (s+6) + 12;
+        ui.zilla.style.setProperty("--zx", zx+"px");
+        ui.zilla.style.setProperty("--zy", zy+"px");
+        ui.zilla.style.width = (s*3 + 12)+"px";
+        ui.zilla.style.height = (s*3 + 12)+"px";
+      }
+
+      grid.flat().forEach(t => { if(t) posTile(t, tileEls.get(t.id)); });
+    }
+
+    /* Input Handling */
+    function onDown(e){
+      if(busy || zillaActiveBlocked(e)) return;
+      const t = grid.flat().find(x=>x && x.id === e.currentTarget.dataset.id);
+      if(!t || isStatic(t)) return;
+      
+      pointer.down = true;
+      pointer.id = t.id;
+      pointer.sx = e.clientX;
+      pointer.sy = e.clientY;
+      e.currentTarget.setPointerCapture(e.pointerId);
+      e.currentTarget.onpointermove = onMove;
+      e.currentTarget.onpointerup = onUp;
+    }
+
+    function zillaBlocked(r,c){
+      if(!zillaActive) return false;
+      const cr = Math.floor(rows/2), cc = Math.floor(cols/2);
+      return (r >= cr-1 && r <= cr+1 && c >= cc-1 && c <= cc+1);
+    }
+    function zillaActiveBlocked(e){ return false; }
+
+    function onMove(e){
+      if(!pointer.down) return;
+      const dx = e.clientX - pointer.sx;
+      const dy = e.clientY - pointer.sy;
+      if(Math.hypot(dx,dy) > 20){
+        let dir = Math.abs(dx)>Math.abs(dy) ? (dx>0?"R":"L") : (dy>0?"D":"U");
+        attemptSwap(pointer.id, dir);
+        pointer.down = false; 
+        e.currentTarget.onpointermove = null;
+      }
+    }
+    function onUp(e){ pointer.down = false; e.currentTarget.onpointermove = null;}
+
+    async function attemptSwap(id, dir){
+      const t1 = grid.flat().find(x=>x && x.id===id);
+      if(!t1) return;
+      let r2=t1.r, c2=t1.c;
+      if(dir==="R") c2++; if(dir==="L") c2--;
+      if(dir==="D") r2++; if(dir==="U") r2--;
+      
+      if(r2<0 || c2<0 || r2>=rows || c2>=cols) return;
+      const t2 = grid[r2][c2];
+      if(!t2 || isStatic(t2)) return;
+
+      busy = true;
+      await swapAnim(t1, t2);
+      swapData(t1, t2);
+
+      let special = checkSpecialSwap(t1, t2);
+      if(special){
+         moves--; 
+         await specialEffect(special, t1, t2);
+         await dropRefill();
+      } else {
+        const matches = findMatches();
+        if(matches.length > 0){
+          moves--;
+          await resolveMatches(matches);
+        } else {
+          await swapAnim(t1, t2);
+          swapData(t1, t2);
+          toast("Ouch! -3 Moves");
+          moves = Math.max(0, moves-3);
+          busy = false;
         }
-        
-        this.playerName = name || "Gast";
-        document.getElementById('modal-start').classList.remove('active');
-        this.init();
-      },
+      }
+      updateStats();
+      checkEnd();
+    }
 
-      setupLevel() {
-        const board = document.getElementById('grid');
-        board.innerHTML = '';
-        this.grid = [];
-        this.tiles.clear();
+    function swapData(t1, t2){
+      grid[t1.r][t1.c] = t2;
+      grid[t2.r][t2.c] = t1;
+      let tr=t1.r, tc=t1.c;
+      t1.r=t2.r; t1.c=t2.c;
+      t2.r=tr; t2.c=tc;
+    }
 
-        // Slots erstellen
-        for(let r=0; r<this.rows; r++) {
-          this.grid[r] = [];
-          for(let c=0; c<this.cols; c++) {
-            const slot = document.createElement('div');
-            slot.className = 'slot';
-            board.appendChild(slot);
-            
-            // Initial Tile Logic
-            let tileType;
-            do {
-              tileType = this.randomTileType();
-            } while (this.wouldMatch(r, c, tileType));
-            
-            this.createTile(r, c, tileType);
+    function swapAnim(t1, t2){
+      return new Promise(r => {
+        const el1 = tileEls.get(t1.id);
+        const el2 = tileEls.get(t2.id);
+        posTile(t1, el1);
+        posTile(t2, el2);
+        setTimeout(r, 250);
+      });
+    }
+
+    function isStatic(t){ return t.type === "mellow" || t.type === "mellowLord"; }
+
+    function checkSpecialSwap(t1, t2){
+      const pair = [t1.type, t2.type].sort();
+      const pStr = pair.join("+");
+      if(pStr.includes("koala") && pStr.includes("cit")) return "doubleClean";
+      if(pStr.includes("smokey") && pStr.includes("simba")) return "bestBuddies";
+      return null;
+    }
+
+    async function specialEffect(type, t1, t2){
+      if(type === "doubleClean"){
+        toast("KOALA + CITRUSSY!", "2x CLEAN 💥");
+        clearBoard();
+        await new Promise(r=>setTimeout(r, 300));
+        await dropRefill(false);
+        clearBoard();
+      }
+      if(type === "bestBuddies"){
+        toast("BEST BUDDIES!", "Simba & Smokey Wave 🌊");
+        // Clear 3 Rows around
+        let cr = t1.r;
+        for(let r=cr-1; r<=cr+1; r++){
+          for(let c=0;c<cols;c++) tryDestroy(r,c);
+        }
+      }
+    }
+
+    function findMatches(){
+      let matched = new Set();
+      // MellowLord Check (2x2)
+      for(let r=0; r<rows-1; r++){
+        for(let c=0; c<cols-1; c++){
+          const t = grid[r][c];
+          if(t && t.type === "mellow"){
+            const sq = [grid[r][c], grid[r+1][c], grid[r][c+1], grid[r+1][c+1]];
+            if(sq.every(x => x && x.type === "mellow")){
+              matched.add("ML:"+r+","+c); 
+            }
           }
         }
-        
-        // Level Specifics
-        if (this.stats.level % 20 === 0) this.spawnBoss();
-      },
+      }
 
-      randomTileType() {
-        const pool = ['sweety', 'sleepy', 'joyce', 'smokey'];
-        if (this.stats.level >= 4) pool.push('simba');
-        if (this.stats.level >= 10) pool.push('fleder');
-        
-        const type = pool[Math.floor(Math.random() * pool.length)];
-        
-        // HARDCORE COLOR LOGIC: Every char has 2 possible colors variants
-        const colors = ["#ff9adf", "#7ad8ff", "#ffcf5a", "#b8ffb1"]; 
-        const maxCol = DIFFICULTY[this.settings.diff].colors;
-        const color = colors[Math.floor(Math.random() * maxCol)];
-        
-        return { type, color, id: Math.random().toString(36).substr(2), evo: 1 };
-      },
-
-      createTile(r, c, data) {
-        const el = document.createElement('div');
-        el.className = 'tile spawn';
-        el.dataset.id = data.id;
-        el.dataset.type = data.type;
-        el.dataset.evo = data.evo;
-        el.style.setProperty('--r', r);
-        el.style.setProperty('--c', c);
-        el.style.setProperty('--tile-color', data.color);
-
-        const imgUrl = ASSETS[data.type];
-        el.innerHTML = `<div class="inner"><img src="${imgUrl}" class="tile-img"></div>`;
-        
-        el.onclick = () => this.handleTileClick(r, c);
-        
-        document.getElementById('grid').appendChild(el);
-        this.grid[r][c] = { ...data, r, c };
-        this.tiles.set(data.id, el);
-        
-        setTimeout(() => el.classList.remove('spawn'), 400);
-      },
-
-      // --- CORE INTERACTION ---
-      handleTileClick(r, c) {
-        if (this.state !== 'IDLE') return;
-        const clicked = this.grid[r][c];
-        if (!clicked) return;
-
-        if (!this.selection) {
-          // Select
-          this.selection = clicked;
-          this.tiles.get(clicked.id).classList.add('selected');
-          AudioMan.play('select');
-        } else {
-          // Action
-          const first = this.selection;
-          this.tiles.get(first.id).classList.remove('selected');
-          this.selection = null;
-
-          if (first.id === clicked.id) return; // Deselect
-
-          const dist = Math.abs(first.r - r) + Math.abs(first.c - c);
-          if (dist === 1) {
-            this.attemptSwap(first, clicked);
+      for(let r=0; r<rows; r++){
+        let match = 1;
+        for(let c=0; c<cols; c++){
+          if(c<cols-1 && grid[r][c].type === grid[r][c+1].type && !isStatic(grid[r][c])){
+            match++;
           } else {
-            // New selection
-            this.selection = clicked;
-            this.tiles.get(clicked.id).classList.add('selected');
-            AudioMan.play('select');
+            if(match >= 3) for(let k=0; k<match; k++) matched.add(grid[r][c-k].id);
+            match = 1;
           }
         }
-      },
-
-      async attemptSwap(t1, t2) {
-        this.state = 'SWAPPING';
-        
-        // UI Swap
-        await this.visualSwap(t1, t2);
-        
-        // Logical Swap
-        this.grid[t1.r][t1.c] = t2;
-        this.grid[t2.r][t2.c] = t1;
-        [t1.r, t1.c, t2.r, t2.c] = [t2.r, t2.c, t1.r, t1.c];
-
-        // Check Match
-        const matches = this.findMatches();
-        
-        // BOSS MOVEMENT PENALTY Check
-        if (this.boss && this.boss.active) {
-            // Chance that boss moves tiles around on bad swap?
+      }
+      for(let c=0; c<cols; c++){
+        let match = 1;
+        for(let r=0; r<rows; r++){
+          if(r<rows-1 && grid[r][c].type === grid[r+1][c].type && !isStatic(grid[r][c])){
+            match++;
+          } else {
+            if(match >= 3) for(let k=0; k<match; k++) matched.add(grid[r-k][c].id);
+            match = 1;
+          }
         }
+      }
+      return Array.from(matched);
+    }
 
-        if (matches.length > 0) {
-          this.stats.moves--;
-          this.stats.combo = 1;
-          await this.processMatches(matches);
+    async function resolveMatches(matchIds){
+      let uniqueIds = new Set(matchIds);
+      let flederToEvolve = [];
+
+      for(let id of uniqueIds){
+        if(id.startsWith("ML:")) continue; 
+        const t = grid.flat().find(x=>x.id===id);
+        if(!t) continue;
+        if(t.type === "fleder"){
+          flederToEvolve.push(t);
+          uniqueIds.delete(id); 
+        }
+      }
+
+      if(flederToEvolve.length >= 3){
+        const survivor = flederToEvolve[0];
+        const others = flederToEvolve.slice(1);
+        if(survivor.stage < 2){
+           survivor.stage++;
+           const el = tileEls.get(survivor.id);
+           let src = survivor.stage===1 ? IMG.fleder2 : IMG.fleder3;
+           el.querySelector("img").src = src;
+           el.classList.add("spawnGlow");
+           toast(survivor.stage===1?"FlederHeld!":"SuperNuss!");
+           others.forEach(o => destroyTile(o));
         } else {
-          // Invalid Swap -> Swap Back
-          AudioMan.play('bad_swap');
-          
-          // PENALTY: Cost moves for bad hint? No, just bad swap penalty if Shock mode
-          if (this.settings.diff === 'shock') {
-             this.stats.moves -= 3;
-             this.showToast("Zuckerschock!", "-3 Moves Strafe", ASSETS.grumpy);
-          }
-
-          await this.visualSwap(t1, t2);
-          // Revert Logic
-          this.grid[t1.r][t1.c] = t2;
-          this.grid[t2.r][t2.c] = t1;
-          [t1.r, t1.c, t2.r, t2.c] = [t2.r, t2.c, t1.r, t1.c];
-          
-          this.state = 'IDLE';
-        }
-        this.updateUI();
-      },
-
-      visualSwap(t1, t2) {
-        const el1 = this.tiles.get(t1.id);
-        const el2 = this.tiles.get(t2.id);
-        el1.style.setProperty('--r', t1.r);
-        el1.style.setProperty('--c', t1.c);
-        el2.style.setProperty('--r', t2.r);
-        el2.style.setProperty('--c', t2.c);
-        return new Promise(r => setTimeout(r, 280));
-      },
-
-      // --- MATCH LOGIC (HARDCORE) ---
-      wouldMatch(r, c, typeObj) {
-        // Pre-check for generation
-        // Requires checking type AND color
-        if (c >= 2) {
-           const a = this.grid[r][c-1] || {}; // Mock during generation if grid array exists
-           const b = this.grid[r][c-2] || {};
-           // Note: During init grid might be partial, logic simplified here for brevity
-        }
-        return false; 
-      },
-
-      findMatches() {
-        let matchedSet = new Set();
-        
-        // Helper: Strict Compare
-        const isMatch = (a, b) => a && b && a.type === b.type && a.color === b.color;
-
-        // Horizontal
-        for(let r=0; r<this.rows; r++) {
-          for(let c=0; c<this.cols-2; c++) {
-            let t = this.grid[r][c];
-            if(!t) continue;
-            let matchLen = 1;
-            while(c + matchLen < this.cols && isMatch(t, this.grid[r][c+matchLen])) matchLen++;
-            if(matchLen >= 3) {
-              for(let i=0; i<matchLen; i++) matchedSet.add(this.grid[r][c+i]);
-              c += matchLen - 1;
+          toast("BÄM! KOALA PARTY! 🐨");
+          others.forEach(o => destroyTile(o));
+          destroyTile(survivor);
+          setTimeout(()=>{
+            // Spawn 3 Koalas
+            let blanks = grid.flat().filter(x=>x!==null && !isStatic(x));
+            if(blanks.length>3){
+               for(let i=0;i<3;i++){
+                 let t = blanks[Math.floor(Math.random()*blanks.length)];
+                 t.type = "koala";
+                 createTileEl(t); // re-render hack
+               }
             }
-          }
+          }, 300);
         }
-        // Vertical
-        for(let c=0; c<this.cols; c++) {
-          for(let r=0; r<this.rows-2; r++) {
-            let t = this.grid[r][c];
-            if(!t) continue;
-            let matchLen = 1;
-            while(r + matchLen < this.rows && isMatch(t, this.grid[r+matchLen][c])) matchLen++;
-            if(matchLen >= 3) {
-              for(let i=0; i<matchLen; i++) matchedSet.add(this.grid[r+i][c]);
-              r += matchLen - 1;
-            }
-          }
-        }
-        return Array.from(matchedSet);
-      },
+      }
 
-      async processMatches(matches) {
-        this.state = 'ANIMATING';
-        
-        // 1. Calculate Score & Boss Damage
-        let points = matches.length * 10 * this.stats.combo;
-        this.stats.score += points;
-        
-        if (this.boss && this.boss.active) {
-            this.damageBoss(matches.length);
+      uniqueIds.forEach(id => {
+        if(id.startsWith("ML:")){
+          let [r,c] = id.split(":")[1].split(",").map(Number);
+          createMellowLord(r,c);
+        } else {
+          const t = grid.flat().find(x=>x.id===id);
+          if(t) destroyTile(t);
         }
+      });
+      
+      if(zillaActive){
+        zillaHP--;
+        document.querySelector("#mellowZilla .hp").innerText = zillaHP;
+        ui.zilla.classList.add("shake");
+        if(zillaHP <= 0) killZilla();
+      }
 
-        // 2. Evolution Logic (Fledernuss)
-        let toRemove = [...matches];
-        const fleders = matches.filter(t => t.type === 'fleder');
-        
-        if (fleders.length >= 3) {
-           // Find center of match (simplified: first one survives)
-           const survivor = fleders[0];
-           if (survivor.evo < 3) {
-               survivor.evo++;
-               toRemove = toRemove.filter(t => t.id !== survivor.id); // Keep survivor
-               
-               // Update Visuals
-               const el = this.tiles.get(survivor.id);
-               el.dataset.evo = survivor.evo;
-               FX.textFloat(el.offsetLeft, el.offsetTop, "EVOLUTION!", "#a35eff");
-               AudioMan.play('evolve');
-           } else {
-               // Stage 3 Boom
-               this.showToast("SUPER NUSS!", "Board Blast!", ASSETS.fleder);
-               // TODO: Explosion logic (remove surroundings)
+      score += uniqueIds.size * 50 * combo;
+      levelScore += uniqueIds.size * 50 * combo;
+      combo++;
+      updateStats();
+
+      await new Promise(r=>setTimeout(r, 300));
+      await dropRefill();
+    }
+
+    function destroyTile(t){
+      const el = tileEls.get(t.id);
+      if(el){
+        el.classList.add("pop");
+        setTimeout(()=>el.remove(), 400);
+      }
+      grid[t.r][t.c] = null;
+      tileEls.delete(t.id);
+      
+      if(t.type === "worm") clearRowCol(t.r, t.c);
+      if(t.type === "cit") clearX(t.r, t.c);
+    }
+
+    function clearRowCol(r,c){
+      toast("SOURWORM!");
+      for(let i=0;i<cols;i++) tryDestroy(r,i);
+      for(let i=0;i<rows;i++) tryDestroy(i,c);
+    }
+    
+    function clearX(r,c){
+      toast("CITRUSSY X!");
+      for(let i=1; i<Math.max(rows,cols); i++){
+        tryDestroy(r-i, c-i); tryDestroy(r+i, c+i);
+        tryDestroy(r-i, c+i); tryDestroy(r+i, c-i);
+      }
+    }
+    function tryDestroy(r,c){
+      if(r>=0 && c>=0 && r<rows && c<cols && grid[r][c]) destroyTile(grid[r][c]);
+    }
+
+    function createMellowLord(r,c){
+      [grid[r][c], grid[r+1][c], grid[r][c+1], grid[r+1][c+1]].forEach(t => {
+        if(t) destroyTile(t);
+      });
+      setTimeout(()=>{
+         const t = {id:uid(), r, c, type:"mellowLord", hp:10};
+         grid[r][c] = t;
+         createTileEl(t);
+         toast("MELLOW LORD!");
+      }, 300);
+    }
+
+    async function dropRefill(recurse=true){
+      for(let c=0; c<cols; c++){
+        if(zillaActive && zillaBlocked(0,c)) continue; 
+        for(let r=rows-1; r>=0; r--){
+           if(grid[r][c] === null){
+             let found = -1;
+             for(let k=r-1; k>=0; k--){
+               if(grid[k][c] !== null && !isStatic(grid[k][c])){ found = k; break; }
+               if(isStatic(grid[k][c])) break; 
+             }
+             if(found !== -1){
+               grid[r][c] = grid[found][c];
+               grid[found][c] = null;
+               grid[r][c].r = r;
+               const el = tileEls.get(grid[r][c].id);
+               posTile(grid[r][c], el);
+             }
            }
         }
-
-        // 3. Remove Tiles
-        for (let t of toRemove) {
-           const el = this.tiles.get(t.id);
-           el.classList.add('matched');
-           
-           // FX
-           const rect = el.getBoundingClientRect();
-           const boardRect = document.getElementById('grid').getBoundingClientRect();
-           FX.spawn(rect.left - boardRect.left + 25, rect.top - boardRect.top + 25, t.color);
-           
-           this.grid[t.r][t.c] = null;
-           // Delay removal for anim
-           setTimeout(() => { el.remove(); this.tiles.delete(t.id); }, 300);
-        }
-        AudioMan.play('pop');
-        
-        await new Promise(r => setTimeout(r, 350));
-
-        // 4. Gravity & Refill
-        await this.applyGravity();
-        
-        // 5. Chain Reaction?
-        const newMatches = this.findMatches();
-        if (newMatches.length > 0) {
-          this.stats.combo++;
-          await this.processMatches(newMatches);
-        } else {
-          // Check Win/Loss
-          this.checkGameStatus();
-        }
-      },
-
-      async applyGravity() {
-        // Fall down
-        for(let c=0; c<this.cols; c++) {
-            let writePtr = this.rows - 1;
-            for(let r=this.rows-1; r>=0; r--) {
-                if (this.grid[r][c]) {
-                    if (writePtr !== r) {
-                        // Move
-                        const t = this.grid[r][c];
-                        this.grid[writePtr][c] = t;
-                        this.grid[r][c] = null;
-                        t.r = writePtr; 
-                        t.c = c;
-                        
-                        const el = this.tiles.get(t.id);
-                        el.classList.add('dropping');
-                        el.style.setProperty('--r', writePtr);
-                        // cleanup class later
-                        setTimeout(() => el.classList.remove('dropping'), 400);
-                    }
-                    writePtr--;
-                }
-            }
-            // Fill top
-            for(let r=writePtr; r>=0; r--) {
-                let newT = this.randomTileType();
-                this.createTile(r, c, newT); // Creates visual at correct pos but needs drop anim
-                // Hack: Visual drop from above board?
-                // For now, simple spawn
-            }
-        }
-        await new Promise(r => setTimeout(r, 450));
-      },
-
-      // --- BOSS & SPECIALS ---
-      spawnBoss() {
-        this.boss = { active: true, hp: 50, maxHp: 50 };
-        const overlay = document.createElement('div');
-        overlay.className = 'boss-overlay';
-        // Center Position
-        overlay.style.left = `calc(3 * (${getComputedStyle(document.documentElement).getPropertyValue('--cell')} + ${getComputedStyle(document.documentElement).getPropertyValue('--gap')}))`;
-        overlay.style.top = `calc(3 * (${getComputedStyle(document.documentElement).getPropertyValue('--cell')} + ${getComputedStyle(document.documentElement).getPropertyValue('--gap')}))`;
-        
-        overlay.innerHTML = `
-            <img src="${ASSETS.mellow}" class="boss-img">
-            <div class="boss-hp-bar"><div class="boss-hp-fill" id="boss-hp"></div></div>
-            <div style="color:white; font-weight:bold; margin-top:5px;">MELLOW ZILLA</div>
-        `;
-        document.getElementById('boss-layer').appendChild(overlay);
-        this.showToast("WARNUNG!", "MellowZilla ist da!", ASSETS.mellow);
-        AudioMan.play('boss_spawn');
-      },
-
-      damageBoss(amount) {
-        const dmg = amount * 2;
-        this.boss.hp -= dmg;
-        const pct = (this.boss.hp / this.boss.maxHp) * 100;
-        document.getElementById('boss-hp').style.width = Math.max(0, pct) + "%";
-        
-        const bossEl = document.querySelector('.boss-overlay');
-        bossEl.classList.add('hit');
-        setTimeout(() => bossEl.classList.remove('hit'), 400);
-
-        if (this.boss.hp <= 0) {
-            this.bossDefeated();
-        }
-      },
-
-      bossDefeated() {
-        this.boss.active = false;
-        document.querySelector('.boss-overlay').style.transform = "scale(0) rotate(360deg)";
-        this.stats.score += 5000;
-        this.showToast("SIEG!", "MellowZilla besiegt! (+5000)", ASSETS.sweety);
-        setTimeout(() => document.getElementById('boss-layer').innerHTML = '', 1000);
-      },
-
-      checkGameStatus() {
-        this.state = 'IDLE';
-        // Level Up?
-        const target = DIFFICULTY[this.settings.diff].targetBase * this.stats.level;
-        if (this.stats.score >= target) {
-            this.stats.level++;
-            this.stats.moves += 15;
-            this.showToast("LEVEL UP!", `Willkommen in Level ${this.stats.level}`, ASSETS.simba);
-            this.setupLevel();
-        }
-        // Game Over?
-        else if (this.stats.moves <= 0) {
-            this.gameOver();
-        } else {
-            // Smart Shuffle Check?
-            // If no moves, shuffle (Smart Shuffle: Keep borders)
-            // Implementation simplified: just check random sample for now
-        }
-        this.updateUI();
-      },
-
-      gameOver() {
-        document.getElementById('modal-gameover').classList.add('active');
-        document.getElementById('go-score').innerText = this.stats.score;
-      },
-
-      // --- UI UPDATES ---
-      updateUI() {
-        document.getElementById('ui-score').innerText = this.stats.score;
-        document.getElementById('ui-lvl').innerText = this.stats.level;
-        document.getElementById('ui-moves').innerText = this.stats.moves;
-        document.getElementById('ui-combo').innerText = "x" + this.stats.combo;
-        
-        const target = DIFFICULTY[this.settings.diff].targetBase * this.stats.level;
-        document.getElementById('ui-target').innerText = target;
-        
-        const pct = Math.min(100, (this.stats.score / target) * 100);
-        document.getElementById('ui-prog').style.width = pct + "%";
-      },
-
-      showToast(title, msg, img) {
-        const t = document.createElement('div');
-        t.className = 'toast';
-        t.innerHTML = `${img ? `<img src="${img}">` : ''}<div><div>${title}</div><div style="font-weight:400; font-size:12px; opacity:0.8">${msg}</div></div>`;
-        document.getElementById('toast-container').appendChild(t);
-        
-        // Anim
-        requestAnimationFrame(() => t.classList.add('show'));
-        setTimeout(() => {
-            t.classList.remove('show');
-            setTimeout(() => t.remove(), 300);
-        }, 3000);
-      },
-      
-      toggleDark() {
-          document.body.classList.toggle('dark-mode');
-      },
-      
-      hint() {
-         if(this.stats.moves <= 2) return;
-         this.stats.moves -= 2;
-         this.updateUI();
-         // Naive Hint implementation
-         const tiles = Array.from(this.tiles.values());
-         const rand = tiles[Math.floor(Math.random()*tiles.length)];
-         rand.classList.add('hint');
-         setTimeout(()=>rand.classList.remove('hint'), 1500);
       }
-    };
+      for(let r=0; r<rows; r++){
+        for(let c=0; c<cols; c++){
+           if(grid[r][c] === null && (!zillaActive || !zillaBlocked(r,c))){
+             let type = randType();
+             let t = {id:uid(), r, c, type, hp:0, stage:0};
+             grid[r][c] = t;
+             createTileEl(t);
+           }
+        }
+      }
 
-    // --- INITIALIZATION ---
-    window.onload = () => {
-        // Show Start Modal
-        document.getElementById('modal-start').classList.add('active');
-        
-        // Listeners
-        document.getElementById('btn-new').onclick = () => Game.start(); // Restart via modal flow
-        document.getElementById('btn-darkmode').onclick = () => Game.toggleDark();
-        document.getElementById('btn-hint').onclick = () => Game.hint();
-        
-        // Difficulty Switcher
-        document.querySelectorAll('.diff-opt').forEach(btn => {
-            btn.onclick = (e) => {
-                document.querySelectorAll('.diff-opt').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                Game.settings.diff = e.target.dataset.diff;
-            };
-        });
-    };
+      await new Promise(r=>setTimeout(r, 250));
+      if(recurse){
+        const m = findMatches();
+        if(m.length>0) await resolveMatches(m);
+        else {
+          busy = false;
+          checkLevelUp();
+        }
+      } else {
+        busy = false;
+      }
+    }
 
+    function checkLevelUp(){
+      if(levelScore >= target){
+        level++; levelScore = 0; target = Math.floor(target * 1.2);
+        let extraMoves = (diff.moves - 20); 
+        if(level >= 10) extraMoves = Math.min(extraMoves, 25); 
+        moves += extraMoves; 
+        toast("LEVEL UP! "+level, "Moves +"+extraMoves);
+        if(level % 20 === 0) spawnZilla();
+        updateStats();
+      }
+    }
+
+    function spawnZilla(){
+      zillaActive = true; zillaHP = 30;
+      ui.zilla.style.display = "block";
+      const cr = Math.floor(rows/2), cc = Math.floor(cols/2);
+      for(let r=cr-1; r<=cr+1; r++){
+        for(let c=cc-1; c<=cc+1; c++){
+           if(grid[r][c]) destroyTile(grid[r][c]);
+           grid[r][c] = null; 
+        }
+      }
+      toast("⚠️ MELLOWZILLA ⚠️", "Besiege ihn!", 4000);
+    }
+    
+    function killZilla(){
+      zillaActive = false; ui.zilla.style.display = "none";
+      score += 20000; toast("ZILLA BESIEGT!", "+20.000 Punkte");
+      dropRefill(true);
+    }
+
+    function checkEnd(){
+      if(moves <= 0){
+        toast("Game Over - Shuffle");
+        moves = -1; // Flag
+        // Shuffle middle
+        toast("Keine Moves mehr...", "Shuffle!");
+        grid.flat().forEach(t=>{if(t)destroyTile(t)});
+        dropRefill(true);
+        moves = 15; // Mercy moves
+      }
+    }
+    
+    function uid(){ return Math.random().toString(36).substr(2,9); }
+    function toast(h, t=""){
+       const el = document.createElement("div");
+       el.className="toast";
+       el.innerHTML = `<b>${h}</b><br><small>${t}</small>`;
+       ui.toast.appendChild(el);
+       setTimeout(()=>el.remove(), 2600);
+    }
+    function updateStats(){
+      document.getElementById("uiLevel").innerText = level;
+      document.getElementById("uiScore").innerText = score.toLocaleString();
+      document.getElementById("uiMoves").innerText = moves;
+      document.getElementById("uiCombo").innerText = "x"+combo;
+      document.getElementById("uiGoal").innerText = (target/1000).toFixed(1)+"k";
+      let pct = Math.min(100, (levelScore/target)*100);
+      document.getElementById("uiBar").style.width = pct+"%";
+      document.getElementById("uiPct").innerText = Math.floor(pct)+"%";
+    }
+    
+    function clearBoard(){ grid.flat().forEach(t => { if(t) destroyTile(t); }); }
+    function spawnLovelies(){
+       if(Math.random() < 0.1){
+          // Spawn one lovelie
+          // Logic omitted for brevity, handled in drop
+       }
+    }
+
+    /* ================= EVENTS ================= */
+    document.getElementById("btnNew").onclick = ()=>initGame(true);
+    document.getElementById("greetPlay").onclick = ()=>{
+      const n = document.getElementById("startName").value;
+      playerName = cleanName(n || "Player");
+      document.getElementById("greetBack").style.display="none";
+      toast("Hi "+playerName, "Viel Glück! 🍀");
+      initGame(true);
+    };
+    document.getElementById("btnDark").onclick = ()=>{
+      document.body.classList.toggle("dark-mode");
+    };
+    
+    document.getElementById("btnPost").onclick = async ()=>{
+      if(!sb) return toast("Offline Mode");
+      const {error} = await sb.from("luvvies_crush_scores").insert({
+        player_name: playerName, score: score, level: level, difficulty: diff.key
+      });
+      if(error) toast("Fehler beim Senden");
+      else { toast("Gesendet! ✅"); loadLeaderboard(); }
+    };
+    
+    async function loadLeaderboard(){
+       if(!sb) return;
+       const {data} = await sb.from("luvvies_crush_scores").select("*").order('score', {ascending:false}).limit(20);
+       const list = document.getElementById("lbList");
+       list.innerHTML = "";
+       data.forEach((d,i) => {
+         list.innerHTML += `<div style="padding:6px; border-bottom:1px solid rgba(0,0,0,0.1); display:flex; justify-content:space-between;">
+           <span>${i+1}. <b>${cleanName(d.player_name)}</b></span>
+           <span>${d.score.toLocaleString()}</span>
+         </div>`;
+       });
+    }
+
+    document.getElementById("btnIntro").onclick = ()=>document.getElementById("introBack").style.display="flex";
+    document.getElementById("introClose").onclick = ()=>document.getElementById("introBack").style.display="none";
+    document.getElementById("infoClose").onclick = ()=>document.getElementById("infoBack").style.display="none";
+    document.getElementById("btnFs").onclick = ()=>document.documentElement.requestFullscreen();
+
+    window.onresize = layout;
+    
+    const m = document.getElementById("luvMenu");
+    BASES.forEach(b => {
+      let d = document.createElement("div");
+      d.className="luvCard";
+      d.innerHTML = `<img src="${b.img}"><div><b>${b.name}</b></div>`;
+      d.onclick = ()=>{
+        document.getElementById("infoImg").src=b.img;
+        document.getElementById("infoName").innerText=b.name;
+        document.getElementById("infoTag").innerText="Ab Level "+b.min;
+        document.getElementById("infoAbility").innerText=b.ability || "Standard Match";
+        document.getElementById("infoBack").style.display="block";
+      };
+      m.appendChild(d);
+    });
+
+    loadLeaderboard();
   </script>
 </body>
 </html>
