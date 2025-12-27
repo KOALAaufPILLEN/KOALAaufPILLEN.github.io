@@ -3282,15 +3282,26 @@
     function ensureMovesOrShuffle(){
       if(busy) return;
       if(hasMove()) return;
+      if(moves <= 0) return; // Prevent infinite loop if game over
+
       toast("Keine Züge möglich 😵","Auto-Shuffle: −1 Move", 3600);
       spendMoves(1);
+      combo = 1; // Reset combo
 
-      const zilla = findMellowZilla();
-      if(zilla){
-        shiftMellowZilla(zilla);
-      } else {
-        shuffleArea4x4(Math.floor(rows/2), Math.floor(cols/2)); // Center shuffle only
-      }
+      // Shuffle until valid move exists (or max tries)
+      let tries = 0;
+      do {
+        const zilla = findMellowZilla();
+        if(zilla){
+          shiftMellowZilla(zilla);
+        } else {
+          // Use full shuffle if center shuffle fails repeatedly?
+          // Let's alternate or stick to requested logic.
+          // User: "gemischt jedoch nur mittig"
+          shuffleArea4x4(Math.floor(rows/2), Math.floor(cols/2));
+        }
+        tries++;
+      } while(!hasMove() && tries < 20);
 
       setTimeout(()=>resolveAll(false, false), 180);
     }
