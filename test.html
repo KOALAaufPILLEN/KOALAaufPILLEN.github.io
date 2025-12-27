@@ -2,127 +2,160 @@
 <html lang="de">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Luvvies Crush - Neon Edition</title>
-  
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Luvvies Crush - Ultimate</title>
   
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
+  <div id="page">
+    <div id="scrollBg"></div>
+    <div id="globalBg"></div>
+    <div id="toast"></div>
 
-  <div id="app">
-    
-    <header class="glass-header">
-      <div class="logo-area">
-        <img src="https://static.wixstatic.com/media/d05122_7c445c8b5f3d46cdb778711661f2351e~mv2.png" alt="Luvvies Logo" class="logo-img">
-        <h1>Luvvies Crush</h1>
+    <div class="modalBack" id="greetBack">
+      <div class="modal greet">
+        <img id="greetLogo" alt="Logo" />
+        <h2>Willkommen bei Luvvies Crush 🍭</h2>
+        <div class="sub">
+          Jetzt mit <b>Dark Mode</b>, Boss-Kämpfen und neuen Luvvies!
+        </div>
+        
+        <div class="theme-switch-wrapper">
+           <label class="theme-switch" for="checkbox-theme">
+            <input type="checkbox" id="checkbox-theme" />
+            <div class="slider round"></div>
+          </label>
+          <span>Dark Mode aktivieren</span>
+        </div>
+
+        <div class="cta">
+          <button class="Btn ghost" id="greetGuide">Anleitung</button>
+          <button class="Btn secondary" id="greetPlay">Spielen</button>
+        </div>
       </div>
-      <nav>
-        <a href="#shop" class="nav-link">Shop</a>
-        <a href="#inventory" class="nav-link">Inventory</a>
-        <button id="btnLeaderboardToggle" class="nav-link btn-ghost">Leaderboard</button>
-      </nav>
-    </header>
+    </div>
 
-    <main>
-      <div class="hud-strip glass-panel">
-        <div class="stat-group">
-          <span class="label">Level</span>
-          <span class="value neon-text" id="uiLevel">1</span>
+    <div class="modalBack" id="introBack">
+      <div class="modal">
+        <h2>Anleitung – Luvvies Crush 🍭</h2>
+        <ul>
+          <li><b>Match 3+</b> (Figur UND Farbe müssen passen!)</li>
+          <li><b>4er Match</b> → <b>Sourworm</b> (Reihe/Spalte)</li>
+          <li><b>5er Match</b> → <b>Citrussy</b> (Stern Explosion)</li>
+          <li><b>T/L Match</b> → <b>Koala</b> (Farbe löschen)</li>
+          <li><b>Koala + Citrussy</b> → 2× Board Clean (Double Points!)</li>
+          <li><b>Simba + Smokey</b> → Best Buddy Wave (ab Lvl 4)</li>
+          <li><b>MellowZilla</b> → Alle 20 Level (3x3 Boss, 20k Punkte)</li>
+          <li><b>Fledernuss</b> → Ab Level 10 (Evolutions-Mechanik)</li>
+          <li><b>Hint</b> kostet jetzt Moves! (Easy: -1, Shock: -3)</li>
+        </ul>
+        <div class="foot">
+          <button class="Btn ghost" id="introClose">Schließen</button>
         </div>
-        <div class="stat-group">
-          <span class="label">Ziel</span>
-          <span class="value" id="uiTarget">2500</span>
+      </div>
+    </div>
+
+    <div class="modalBack" id="infoBack">
+      <div class="modal">
+        <div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
+          <img id="infoImg" src="" alt="" class="info-img-preview">
+          <div style="min-width:240px;">
+            <h2 id="infoName" style="margin:0 0 6px">—</h2>
+            <div class="tiny" id="infoTag">—</div>
+            <div style="height:10px"></div>
+            <div class="panel" style="padding:10px; border-radius:18px;">
+              <b>Ability</b>
+              <div id="infoAbility" style="margin-top:6px;font-weight:900;opacity:.9;">—</div>
+            </div>
+          </div>
         </div>
-        <div class="stat-group center-stat">
-          <span class="label">Score</span>
-          <span class="value large-neon" id="uiScore">0</span>
+        <p id="infoStory" style="margin:12px 0 10px;font-weight:900;opacity:.9;">—</p>
+        <div class="foot">
+          <button class="Btn ghost" id="infoClose">Schließen</button>
         </div>
-        <div class="stat-group">
-          <span class="label">Moves</span>
-          <span class="value" id="uiMoves">30</span>
+      </div>
+    </div>
+
+    <div id="app">
+      <div class="topRow">
+        <div class="diffWrap">
+          <div class="label">Modus</div>
+          <div class="diffPills" id="diffPills">
+            <input type="radio" name="diff" id="d_easy" value="easy" checked><label for="d_easy">Easy</label>
+            <input type="radio" name="diff" id="d_normal" value="normal"><label for="d_normal">Normal</label>
+            <input type="radio" name="diff" id="d_hard" value="hard"><label for="d_hard">Hard</label>
+            <input type="radio" name="diff" id="d_shock" value="shock"><label for="d_shock">Zuckerschock</label>
+          </div>
         </div>
-        <div class="stat-group">
-          <div class="diff-select">
-            <select id="diffSelect">
-              <option value="easy">Easy</option>
-              <option value="normal" selected>Normal</option>
-              <option value="hard">Hard</option>
-              <option value="shock">Zuckerschock</option>
-            </select>
+
+        <div class="actions">
+          <button class="Btn ghost" id="btnThemeToggle">🌗 Theme</button>
+          <button class="Btn secondary" id="btnNew">Neues Spiel</button>
+          <button class="Btn" id="btnHint">Hint <span id="hintCostBadge" class="badge">-1</span></button>
+          <button class="Btn" id="btnFs">Vollbild</button>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="k">Level</div><div class="v" id="uiLevel">1</div></div>
+        <div class="stat"><div class="k">Ziel</div><div class="v" id="uiGoal">4000</div></div>
+        <div class="stat center-stat"><div class="k">Score</div><div class="v big" id="uiScore">0</div></div>
+        <div class="stat"><div class="k">Moves</div><div class="v" id="uiMoves">30</div></div>
+        <div class="stat"><div class="k">Combo</div><div class="v" id="uiCombo">x1</div></div>
+      </div>
+
+      <div class="progressRow">
+        <b>Fortschritt</b>
+        <div class="bar"><i id="uiBar"></i></div>
+        <div class="pct" id="uiPct">0%</div>
+      </div>
+
+      <div class="playArea" id="playArea">
+        <div id="boardWrap">
+          <div id="fsBg"></div>
+          <div id="board"></div>
+          <div id="fxLayer"></div>
+          
+          <div id="fsHud">
+            <div class="hudLeft">
+              <div class="hudChip color" id="hudLevel">Level 1</div>
+              <div class="hudChip color" id="hudScore">0</div>
+            </div>
+            <div class="hudCenter">
+              <div class="hudProg">
+                 <div class="pbar"><i id="hudBar"></i></div>
+              </div>
+            </div>
+            <div class="hudRight">
+              <button class="hudBtn hint" id="fsHint">Hint</button>
+              <button class="hudBtn exit" id="fsExit">Exit</button>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="progress-container">
-        <div class="progress-bar" id="uiBar"></div>
-      </div>
+      <div class="below">
+        <div class="panel" id="luvPanel">
+          <h3>Deine Luvvies</h3>
+          <div class="luvGrid" id="luvMenu"></div>
+        </div>
 
-      <div class="board-wrapper">
-        <div id="gameBoard" class="game-board"></div>
-        <div id="fxLayer"></div>
+        <div class="panel" id="rightPanel">
+          <h3>Leaderboard</h3>
+          <div class="lbRow">
+            <input id="lbName" maxlength="24" placeholder="Name (z.B. KOALAaufPILLEN)" />
+          </div>
+          <div class="lbRow">
+            <button class="Btn secondary" id="btnPost">Post Score</button>
+            <button class="Btn ghost" id="btnRefresh">Refresh</button>
+          </div>
+          <div class="lbList" id="lbList"></div>
+        </div>
       </div>
-
-      <div class="controls glass-panel">
-        <button id="btnHint" class="action-btn">Hint <span class="cost-badge" id="hintCost">-2</span></button>
-        <button id="btnShuffle" class="action-btn secondary">Shuffle (Panic)</button>
-        <button id="btnFs" class="action-btn ghost">Fullscreen</button>
-      </div>
-    </main>
-
-    <footer class="glass-footer">
-      <div class="legal">
-        <a href="#">Impressum</a> &bull; <a href="#">Datenschutz</a> &bull; <span class="ver">v2.0 Refactor</span>
-      </div>
-    </footer>
-
-  </div>
-
-  <div id="modalStart" class="modal-backdrop">
-    <div class="modal glass-modal">
-      <h2>Willkommen zurück! 🍭</h2>
-      <p>Luvvies Crush im neuen <b>Dark Neon Mode</b>.</p>
-      
-      <div class="input-group">
-        <label>Dein Spielername</label>
-        <input type="text" id="inputNameStart" placeholder="z.B. KOALAaufPILLEN" maxlength="20">
-      </div>
-
-      <div class="btn-row">
-        <button id="btnStartGame" class="action-btn primary pulse-anim">Spiel Starten</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="modalGameOver" class="modal-backdrop hidden">
-    <div class="modal glass-modal">
-      <h2 id="goTitle">Game Over</h2>
-      <div class="score-summary">
-        <div class="final-score" id="goScore">0</div>
-        <div class="final-level" id="goLevel">Level 1</div>
-      </div>
-      
-      <div class="input-group">
-        <label>Name für Leaderboard anpassen:</label>
-        <input type="text" id="inputNameEnd" maxlength="20">
-      </div>
-      
-      <div class="btn-row">
-        <button id="btnPostScore" class="action-btn secondary">Score Posten</button>
-        <button id="btnRestart" class="action-btn primary">Nochmal</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="modalLeaderboard" class="modal-backdrop hidden">
-    <div class="modal glass-modal lb-modal">
-      <h2>Highscores</h2>
-      <div id="lbContent" class="lb-list">Lade...</div>
-      <button id="btnCloseLb" class="action-btn ghost small">Schließen</button>
     </div>
   </div>
 
