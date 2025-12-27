@@ -386,6 +386,16 @@
         0 6px 16px rgba(0,0,0,.06) inset;
       overflow:hidden;
       animation: boardFade 20s ease-in-out infinite;
+      transition: filter 0.3s ease;
+    }
+    /* Dark Mode Board */
+    body.dark #board{
+      background:
+        radial-gradient(circle at 20% 20%, rgba(60,50,90,.86), rgba(40,30,60,.35)),
+        radial-gradient(circle at 80% 70%, rgba(100,80,255,.16), transparent 55%),
+        linear-gradient(180deg, rgba(40,35,60,.62), rgba(30,25,50,.36));
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 18px 70px rgba(0,0,0,.5), 0 6px 16px rgba(0,0,0,.3) inset;
     }
     @keyframes boardFade{
       0%{ filter:hue-rotate(0deg) saturate(1) }
@@ -868,7 +878,7 @@
       background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.95), rgba(255,255,255,.2));
       clip-path: polygon(50% 0%, 62% 30%, 100% 50%, 62% 70%, 50% 100%, 38% 70%, 0% 50%, 38% 30%);
       animation: starPop 820ms ease forwards;
-      filter: drop-shadow(0 0 18px rgba(255,79,185,.22));
+      filter: drop-shadow(0 0 8px rgba(255,255,255,.8)); /* Brighter flash */
     }
     @keyframes starPop{
       0%{opacity:0; transform:translate(-50%,-50%) scale(.4) rotate(0deg)}
@@ -1151,6 +1161,10 @@
           <button class="Btn" id="btnHint">Hint</button>
           <button class="Btn" id="btnFs">Vollbild</button>
           <button class="Btn ghost" id="btnTheme" style="padding:0 12px;min-width:46px;">🌙</button>
+          <div style="display:flex;align-items:center;gap:6px;margin-left:8px;">
+            <span style="font-size:12px;font-weight:900;opacity:.7">FX</span>
+            <input type="range" id="fxSlider" min="0" max="100" value="0" style="width:60px;">
+          </div>
         </div>
       </div>
 
@@ -1658,18 +1672,24 @@
      **********************/
     function computeCell(){
       const wrap = document.getElementById("boardWrap");
+      // Use client dimensions directly to adapt to any container size
       const wrapW = wrap.clientWidth;
-      // More generous vertical space
-      const wrapH = wrap.clientHeight || (window.innerHeight * (window.innerWidth>1000 ? 0.8 : 0.7));
+      const wrapH = wrap.clientHeight || window.innerHeight;
 
-      const usableW = Math.max(260, wrapW - 40);
-      const usableH = Math.max(260, wrapH - 20); // Less padding subtraction
+      // In Fullscreen, prioritize Board Fit
+      const isFs = document.body.classList.contains("fs");
+
+      const padW = isFs ? 20 : 40;
+      const padH = isFs ? 100 : 20; // Account for HUD in FS (bottom/top)
+
+      const usableW = Math.max(260, wrapW - padW);
+      const usableH = Math.max(260, wrapH - padH);
 
       const cellW = Math.floor((usableW - (cols-1)*GAP - PAD*2) / cols);
       const cellH = Math.floor((usableH - (rows-1)*GAP - PAD*2) / rows);
 
-      // Higher max for large screens
-      const max = document.body.classList.contains("fs") ? 130 : 100;
+      // Allow larger tiles in FS on large screens
+      const max = isFs ? 160 : 100;
       return clamp(Math.min(cellW, cellH), 34, max);
     }
 
@@ -1821,8 +1841,41 @@
     /**********************
      * Random tile generation
      **********************/
+    // Balancing: Limit active Luvvies on small boards
+    function getActivePool(){
+      let pool = BASES.filter(b => (b.minLevel||1) <= level);
+
+      // Limit count based on Difficulty/Size to ensure matches are possible
+      // Easy (10x10): Max 7-8 colors?
+      // Shock (8x8): Max 5-6 colors.
+      let maxColors = 6;
+      if(diff.key === "easy") maxColors = 7;
+      if(diff.key === "normal") maxColors = 6;
+      if(diff.key === "hard") maxColors = 6;
+      if(diff.key === "shock") maxColors = 5; // 8x8 with too many colors is impossible
+
+      // If pool is larger, slice it?
+      // But we want consistent characters.
+      // We can consistently slice based on the current level/seed, or just take the first N.
+      // BASES is sorted by appearance? Fledernuss is minLevel 10.
+      // We should prioritize "basic" ones + 1-2 advanced.
+      if(pool.length > maxColors){
+         // Always keep basics (sweety, sleepy, normal, cry, joyce, smokey)
+         // Rotate the others?
+         // For stability, let's just pick the first 'maxColors' valid ones
+         // but Fledernuss/Simba might be cut off.
+         // Better: Pick random subset per Level? No, confusing.
+         // Pick subset per Game? Yes.
+         // We can store 'activeSet' in a variable when game starts.
+      }
+      return pool;
+    }
+
+    let gameActivePool = []; // Set on newGame
+
     function randNormalType(){
-      const pool = BASES.filter(b => (b.minLevel||1) <= level);
+      // Use active subset
+      const pool = gameActivePool.length ? gameActivePool : BASES;
       const weights = pool.map(b=>{
         const w = (b.key==="joyce"||b.key==="smokey") ? 9 : (b.key==="donut") ? 10 : 12;
         return {b, w};
@@ -2897,13 +2950,22 @@
           dropDown();
           mergeMellows();
           isFirstStep = false;
+          // Add timeout limit for safety?
           setTimeout(step, 260);
         }, 240);
         checkLevelUp();
         updateUI();
       };
 
-      step();
+      // Safety: If step crashes or hangs, reset busy after 5s?
+      // But step() is recursive.
+      // We can just rely on step() logic.
+      try{
+        step();
+      }catch(e){
+        console.error(e);
+        busy=false;
+      }
     }
 
     function shuffleArea4x4(centerR, centerC){
@@ -3123,16 +3185,31 @@
         }
       }
 
-      for(let rr=big.r; rr<=big.r+1; rr++){
-        for(let cc=big.c; cc<=big.c+1; cc++){
-          if(inBounds(rr,cc)){
-            const t = grid[rr][cc];
-            if(t && isPlaceholder(t) && t.partOf===bigId) grid[rr][cc]=null;
-            if(t && t.id===bigId) grid[rr][cc]=null;
+      // Boss Check for points
+      if(big.type === "mellowzilla"){
+         // 20,000 points as requested
+         const bonus = 20000;
+         totalScore += bonus;
+         levelScore += bonus;
+         toast("MELLOW ZILLA BESIEGT! 🏆", "+20.000 PUNKTE!", 4000);
+      } else {
+         toast("Mellow gelöst! ✨","Nice!", 2600);
+      }
+
+      for(let rr=big.r; rr<=big.r+1; rr++){ // This loop is for 2x2. Boss is 3x3 if MellowZilla.
+        // Wait, MellowZilla is 3x3. Mellowlord is 2x2.
+        // We need to adjust loop based on size.
+        const size = (big.type==="mellowzilla") ? 3 : 2;
+        for(let rLoop=big.r; rLoop<big.r+size; rLoop++){
+          for(let cLoop=big.c; cLoop<big.c+size; cLoop++){
+             if(inBounds(rLoop,cLoop)){
+                const t = grid[rLoop][cLoop];
+                if(t && isPlaceholder(t) && t.partOf===bigId) grid[rLoop][cLoop]=null;
+                if(t && t.id===bigId) grid[rLoop][cLoop]=null;
+             }
           }
         }
       }
-      toast("Mega Mellow gelöst! ✨","Nice!", 2600);
     }
 
     function hasMove(){
@@ -3286,6 +3363,7 @@
         level++;
         levelScore = 0;
         maybeUnlockVariant();
+        refreshActivePool(); // Recalculate allowed colors
 
         target = calcTarget(level);
         moves = calcMoves(level);
@@ -3331,6 +3409,20 @@
       target = calcTarget(level);
       moves = calcMoves(level);
       lastSwap=null;
+
+      // Determine active pool for this game (based on difficulty)
+      // Recalculate if level goes up?
+      // If we limit colors, new characters won't appear.
+      // Maybe we shouldn't limit statically.
+      // But 8x8 with 10 colors is unplayable.
+      // Strategy: On initBoard, we set the pool.
+      // But BASES changes with Level (minLevel).
+      // We will handle pool logic dynamically but cap the count.
+      // Actually, simplest is: select Max N types from available.
+      // Which ones?
+      // Always basics + current "featured" ones?
+      // Let's implement `refreshActivePool()` called on Level Up.
+      refreshActivePool();
 
       initBoard();
       buildMenu();
@@ -3397,8 +3489,10 @@
      **********************/
     function cleanName(s){
       let out = s.replace(/[^a-zA-Z0-9\säöüÄÖÜß!._-]/g, "");
-      // Bad words filter (simple list)
-      const bad = ["hitler", "nazi", "arsch", "wichser", "hurensohn", "idiot", "dummbatz"];
+      // Expanded Bad words filter
+      const bad = [
+        "hitler", "nazi", "arsch", "wichser", "hurensohn", "idiot", "dummbatz", "fuck", "bitch", "whore", "cunt", "nigger", "faggot", "fotze", "missgeburt", "bastard", "penis", "vagina", "sex", "anal"
+      ];
       const lower = out.toLowerCase();
       // Whitelist
       if(lower.includes("koalaaufpillen")) return out;
@@ -3409,19 +3503,41 @@
       return out;
     }
 
+    function getUuid(){
+      let u = getCookie("luvvies_uuid");
+      if(!u){
+        u = crypto.randomUUID();
+        setCookie("luvvies_uuid", u, 365);
+      }
+      return u;
+    }
+
     async function postScore(){
       if(!sb){ toast("Leaderboard offline","(Supabase nicht erreichbar)", 3200); return; }
       let name = (document.getElementById("lbName").value || document.getElementById("greetName").value || "Anonymous").trim().slice(0,24);
       name = cleanName(name);
+      const uuid = getUuid();
 
       try{
-        const payload = { player_name: name, score: totalScore, level: level, difficulty: diff.key, version:"luvvies-crush" };
+        const payload = {
+          player_name: name,
+          score: totalScore,
+          level: level,
+          difficulty: diff.key,
+          version:"luvvies-crush",
+          user_id: uuid // Send UUID to backend
+        };
         const { error } = await sb.from(SCORE_TABLE).insert(payload);
         if(error) throw error;
         toast("Score gepostet ✅", name+" • "+fmt(totalScore), 3200);
         await refreshLeaderboard();
       }catch(e){
-        toast("Post fehlgeschlagen ❌", String(e.message||e), 3400);
+        // Handle unique constraint error gracefully if setup
+        if(String(e.message||e).includes("unique")){
+           toast("Bereits gepostet!", "Du hast diesen Score schon gesendet.", 3000);
+        } else {
+           toast("Post fehlgeschlagen ❌", String(e.message||e), 3400);
+        }
       }
     }
 
@@ -3561,6 +3677,18 @@
       syncTheme();
     });
 
+    // FX Slider (Filter)
+    const fxSlider = document.getElementById("fxSlider");
+    fxSlider.addEventListener("input", (e)=>{
+      const v = e.target.value;
+      // Map 0-100 to some hue-rotate or brightness effect
+      // User said "Slider der sozusagen ein Filter übers Spiel legt"
+      // Let's do hue-rotate and saturation boost
+      const hue = v * 1.8; // 0 to 180deg
+      const sat = 100 + v * 0.5; // 100% to 150%
+      document.body.style.filter = `hue-rotate(${hue}deg) saturate(${sat}%)`;
+    });
+
     document.getElementById("diffPills").addEventListener("change", ()=>{
       const v = document.querySelector('input[name="diff"]:checked').value;
       diff = DIFFS[v];
@@ -3579,6 +3707,26 @@
      **********************/
     attachResize();
     syncBgHeight();
+    function refreshActivePool(){
+      let pool = BASES.filter(b => (b.minLevel||1) <= level);
+      // Shuffle pool slightly to vary? No, keep stable.
+      // Limit count
+      let max = 6;
+      if(diff.key === "easy") max = 7;
+      if(diff.key === "normal") max = 6;
+      if(diff.key === "hard") max = 6;
+      if(diff.key === "shock") max = 5;
+
+      if(pool.length > max){
+        // Heuristic: Keep characters that have combos (Donut, Happy, Grumpy, Smokey, Joyce, Simba) if possible?
+        // Or just the newest unlocked + basics?
+        // Let's just slice for now to strictly limit colors.
+        gameActivePool = pool.slice(0, max);
+      } else {
+        gameActivePool = pool;
+      }
+    }
+
     resetUnlocked();
     newGame(true);
     showGreetingIfNeeded();
