@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Luvvies Crush - Neon Edition</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div id="app">
+    
+    <header class="glass-header">
+      <div class="logo-area">
+        <img src="https://static.wixstatic.com/media/d05122_7c445c8b5f3d46cdb778711661f2351e~mv2.png" alt="Luvvies Logo" class="logo-img">
+        <h1>Luvvies Crush</h1>
+      </div>
+      <nav>
+        <a href="#shop" class="nav-link">Shop</a>
+        <a href="#inventory" class="nav-link">Inventory</a>
+        <button id="btnLeaderboardToggle" class="nav-link btn-ghost">Leaderboard</button>
+      </nav>
+    </header>
+
+    <main>
+      <div class="hud-strip glass-panel">
+        <div class="stat-group">
+          <span class="label">Level</span>
+          <span class="value neon-text" id="uiLevel">1</span>
+        </div>
+        <div class="stat-group">
+          <span class="label">Ziel</span>
+          <span class="value" id="uiTarget">2500</span>
+        </div>
+        <div class="stat-group center-stat">
+          <span class="label">Score</span>
+          <span class="value large-neon" id="uiScore">0</span>
+        </div>
+        <div class="stat-group">
+          <span class="label">Moves</span>
+          <span class="value" id="uiMoves">30</span>
+        </div>
+        <div class="stat-group">
+          <div class="diff-select">
+            <select id="diffSelect">
+              <option value="easy">Easy</option>
+              <option value="normal" selected>Normal</option>
+              <option value="hard">Hard</option>
+              <option value="shock">Zuckerschock</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="progress-container">
+        <div class="progress-bar" id="uiBar"></div>
+      </div>
+
+      <div class="board-wrapper">
+        <div id="gameBoard" class="game-board"></div>
+        <div id="fxLayer"></div>
+      </div>
+
+      <div class="controls glass-panel">
+        <button id="btnHint" class="action-btn">Hint <span class="cost-badge" id="hintCost">-2</span></button>
+        <button id="btnShuffle" class="action-btn secondary">Shuffle (Panic)</button>
+        <button id="btnFs" class="action-btn ghost">Fullscreen</button>
+      </div>
+    </main>
+
+    <footer class="glass-footer">
+      <div class="legal">
+        <a href="#">Impressum</a> &bull; <a href="#">Datenschutz</a> &bull; <span class="ver">v2.0 Refactor</span>
+      </div>
+    </footer>
+
+  </div>
+
+  <div id="modalStart" class="modal-backdrop">
+    <div class="modal glass-modal">
+      <h2>Willkommen zurück! 🍭</h2>
+      <p>Luvvies Crush im neuen <b>Dark Neon Mode</b>.</p>
+      
+      <div class="input-group">
+        <label>Dein Spielername</label>
+        <input type="text" id="inputNameStart" placeholder="z.B. KOALAaufPILLEN" maxlength="20">
+      </div>
+
+      <div class="btn-row">
+        <button id="btnStartGame" class="action-btn primary pulse-anim">Spiel Starten</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalGameOver" class="modal-backdrop hidden">
+    <div class="modal glass-modal">
+      <h2 id="goTitle">Game Over</h2>
+      <div class="score-summary">
+        <div class="final-score" id="goScore">0</div>
+        <div class="final-level" id="goLevel">Level 1</div>
+      </div>
+      
+      <div class="input-group">
+        <label>Name für Leaderboard anpassen:</label>
+        <input type="text" id="inputNameEnd" maxlength="20">
+      </div>
+      
+      <div class="btn-row">
+        <button id="btnPostScore" class="action-btn secondary">Score Posten</button>
+        <button id="btnRestart" class="action-btn primary">Nochmal</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalLeaderboard" class="modal-backdrop hidden">
+    <div class="modal glass-modal lb-modal">
+      <h2>Highscores</h2>
+      <div id="lbContent" class="lb-list">Lade...</div>
+      <button id="btnCloseLb" class="action-btn ghost small">Schließen</button>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
