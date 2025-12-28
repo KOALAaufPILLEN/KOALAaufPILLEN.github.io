@@ -1033,6 +1033,12 @@
       background: linear-gradient(135deg, rgba(255,79,185,.92), rgba(255,170,230,.86));
       color:#fff;
       border: 1px solid rgba(255,255,255,.28);
+      animation: pulseBtn 2s infinite;
+    }
+    @keyframes pulseBtn{
+      0%{ transform:scale(1); box-shadow: 0 0 0 0 rgba(255,79,185, 0.7); }
+      70%{ transform:scale(1.05); box-shadow: 0 0 0 10px rgba(255,79,185, 0); }
+      100%{ transform:scale(1); box-shadow: 0 0 0 0 rgba(255,79,185, 0); }
     }
 
     /* Mobile/Tablet fullscreen layout */
@@ -1221,7 +1227,7 @@
 
             <div class="hudRight">
               <button class="hudBtn hint" id="fsHint">Hint</button>
-              <button class="hudBtn guide" id="fsIntro">Anleitung</button>
+              <button class="hudBtn" id="fsMenuBtn">Menü</button>
               <button class="hudBtn exit" id="fsExit">Exit</button>
             </div>
           </div>
@@ -2427,12 +2433,28 @@
 
         const ok = hasAnyMatchOrSpecial();
         if(!ok){
+          // Swap back visual + logic
           doSwap(r1,c1,r2,c2);
+
+          // Ensure visual sync after a slight delay to make the swap-back visible
+          setTimeout(()=>{
+             const a = grid[r1][c1];
+             const b = grid[r2][c2];
+             if(a) {
+                const el = tileEls.get(a.id);
+                if(el) setTileXY(el, r1, c1);
+             }
+             if(b) {
+                const el = tileEls.get(b.id);
+                if(el) setTileXY(el, r2, c2);
+             }
+             busy=false;
+          }, 220);
+
           spendMoves(3);
           combo = 1;
           updateUI();
           toast("Ouch 😵","Falscher Swap: −3 Moves", 3200);
-          busy=false;
           return;
         }
         spendMoves(1);
@@ -3139,7 +3161,11 @@
           ui.board.appendChild(el);
 
           const ctr = tileCenter(r,c);
-          burstFx(ctr.x + (CELL+GAP)/2, ctr.y + (CELL+GAP)/2, 18);
+          burstFx(ctr.x + (CELL+GAP)/2, ctr.y + (CELL+GAP)/2, 25);
+          // Peng Peng Glitter
+          for(let i=0;i<5;i++){
+             setTimeout(()=>makeStar(ctr.x + (Math.random()*60-30), ctr.y + (Math.random()*60-30), true), i*100);
+          }
           toast("Mellowlord! 😈","4 Mellows verschmelzen!", 2800);
           setTileXY(el, r, c);
         }
@@ -3741,17 +3767,27 @@
       syncTheme();
     });
 
-    // FX Slider (Filter)
+    // FX Slider (Filter + Brightness)
+    function updateFx(v){
+      // v: 0-100
+      // Hue shift: 0 -> 90deg (subtle)
+      // Brightness: 100% -> 40% (darker)
+      // Saturation: 100% -> 120%
+      const hue = v * 0.9;
+      const bri = 100 - (v * 0.6);
+      const sat = 100 + (v * 0.2);
+      document.body.style.filter = `hue-rotate(${hue}deg) brightness(${bri}%) saturate(${sat}%)`;
+
+      // Sync sliders
+      if(document.getElementById("fxSlider")) document.getElementById("fxSlider").value = v;
+      if(document.getElementById("fsMenuFx")) document.getElementById("fsMenuFx").value = v;
+    }
+
     const fxSlider = document.getElementById("fxSlider");
-    fxSlider.addEventListener("input", (e)=>{
-      const v = e.target.value;
-      // Map 0-100 to some hue-rotate or brightness effect
-      // User said "Slider der sozusagen ein Filter übers Spiel legt"
-      // Let's do hue-rotate and saturation boost
-      const hue = v * 1.8; // 0 to 180deg
-      const sat = 100 + v * 0.5; // 100% to 150%
-      document.body.style.filter = `hue-rotate(${hue}deg) saturate(${sat}%)`;
-    });
+    fxSlider.addEventListener("input", (e)=>updateFx(e.target.value));
+
+    const fsMenuFx = document.getElementById("fsMenuFx");
+    if(fsMenuFx) fsMenuFx.addEventListener("input", (e)=>updateFx(e.target.value));
 
     document.getElementById("diffPills").addEventListener("change", ()=>{
       const v = document.querySelector('input[name="diff"]:checked').value;
@@ -3761,7 +3797,39 @@
       buildFsBg();
     });
     document.getElementById("fsHint").addEventListener("click", hint);
-    document.getElementById("fsIntro").addEventListener("click", ()=>document.getElementById("introBack").style.display="flex");
+    // Menu Btn
+    const btnMenu = document.getElementById("fsMenuBtn");
+    if(btnMenu) btnMenu.addEventListener("click", ()=>{
+       // Populate tips
+       const t = document.getElementById("quickTips");
+       if(t) document.getElementById("fsMenuTips").innerHTML = t.innerHTML;
+       document.getElementById("fsMenuBack").style.display="flex";
+    });
+
+    const menuClose = document.getElementById("fsMenuClose");
+    if(menuClose) menuClose.addEventListener("click", ()=>document.getElementById("fsMenuBack").style.display="none");
+
+    const menuIntro = document.getElementById("fsMenuIntro");
+    if(menuIntro) menuIntro.addEventListener("click", ()=>document.getElementById("introBack").style.display="flex");
+
+    const menuLuv = document.getElementById("fsMenuLuv");
+    if(menuLuv) menuLuv.addEventListener("click", ()=>{
+       toast("Luvvies Menü", "Bitte Spiel beenden für Details", 2000);
+    });
+
+    // Dark mode in FS Menu
+    const fsTheme = document.getElementById("fsMenuTheme");
+    if(fsTheme) fsTheme.addEventListener("click", ()=>{
+      document.body.classList.toggle("dark");
+      syncTheme();
+      // Sync icon
+      fsTheme.textContent = document.body.classList.contains("dark") ? "☀️" : "🌙";
+    });
+
+    // Old FS listeners (kept for safety if buttons exist)
+    const fsIntroBtn = document.getElementById("fsIntro");
+    if(fsIntroBtn) fsIntroBtn.addEventListener("click", ()=>document.getElementById("introBack").style.display="flex");
+
     document.getElementById("fsExit").addEventListener("click", async ()=>{
       if(document.fullscreenElement) await document.exitFullscreen();
     });
