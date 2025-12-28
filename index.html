@@ -303,6 +303,13 @@
     }
     .stat .k{font-weight:900; font-size:12px; opacity:.7}
     .stat .v{font-weight:1000; font-size:20px; margin-top:2px}
+    /* Stat Pop Animation */
+    .statPop { animation: statPulse 0.4s cubic-bezier(.12, .8, .3, 1.2); color: #ff4fb9; }
+    @keyframes statPulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.4); }
+      100% { transform: scale(1); }
+    }
 
     .progressRow{
       margin-top: 10px;
@@ -583,20 +590,21 @@
     }
 
     /* Pop */
-    .pop .plate{ animation: popPlate 420ms ease-in both; }
+    .pop .plate{ animation: popPlate 420ms cubic-bezier(.12, .8, .3, 1.2) both; }
     @keyframes popPlate{
       0%{ transform: translateY(0) scale(1); opacity:1; }
-      55%{ transform: translateY(-2px) scale(1.14); opacity:1; }
-      100%{ transform: translateY(8px) scale(.30); opacity:0; }
+      40%{ transform: translateY(-12px) scale(1.35) rotate(5deg); opacity:1; } /* Exaggerated Pop */
+      100%{ transform: translateY(18px) scale(0); opacity:0; }
     }
 
-    /* Landing bounce */
-    .land .plate{ animation: landPlate 560ms cubic-bezier(.2,.9,.2,1) both; }
-    @keyframes landPlate{
-      0%{ transform: translateY(0) scale(1); }
-      28%{ transform: translateY(4px) scale(1.06, .98); }
-      58%{ transform: translateY(-4px) scale(.99,1.04); }
-      100%{ transform: translateY(0) scale(1); }
+    /* Candy-like Landing Bounce (Squash & Stretch) */
+    .land .plate{ animation: jellyLand 600ms cubic-bezier(.12, .8, .3, 1.2) both; }
+    @keyframes jellyLand{
+      0%{ transform: translateY(0) scale(1, 1); }
+      30%{ transform: translateY(12px) scale(1.25, 0.75); } /* Squash impact */
+      50%{ transform: translateY(-6px) scale(0.85, 1.15); } /* Rebound up */
+      70%{ transform: translateY(3px) scale(1.05, 0.95); } /* Settle down */
+      100%{ transform: translateY(0) scale(1, 1); }
     }
 
     /* Spawn glow */
@@ -665,6 +673,27 @@
       .stats{grid-template-columns: repeat(2, minmax(0,1fr));}
       .below{grid-template-columns:1fr;}
       #boardWrap{min-height: 52vh;}
+    }
+
+    /* Mobile Portrait Optimization (Focus on Board) */
+    @media (max-width: 768px) and (orientation: portrait){
+       /* Hide non-essential UI */
+       .stats, .progressRow, .below { display: none !important; }
+       /* Hide Desktop Intro Button, Show Menu Button */
+       #btnIntro { display: none !important; }
+       #btnMenuMain { display: inline-flex !important; }
+
+       /* Maximize board area */
+       #app { width: 100%; margin: 8px 0; }
+       #boardWrap { min-height: 75vh; }
+
+       /* Compact Action Bar */
+       .topRow { padding: 8px; border-radius: 0 0 16px 16px; justify-content: center; margin-top:0; }
+       .actions { gap: 6px; }
+       .Btn { height: 38px; padding: 0 12px; font-size: 13px; }
+
+       /* Ensure Toast is visible */
+       #toast { top: 70px; }
     }
 
     .panel{
@@ -1184,8 +1213,16 @@
     </div>
 
     <div class="modalBack" id="fsMenuBack" style="z-index:99999;">
-      <div class="modal" style="max-width:400px;text-align:center;">
+      <div class="modal" style="max-width:min(440px, 94vw);text-align:center;max-height:85vh;overflow:auto;">
         <h2>Menü ⚙️</h2>
+
+        <!-- Live Stats (Visible on Mobile) -->
+        <div class="panel" style="margin:10px 0; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+           <div class="stat"><div class="k">Score</div><div class="v" id="menuScore">0</div></div>
+           <div class="stat"><div class="k">Level</div><div class="v" id="menuLevel">1</div></div>
+           <div class="stat"><div class="k">Goal</div><div class="v" id="menuGoal">0</div></div>
+           <div class="stat"><div class="k">Moves</div><div class="v" id="menuMoves">0</div></div>
+        </div>
 
         <div class="panel" style="margin:14px 0;text-align:left;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -1200,6 +1237,13 @@
 
         <button class="Btn" id="fsMenuLuv" style="width:100%;margin-bottom:8px;">Deine Luvvies (Infos)</button>
         <button class="Btn ghost" id="fsMenuIntro" style="width:100%;margin-bottom:8px;">Anleitung</button>
+
+        <!-- Hidden container for Luvvies Grid inside Menu -->
+        <div id="fsLuvGrid" style="display:none; margin-top:10px;">
+           <h3>Wähle einen Luvvie</h3>
+           <div class="luvGrid" id="menuLuvGrid"></div>
+           <button class="Btn ghost" id="fsLuvBack" style="margin-top:10px;">Zurück</button>
+        </div>
 
         <div class="foot" style="justify-content:center;margin-top:18px;">
            <button class="Btn secondary" id="fsMenuClose">Zurück zum Spiel</button>
@@ -1221,6 +1265,7 @@
 
         <div class="actions">
           <button class="Btn ghost" id="btnIntro">Anleitung</button>
+          <button class="Btn" id="btnMenuMain" style="display:none;">Menü</button>
           <button class="Btn secondary" id="btnNew">Neues Spiel</button>
           <button class="Btn" id="btnHint">Hint</button>
           <button class="Btn" id="btnFs">Vollbild</button>
@@ -1628,6 +1673,11 @@
       hudCombo: document.getElementById("hudCombo"),
       hudBar:   document.getElementById("hudBar"),
       hudPct:   document.getElementById("hudPct"),
+      // Menu Stats
+      menuScore: document.getElementById("menuScore"),
+      menuLevel: document.getElementById("menuLevel"),
+      menuGoal:  document.getElementById("menuGoal"),
+      menuMoves: document.getElementById("menuMoves"),
     };
 
     /**********************
@@ -1897,7 +1947,10 @@
           plate.removeEventListener("transitionend", onEnd);
           el.classList.add("land");
           const center = tileCenter(tile.r, tile.c);
-          makeStar(center.x, center.y, true);
+
+          // Dust/Impact FX
+          burstFx(center.x, center.y + CELL/2, 6);
+
           setTimeout(()=>el.classList.remove("land"), 560);
         };
         plate.addEventListener("transitionend", onEnd);
@@ -3510,6 +3563,25 @@
       ui.moves.textContent = moves;
       ui.combo.textContent = "x"+combo;
 
+      // Menu Stats Sync
+      if(ui.menuScore) ui.menuScore.textContent = fmt(totalScore);
+      if(ui.menuLevel) ui.menuLevel.textContent = level;
+      if(ui.menuGoal) ui.menuGoal.textContent = fmt(target);
+      if(ui.menuMoves) ui.menuMoves.textContent = moves;
+
+      // Pop Animation on change
+      [ui.level, ui.score, ui.moves].forEach(el => {
+          el.parentElement.classList.remove("statPop");
+          void el.offsetWidth; // Trigger reflow
+          el.parentElement.classList.add("statPop");
+      });
+      // Also for menu stats
+      if(ui.menuScore) {
+          ui.menuScore.parentElement.classList.remove("statPop");
+          void ui.menuScore.offsetWidth;
+          ui.menuScore.parentElement.classList.add("statPop");
+      }
+
       const pct = clamp(Math.round((levelScore/target)*100), 0, 100);
       ui.bar.style.width = pct+"%";
       ui.pct.textContent = pct+"%";
@@ -3889,8 +3961,8 @@
     });
     document.getElementById("fsHint").addEventListener("click", hint);
     // Menu Btn
-    const btnMenu = document.getElementById("fsMenuBtn");
-    if(btnMenu) btnMenu.addEventListener("click", ()=>{
+    // Shared Menu Open Logic
+    function openMainMenu(){
        // Populate current settings
        const isDark = document.body.classList.contains("dark");
        const themeBtn = document.getElementById("fsMenuTheme");
@@ -3902,7 +3974,14 @@
        if(slider && fsSlider) fsSlider.value = slider.value;
 
        document.getElementById("fsMenuBack").style.display="flex";
-    });
+    }
+
+    const btnMenu = document.getElementById("fsMenuBtn");
+    if(btnMenu) btnMenu.addEventListener("click", openMainMenu);
+
+    // New Mobile Menu Button
+    const btnMenuMain = document.getElementById("btnMenuMain");
+    if(btnMenuMain) btnMenuMain.addEventListener("click", openMainMenu);
 
     const menuClose = document.getElementById("fsMenuClose");
     if(menuClose) menuClose.addEventListener("click", ()=>document.getElementById("fsMenuBack").style.display="none");
@@ -3915,12 +3994,61 @@
 
     const menuLuv = document.getElementById("fsMenuLuv");
     if(menuLuv) menuLuv.addEventListener("click", ()=>{
-       document.getElementById("fsMenuBack").style.display="none"; // Close menu first
-       openInfo({name:"Deine Luvvies", ability:"(Übersicht aller Charaktere)", story:"Hier siehst du, wer was kann!", lines:{easy:["Klick im Spiel","auf Luvvies","für mehr Infos!"]}});
-       // Ideally show the full grid? But the full grid is only in the main menu.
-       // Let's just scroll to bottom if possible or show a hint.
-       const luvPanel = document.getElementById("luvPanel");
-       if(luvPanel) luvPanel.scrollIntoView({behavior:"smooth"});
+       // Toggle Grid visibility inside menu
+       const grid = document.getElementById("fsLuvGrid");
+       const menuGrid = document.getElementById("menuLuvGrid");
+
+       // Populate if empty (Clone from main menu)
+       if(menuGrid.children.length === 0){
+          const mainGrid = document.getElementById("luvMenu");
+          if(mainGrid && mainGrid.innerHTML){
+             menuGrid.innerHTML = mainGrid.innerHTML;
+             // Re-attach listeners to the cloned nodes
+             Array.from(menuGrid.children).forEach((card, i) => {
+                 // We need to find the corresponding data.
+                 // The 'buildMenu' function uses BASES + extra.
+                 // Let's just rebuild it cleanly.
+             });
+             // Actually, easier to just call buildMenu for this specific container?
+             // Or rebuild manually here.
+             menuGrid.innerHTML = "";
+             const all = [...BASES,
+                {key:"myst",name:"???",img:null,tag:"powerup",ability:"Klicken → random Reveal (Puff!)",story:"Mystery ist Glück + Rarity.",lines:{easy:["???","Puff ✨","Glück!"],normal:["Reveal time.","Puff.","Random!"],hard:["Risk it.","Puff.","Roll!"],shock:["ALL IN 😈","Puff!","GAMBLE!"]}},
+                {key:"worm",name:"Sourworm",img:IMG.worm,tag:"powerup",ability:"Reihe/Spalte (je nach Drag)",story:"Sauer, aber räumt sauber.",lines:{easy:["Chomp!","Weg damit!","Sauer!"],normal:["Line clear.","Crunch.","Nice."],hard:["Präzise.","Perfekt.","Clean."],shock:["WELLE!","CRUNCH!","RIP Reihe!"]}},
+                {key:"cit",name:"Citrussy",img:IMG.citrussy,tag:"powerup",ability:"Stern Radius 3 (8 Richtungen)",story:"Zitrus-Boom in alle Richtungen.",lines:{easy:["CIT!","Spritz!","Boom!"],normal:["Cross clear.","Zing!","Nice."],hard:["Setz’s gut.","Perfekt.","Value!"],shock:["ZITRUS-NUKE!","BOOM!","MEHR!"]}},
+                {key:"koala",name:"Koala",img:IMG.koala,tag:"powerup",ability:"Koala+Sorte clear",story:"Boss-Magie: eine Sorte komplett weg.",lines:{easy:["Boss!","Magie!","Clean!"],normal:["Koala time.","Alles weg.","Nice."],hard:["Richtig wählen.","Perfekt.","Carry."],shock:["BOSS MODE 😈","Wipe!","SWEET!"]}},
+                {key:"mellow",name:"Mellow",img:IMG.mellow,tag:"obstacle",ability:"Block (3 HP) – Clears daneben ziehen HP ab",story:"Klebt fest… bis du ihn knackbar machst.",lines:{easy:["Kleb 😈","HP runter!","Block!"],normal:["Nicht ignorieren.","Knacken!","Weg!"],hard:["Gefährlich.","Planen.","Ziel!"],shock:["BLOCK HELL 😈","RIP Moves","KNACKEN!"]}},
+                {key:"lovelie",name:"Lovelie",name:"Lovelie",img:IMG.lovelie,tag:"bonus",ability:"Ultra selten (Bonus)",story:"Wenn Lovelie kommt, lohnt’s sich.",lines:{easy:["OMG 💖","So selten!","Bonus!"],normal:["Lovelie!","Lucky!","Nice."],hard:["Rare!","Take it.","Value!"],shock:["ULTRA RARE 💖","LETS GO!","HYPE!"]}},
+              ];
+              for(const b of all){
+                const card=document.createElement("div");
+                card.className="luvCard";
+                const imgHtml = b.img ?
+                  `<img src="${b.img}" alt="${b.name}">` : `<div style="width:78px;height:78px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#ff4fb9,#7ad8ff);color:#fff;font-weight:1000;font-size:32px;box-shadow:0 12px 20px rgba(0,0,0,.12);">?</div>`;
+                card.innerHTML = `
+                  ${imgHtml}
+                  <div>
+                    <b>${b.name}</b>
+                    <small>${b.tag || "normal"}</small>
+                  </div>
+                `;
+                card.addEventListener("click", ()=>openInfo(b));
+                menuGrid.appendChild(card);
+              }
+          }
+       }
+
+       grid.style.display = "block";
+       // Hide other buttons to focus
+       menuLuv.style.display = "none";
+       document.getElementById("fsMenuIntro").style.display = "none";
+    });
+
+    const fsLuvBack = document.getElementById("fsLuvBack");
+    if(fsLuvBack) fsLuvBack.addEventListener("click", ()=>{
+        document.getElementById("fsLuvGrid").style.display = "none";
+        document.getElementById("fsMenuLuv").style.display = "block";
+        document.getElementById("fsMenuIntro").style.display = "block";
     });
 
     // Dark mode in FS Menu
