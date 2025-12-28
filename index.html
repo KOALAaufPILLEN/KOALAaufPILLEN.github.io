@@ -693,17 +693,19 @@
        #btnIntro { display: none !important; }
        #btnMenuMain { display: inline-flex !important; }
 
-       /* Maximize board area */
-       #app { width: 100%; margin: 8px 0; }
-       #boardWrap { min-height: 75vh; }
+       /* Maximize board area - AGGRESSIVE FILL */
+       #app { width: 100%; margin: 0; padding: 0; }
+       .playArea { padding: 2px; border:none; background:transparent; box-shadow:none; }
+       #boardWrap { min-height: 85vh; padding: 0; margin-top: 4px; justify-content:center; align-items:flex-start; }
 
        /* Compact Action Bar */
-       .topRow { padding: 8px; border-radius: 0 0 16px 16px; justify-content: center; margin-top:0; }
-       .actions { gap: 6px; }
-       .Btn { height: 38px; padding: 0 12px; font-size: 13px; }
+       .topRow { padding: 6px; border-radius: 0 0 16px 16px; justify-content: center; margin-top:0; width:100%; box-sizing:border-box; }
+       .actions { gap: 4px; width:100%; justify-content:center; }
+       .Btn { height: 36px; padding: 0 10px; font-size: 13px; }
+       .diffWrap { display:none; } /* Save space */
 
-       /* Ensure Toast is visible */
-       #toast { top: 70px; }
+       /* Ensure Toast is visible (below top bar) */
+       #toast { top: 60px; }
     }
 
     .panel{
@@ -821,26 +823,48 @@
     }
 
     /* Toasts -> rechts seitlich (Desktop/Fullscreen), Mobile oben */
+    /* Toasts - Smart Positioning to avoid board overlap */
     #toast{
       position: fixed;
-      right: 16px;
-      top: 110px;
       z-index: 9999;
       pointer-events:none;
       display:flex;
       flex-direction:column;
       gap:10px;
+      max-width: min(400px, 85vw);
+
+      /* Default Desktop: Top-Right corner, well aside */
+      right: 20px;
+      top: 80px;
       align-items:flex-end;
-      max-width: min(420px, 92vw);
     }
-    @media (max-width: 560px){
-      #toast{
+
+    /* Mobile / Narrow: Move to top center, above board */
+    @media (max-width: 1100px) {
+      #toast {
         left: 50%;
         right: auto;
-        top: 10%;
+        top: 12px;
         transform: translateX(-50%);
         align-items:center;
+        width: 100%;
       }
+    }
+
+    /* Fullscreen specific overrides */
+    body.fs #toast {
+       /* In FS, try to stay on the side if width allows */
+       right: 30px;
+       top: 100px;
+    }
+    @media (max-width: 1100px) {
+       body.fs #toast {
+          /* On smaller FS screens, stick to top center */
+          left: 50%;
+          right: auto;
+          top: 60px; /* Below HUD */
+          transform: translateX(-50%);
+       }
     }
     .toast{
       width: 100%;
@@ -1829,13 +1853,13 @@
       const wrapW = isFs ? window.innerWidth : wrap.clientWidth;
       const wrapH = isFs ? window.innerHeight : (wrap.clientHeight || window.innerHeight);
 
-      // Target ~85-90% fill of the smaller dimension
-      // In FS, we need space for HUD (top/bottom)
-      const hudSafeTop = isFs ? 80 : 0;
-      const hudSafeBot = isFs ? 80 : 0;
+      // Target ~96% fill (Aggressive)
+      const hudSafeTop = isFs ? 60 : 0;
+      const hudSafeBot = isFs ? 60 : 0;
 
-      const availableW = wrapW * (isFs ? 0.95 : 0.92);
-      const availableH = (wrapH - hudSafeTop - hudSafeBot) * (isFs ? 0.90 : 0.85);
+      // Much higher fill factors
+      const availableW = wrapW * (isFs ? 0.98 : 0.96);
+      const availableH = (wrapH - hudSafeTop - hudSafeBot) * (isFs ? 0.95 : 0.92);
 
       const usableW = Math.max(260, availableW - PAD*2);
       const usableH = Math.max(260, availableH - PAD*2);
@@ -1844,7 +1868,7 @@
       const cellH = Math.floor((usableH - (rows-1)*GAP) / rows);
 
       // Allow larger tiles in FS on large screens
-      const max = isFs ? 140 : 80;
+      const max = isFs ? 140 : 85;
       // Ensure it doesn't get ridiculously small (min 28)
       return clamp(Math.min(cellW, cellH), 28, max);
     }
