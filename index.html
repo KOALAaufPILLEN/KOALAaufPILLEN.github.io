@@ -2285,7 +2285,8 @@
       if(!isMatchable(t1)||!isMatchable(t2)||!isMatchable(t3)) return null;
 
       const p1=parseTypeId(t1.type), p2=parseTypeId(t2.type), p3=parseTypeId(t3.type);
-      if(!(p1.variant===p2.variant && p2.variant===p3.variant)) return null;
+      // Removed variant check: allow mixed variants for special combos
+      // if(!(p1.variant===p2.variant && p2.variant===p3.variant)) return null;
 
       const keys=[p1.baseKey,p2.baseKey,p3.baseKey];
       const count=(k)=>keys.filter(x=>x===k).length;
@@ -2743,6 +2744,7 @@
 
         if(mm.clear.size===0 && specials.length===0){
           busy=false;
+          layoutBoard(); // Force sync visual positions to fix drag bugs
           updateUI();
           ensureMovesOrShuffle();
           return;
@@ -2770,6 +2772,7 @@
         // and 'mm.clear' is empty.
         if(acceptedSpecials.length === 0 && mm.clear.size === 0){
            busy=false;
+           layoutBoard(); // Force sync
            updateUI();
            ensureMovesOrShuffle();
            return;
@@ -2935,6 +2938,7 @@
             el.classList.add("pop");
             const ctr = tileCenter(r,c);
             makeStar(ctr.x, ctr.y, true);
+            burstFx(ctr.x, ctr.y, 8); // Extra glitter
             setTimeout(()=>{ el.remove(); tileEls.delete(t.id); }, 420);
           }
           grid[r][c]=null;
