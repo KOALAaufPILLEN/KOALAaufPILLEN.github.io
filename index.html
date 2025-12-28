@@ -80,6 +80,11 @@
     #page{ scrollbar-width:none; }
     #page::-webkit-scrollbar{ width:0; height:0; }
 
+    /* FX Layer global für korrekte Offsets */
+    #fxGlobal{
+      position:fixed; inset:0; pointer-events:none; z-index:9999; overflow:hidden;
+    }
+
     /* Scrollender Background Layer */
     #scrollBg{
       position:absolute;
@@ -367,6 +372,19 @@
       z-index:10;
       padding: 8px;
       touch-action: none;
+    }
+    /* Better center alignment for FX calculations */
+    body.fs #boardWrap {
+       width: 100vw;
+       height: 100vh;
+       padding: 0;
+       margin: 0;
+       position: fixed;
+       top: 0; left: 0;
+       background: transparent;
+       display: flex;
+       align-items: center;
+       justify-content: center;
     }
 
     #board{
@@ -1072,6 +1090,7 @@
   <div id="page">
     <div id="scrollBg"></div>
     <div id="globalBg"></div>
+    <div id="fxGlobal"></div>
     <div id="toast"></div>
 
     <div class="modalBack" id="greetBack">
@@ -1160,6 +1179,30 @@
         <p class="tiny" style="margin:10px 0 0;">(Platzhalter) Später: Plushie-Shop Link ✨</p>
         <div class="foot">
           <button class="Btn ghost" id="infoClose">Schließen</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modalBack" id="fsMenuBack" style="z-index:99999;">
+      <div class="modal" style="max-width:400px;text-align:center;">
+        <h2>Menü ⚙️</h2>
+
+        <div class="panel" style="margin:14px 0;text-align:left;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <b>Dark Mode</b>
+            <button class="Btn ghost" id="fsMenuTheme" style="padding:0 12px;min-width:50px;">🌙</button>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+             <b>Helligkeit (Dimmer)</b>
+             <input type="range" id="fsMenuFx" min="0" max="80" value="0" style="width:100px;">
+          </div>
+        </div>
+
+        <button class="Btn" id="fsMenuLuv" style="width:100%;margin-bottom:8px;">Deine Luvvies (Infos)</button>
+        <button class="Btn ghost" id="fsMenuIntro" style="width:100%;margin-bottom:8px;">Anleitung</button>
+
+        <div class="foot" style="justify-content:center;margin-top:18px;">
+           <button class="Btn secondary" id="fsMenuClose">Zurück zum Spiel</button>
         </div>
       </div>
     </div>
@@ -1544,6 +1587,7 @@
     let grid = [];
     let tileEls = new Map();
     let busy = false;
+    let isGameOver = false; // New flag for strict locking
     // big mellow mapping
     const bigMellows = new Map();
     // id -> {id, r, c, hp, type}
@@ -1575,7 +1619,7 @@
       bar:   document.getElementById("uiBar"),
       pct:   document.getElementById("uiPct"),
       board: document.getElementById("board"),
-      fx:    document.getElementById("fxLayer"),
+      fx:    document.getElementById("fxGlobal"), // Use new global FX layer
       menu:  document.getElementById("luvMenu"),
       tips:  document.getElementById("quickTips"),
       hudLevel: document.getElementById("hudLevel"),
@@ -1658,8 +1702,23 @@
      * FX helpers
      **********************/
     function tileCenter(r,c){
-      const x = PAD + c*(CELL+GAP) + CELL/2;
-      const y = PAD + r*(CELL+GAP) + CELL/2;
+      // Use getBoundingClientRect for perfect alignment regardless of container nesting/centering
+      const t = grid[r][c];
+      if (t) {
+         const el = tileEls.get(t.id);
+         if (el) {
+            const rect = el.getBoundingClientRect();
+            return {
+               x: rect.left + rect.width / 2,
+               y: rect.top + rect.height / 2
+            };
+         }
+      }
+      // Fallback if tile element is missing (e.g. empty cell calculation)
+      // Calculate based on board position
+      const boardRect = ui.board.getBoundingClientRect();
+      const x = boardRect.left + PAD + c*(CELL+GAP) + CELL/2;
+      const y = boardRect.top + PAD + r*(CELL+GAP) + CELL/2;
       return {x, y};
     }
     function makeStar(x,y, big=false){
@@ -1680,12 +1739,15 @@
       setTimeout(()=>r.remove(), 760);
     }
     function burstFx(x,y, count=12){
+      // PENG style! More energetic
       ringFx(x,y);
-      for(let i=0;i<count;i++){
+      for(let i=0;i<count*1.5;i++){ // More particles
         const ang = Math.random()*Math.PI*2;
-        const dist = 8 + Math.random()*30;
-        makeStar(x + Math.cos(ang)*dist, y + Math.sin(ang)*dist, Math.random()<0.35);
+        const dist = 12 + Math.random()*50; // Larger spread
+        makeStar(x + Math.cos(ang)*dist, y + Math.sin(ang)*dist, Math.random()<0.4);
       }
+      // Inner flash
+      makeStar(x, y, true);
     }
 
     /**********************
@@ -1693,25 +1755,29 @@
      **********************/
     function computeCell(){
       const wrap = document.getElementById("boardWrap");
-      // Use client dimensions directly to adapt to any container size
-      const wrapW = wrap.clientWidth;
-      const wrapH = wrap.clientHeight || window.innerHeight;
-
-      // In Fullscreen, prioritize Board Fit
+      // Use innerWidth/Height for fullscreen to ensure robustness against wrapper padding
       const isFs = document.body.classList.contains("fs");
+      const wrapW = isFs ? window.innerWidth : wrap.clientWidth;
+      const wrapH = isFs ? window.innerHeight : (wrap.clientHeight || window.innerHeight);
 
-      const padW = isFs ? 20 : 40;
-      const padH = isFs ? 100 : 20; // Account for HUD in FS (bottom/top)
+      // Target ~85-90% fill of the smaller dimension
+      // In FS, we need space for HUD (top/bottom)
+      const hudSafeTop = isFs ? 80 : 0;
+      const hudSafeBot = isFs ? 80 : 0;
 
-      const usableW = Math.max(260, wrapW - padW);
-      const usableH = Math.max(260, wrapH - padH);
+      const availableW = wrapW * (isFs ? 0.95 : 0.92);
+      const availableH = (wrapH - hudSafeTop - hudSafeBot) * (isFs ? 0.90 : 0.85);
 
-      const cellW = Math.floor((usableW - (cols-1)*GAP - PAD*2) / cols);
-      const cellH = Math.floor((usableH - (rows-1)*GAP - PAD*2) / rows);
+      const usableW = Math.max(260, availableW - PAD*2);
+      const usableH = Math.max(260, availableH - PAD*2);
+
+      const cellW = Math.floor((usableW - (cols-1)*GAP) / cols);
+      const cellH = Math.floor((usableH - (rows-1)*GAP) / rows);
 
       // Allow larger tiles in FS on large screens
-      const max = isFs ? 160 : 100;
-      return clamp(Math.min(cellW, cellH), 34, max);
+      const max = isFs ? 140 : 80;
+      // Ensure it doesn't get ridiculously small (min 28)
+      return clamp(Math.min(cellW, cellH), 28, max);
     }
 
     function setTileXY(el, r, c){
@@ -1951,18 +2017,37 @@
       const H = Math.max(page.scrollHeight, window.innerHeight);
       const bgChars = [...BASES].sort(()=>Math.random()-0.5).slice(0,8);
 
+      // Collision avoidance for BG items
+      const placed = [];
+
       bgChars.forEach((b)=>{
         const wrap = document.createElement("div");
         wrap.className="bgLuv";
         const img = document.createElement("img");
         img.src=b.img; img.alt=b.name;
 
-        const leftZone = Math.random() < 0.5;
-        const x = leftZone
-          ? Math.random()*(Math.max(240, W*0.26) - 120)
-          : (W - 300) - Math.random()*(Math.max(240, W*0.26) - 120);
+        // Try to find a spot
+        let x,y;
+        let attempts = 0;
+        let good = false;
+        while(!good && attempts < 20){
+          const leftZone = Math.random() < 0.5;
+          x = leftZone
+            ? Math.random()*(Math.max(240, W*0.26) - 120)
+            : (W - 300) - Math.random()*(Math.max(240, W*0.26) - 120);
+          y = Math.random()*(Math.max(520,H)-280);
 
-        const y = Math.random()*(Math.max(520,H)-280);
+          // Check collision
+          good = true;
+          for(const p of placed){
+             const dx = p.x - x;
+             const dy = p.y - y;
+             if(Math.hypot(dx,dy) < 300) { good = false; break; } // 300px minimal dist
+          }
+          attempts++;
+        }
+
+        placed.push({x,y});
 
         wrap.style.left = Math.max(0, x)+"px";
         wrap.style.top  = y+"px";
@@ -2195,7 +2280,9 @@
      * Pointer (click ???)
      **********************/
     function onPointerDown(e){
-      if(busy) return;
+      if(busy || isGameOver) return; // Strict lock
+      if(moves <= 0) return; // No moves allowed
+
       clearHints();
       const id = e.currentTarget.dataset.id;
       const tile = findTileById(id);
@@ -2229,6 +2316,8 @@
 
     ui.board.addEventListener("pointermove", (e)=>{
       if(!pointer.down) return;
+      if(busy || isGameOver || moves <= 0){ pointer.down=false; return; } // Safety check during drag
+
       const tile = findTileById(pointer.id);
       if(!tile) return;
 
@@ -3451,6 +3540,7 @@
     }
 
     function gameOver(){
+      isGameOver = true; // Lock input permanently
       // Show dedicated Game Over Modal
       document.getElementById("goScore").textContent = fmt(totalScore);
 
@@ -3479,6 +3569,7 @@
 
     function newGame(fromDiffChange=false){
       busy=false;
+      isGameOver=false;
       level=1;
       totalScore=0;
       levelScore=0;
@@ -3773,14 +3864,10 @@
 
     // FX Slider (Filter + Brightness)
     function updateFx(v){
-      // v: 0-100
-      // Hue shift: 0 -> 90deg (subtle)
-      // Brightness: 100% -> 40% (darker)
-      // Saturation: 100% -> 120%
-      const hue = v * 0.9;
-      const bri = 100 - (v * 0.6);
-      const sat = 100 + (v * 0.2);
-      document.body.style.filter = `hue-rotate(${hue}deg) brightness(${bri}%) saturate(${sat}%)`;
+      // v: 0-80 (Dimmer only)
+      // Brightness: 100% -> 20%
+      const bri = 100 - v;
+      document.body.style.filter = `brightness(${bri}%)`;
 
       // Sync sliders
       if(document.getElementById("fxSlider")) document.getElementById("fxSlider").value = v;
@@ -3804,9 +3891,16 @@
     // Menu Btn
     const btnMenu = document.getElementById("fsMenuBtn");
     if(btnMenu) btnMenu.addEventListener("click", ()=>{
-       // Populate tips
-       const t = document.getElementById("quickTips");
-       if(t) document.getElementById("fsMenuTips").innerHTML = t.innerHTML;
+       // Populate current settings
+       const isDark = document.body.classList.contains("dark");
+       const themeBtn = document.getElementById("fsMenuTheme");
+       if(themeBtn) themeBtn.textContent = isDark ? "☀️" : "🌙";
+
+       // Sync slider value
+       const slider = document.getElementById("fxSlider");
+       const fsSlider = document.getElementById("fsMenuFx");
+       if(slider && fsSlider) fsSlider.value = slider.value;
+
        document.getElementById("fsMenuBack").style.display="flex";
     });
 
@@ -3814,11 +3908,19 @@
     if(menuClose) menuClose.addEventListener("click", ()=>document.getElementById("fsMenuBack").style.display="none");
 
     const menuIntro = document.getElementById("fsMenuIntro");
-    if(menuIntro) menuIntro.addEventListener("click", ()=>document.getElementById("introBack").style.display="flex");
+    if(menuIntro) menuIntro.addEventListener("click", ()=>{
+       document.getElementById("fsMenuBack").style.display="none"; // Close menu first
+       document.getElementById("introBack").style.display="flex";
+    });
 
     const menuLuv = document.getElementById("fsMenuLuv");
     if(menuLuv) menuLuv.addEventListener("click", ()=>{
-       toast("Luvvies Menü", "Bitte Spiel beenden für Details", 2000);
+       document.getElementById("fsMenuBack").style.display="none"; // Close menu first
+       openInfo({name:"Deine Luvvies", ability:"(Übersicht aller Charaktere)", story:"Hier siehst du, wer was kann!", lines:{easy:["Klick im Spiel","auf Luvvies","für mehr Infos!"]}});
+       // Ideally show the full grid? But the full grid is only in the main menu.
+       // Let's just scroll to bottom if possible or show a hint.
+       const luvPanel = document.getElementById("luvPanel");
+       if(luvPanel) luvPanel.scrollIntoView({behavior:"smooth"});
     });
 
     // Dark mode in FS Menu
