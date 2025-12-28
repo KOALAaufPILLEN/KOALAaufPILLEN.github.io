@@ -189,6 +189,9 @@
        gap: 10px;
     }
 
+    /* Strict Lock Class */
+    .locked { pointer-events: none !important; filter: grayscale(0.2); }
+
     .diffWrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
     .diffWrap .label{font-weight:900;opacity:.9;margin-right:4px}
     .diffPills{
@@ -1419,7 +1422,7 @@
      * Images
      **********************/
     const IMG = {
-      logo:     "https://static.wixstatic.com/media/d05122_6062723c34eb4dfb9e49339e09d06024~mv2.png",
+      logo:     "https://static.wixstatic.com/media/d05122_7c445c8b5f3d46cdb778711661f2351e~mv2.png",
       sweety:   "https://static.wixstatic.com/media/d05122_efe39fec7e5c4d569dfb3fef75e5b6ff~mv2.png",
       sleepy:   "https://static.wixstatic.com/media/d05122_cfd779a0aad04c72bd08efbc0f363f53~mv2.png",
       normal:   "https://static.wixstatic.com/media/d05122_8a7c2f43a31247a6994651163c2898c5~mv2.png",
@@ -1778,13 +1781,18 @@
       const y = boardRect.top + PAD + r*(CELL+GAP) + CELL/2;
       return {x, y};
     }
-    function makeStar(x,y, big=false){
+    function makeStar(x,y, big=false, color=null){
       const s = document.createElement("div");
       s.className="star";
       s.style.left = x+"px";
       s.style.top  = y+"px";
       s.style.width = big ? "16px":"12px";
       s.style.height= big ? "16px":"12px";
+      if(color){
+         // Use mask or background
+         s.style.background = `radial-gradient(circle at 30% 30%, #fff, ${color})`;
+         s.style.filter = `drop-shadow(0 0 8px ${color})`;
+      }
       ui.fx.appendChild(s);
       setTimeout(()=>s.remove(), 900);
     }
@@ -1801,7 +1809,11 @@
       for(let i=0;i<count*1.5;i++){ // More particles
         const ang = Math.random()*Math.PI*2;
         const dist = 12 + Math.random()*50; // Larger spread
-        makeStar(x + Math.cos(ang)*dist, y + Math.sin(ang)*dist, Math.random()<0.4);
+        // Random Color
+        const hues = ["#ff4fb9", "#7ad8ff", "#ffd740", "#8b5cf6", "#ffffff"];
+        const color = hues[Math.floor(Math.random()*hues.length)];
+
+        makeStar(x + Math.cos(ang)*dist, y + Math.sin(ang)*dist, Math.random()<0.4, color);
       }
       // Inner flash
       makeStar(x, y, true);
@@ -3543,12 +3555,11 @@
     }
 
     async function toggleFullscreen(){
-      const root = document.getElementById("playArea");
       try{
         if(document.fullscreenElement){
           await document.exitFullscreen();
         }else{
-          await root.requestFullscreen();
+          await document.documentElement.requestFullscreen();
         }
       }catch(e){}
     }
