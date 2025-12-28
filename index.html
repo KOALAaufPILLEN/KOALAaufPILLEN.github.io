@@ -182,6 +182,13 @@
       z-index:6;
     }
 
+    /* Single Column Luvvies List in Menu */
+    #menuLuvGrid {
+       display: flex;
+       flex-direction: column;
+       gap: 10px;
+    }
+
     .diffWrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
     .diffWrap .label{font-weight:900;opacity:.9;margin-right:4px}
     .diffPills{
@@ -4012,14 +4019,25 @@
              // Actually, easier to just call buildMenu for this specific container?
              // Or rebuild manually here.
              menuGrid.innerHTML = "";
-             const all = [...BASES,
+
+             // Sort Logic: Nuss items at the end
+             const nussKeys = ["fledernuss", "flederheld", "supernuss"];
+             const normalBases = BASES.filter(b => !nussKeys.includes(b.key));
+             const nussBases = BASES.filter(b => nussKeys.includes(b.key));
+             // Ensure correct internal order for Nuss if needed (already sorted in definition, but safe to keep)
+
+             const specials = [
                 {key:"myst",name:"???",img:null,tag:"powerup",ability:"Klicken → random Reveal (Puff!)",story:"Mystery ist Glück + Rarity.",lines:{easy:["???","Puff ✨","Glück!"],normal:["Reveal time.","Puff.","Random!"],hard:["Risk it.","Puff.","Roll!"],shock:["ALL IN 😈","Puff!","GAMBLE!"]}},
                 {key:"worm",name:"Sourworm",img:IMG.worm,tag:"powerup",ability:"Reihe/Spalte (je nach Drag)",story:"Sauer, aber räumt sauber.",lines:{easy:["Chomp!","Weg damit!","Sauer!"],normal:["Line clear.","Crunch.","Nice."],hard:["Präzise.","Perfekt.","Clean."],shock:["WELLE!","CRUNCH!","RIP Reihe!"]}},
                 {key:"cit",name:"Citrussy",img:IMG.citrussy,tag:"powerup",ability:"Stern Radius 3 (8 Richtungen)",story:"Zitrus-Boom in alle Richtungen.",lines:{easy:["CIT!","Spritz!","Boom!"],normal:["Cross clear.","Zing!","Nice."],hard:["Setz’s gut.","Perfekt.","Value!"],shock:["ZITRUS-NUKE!","BOOM!","MEHR!"]}},
                 {key:"koala",name:"Koala",img:IMG.koala,tag:"powerup",ability:"Koala+Sorte clear",story:"Boss-Magie: eine Sorte komplett weg.",lines:{easy:["Boss!","Magie!","Clean!"],normal:["Koala time.","Alles weg.","Nice."],hard:["Richtig wählen.","Perfekt.","Carry."],shock:["BOSS MODE 😈","Wipe!","SWEET!"]}},
                 {key:"mellow",name:"Mellow",img:IMG.mellow,tag:"obstacle",ability:"Block (3 HP) – Clears daneben ziehen HP ab",story:"Klebt fest… bis du ihn knackbar machst.",lines:{easy:["Kleb 😈","HP runter!","Block!"],normal:["Nicht ignorieren.","Knacken!","Weg!"],hard:["Gefährlich.","Planen.","Ziel!"],shock:["BLOCK HELL 😈","RIP Moves","KNACKEN!"]}},
                 {key:"lovelie",name:"Lovelie",name:"Lovelie",img:IMG.lovelie,tag:"bonus",ability:"Ultra selten (Bonus)",story:"Wenn Lovelie kommt, lohnt’s sich.",lines:{easy:["OMG 💖","So selten!","Bonus!"],normal:["Lovelie!","Lucky!","Nice."],hard:["Rare!","Take it.","Value!"],shock:["ULTRA RARE 💖","LETS GO!","HYPE!"]}},
-              ];
+             ];
+
+             // Final Order: Normal -> Specials -> Nuss
+             const all = [...normalBases, ...specials, ...nussBases];
+
               for(const b of all){
                 const card=document.createElement("div");
                 card.className="luvCard";
