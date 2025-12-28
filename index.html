@@ -85,6 +85,13 @@
       position:fixed; inset:0; pointer-events:none; z-index:9999; overflow:hidden;
     }
 
+    /* Dark Overlay for Dimming (No Color Shift) */
+    #darkOverlay{
+      position:fixed; inset:0; pointer-events:none; z-index:99995;
+      background: #000; opacity:0;
+      transition: opacity 0.2s ease;
+    }
+
     /* Scrollender Background Layer */
     #scrollBg{
       position:absolute;
@@ -1156,6 +1163,7 @@
     <div id="scrollBg"></div>
     <div id="globalBg"></div>
     <div id="fxGlobal"></div>
+    <div id="darkOverlay"></div>
     <div id="toast"></div>
 
     <div class="modalBack" id="greetBack">
@@ -2110,6 +2118,7 @@
 
     /**********************
      * Background (no bubbles) + subtle twinkles
+     * Improved Collision + Mobile Resizing
      **********************/
     function buildGlobalBg(){
       syncBgHeight();
@@ -2119,62 +2128,72 @@
       const page = document.getElementById("page");
       const W = page.clientWidth;
       const H = Math.max(page.scrollHeight, window.innerHeight);
-      const bgChars = [...BASES].sort(()=>Math.random()-0.5).slice(0,8);
 
-      // Collision avoidance for BG items
+      // Reduce count on small screens
+      const isMobile = W < 600;
+      const count = isMobile ? 5 : 8;
+      const scale = isMobile ? 0.6 : 1.0;
+
+      const bgChars = [...BASES].sort(()=>Math.random()-0.5).slice(0, count);
       const placed = [];
 
       bgChars.forEach((b)=>{
         const wrap = document.createElement("div");
         wrap.className="bgLuv";
+
+        // Apply scaling
+        if(isMobile) wrap.style.transform = `scale(${scale})`;
+
         const img = document.createElement("img");
         img.src=b.img; img.alt=b.name;
 
-        // Try to find a spot
+        // Strict Grid-based or Distance-based placement to avoid overlap
+        // We divide the vertical space into slots to ensure spread
+        // Or just robust loop.
+
         let x,y;
         let attempts = 0;
         let good = false;
-        while(!good && attempts < 20){
-          const leftZone = Math.random() < 0.5;
-          x = leftZone
-            ? Math.random()*(Math.max(240, W*0.26) - 120)
-            : (W - 300) - Math.random()*(Math.max(240, W*0.26) - 120);
-          y = Math.random()*(Math.max(520,H)-280);
+        // Keep them closer to edges but "not too far"
+        // User wants "genau sind und nicht weiter weg" (maybe deeper z-index visual?)
+        // Let's ensure they are fully visible (opacity good) but clearly background.
 
-          // Check collision
-          good = true;
-          for(const p of placed){
-             const dx = p.x - x;
-             const dy = p.y - y;
-             if(Math.hypot(dx,dy) < 300) { good = false; break; } // 300px minimal dist
-          }
-          attempts++;
+        const sideWidth = Math.min(300, W * 0.35); // Max width of side zone
+
+        while(!good && attempts < 50){
+           const leftZone = Math.random() < 0.5;
+           // X is within the side strips
+           if(leftZone){
+              x = Math.random() * (sideWidth - 100);
+           } else {
+              x = (W - sideWidth) + Math.random() * (sideWidth - 100);
+           }
+           y = Math.random() * (H - 300);
+
+           // Collision check
+           good = true;
+           for(const p of placed){
+              // Distance check considering scale
+              const dx = p.x - x;
+              const dy = p.y - y;
+              const minDist = isMobile ? 180 : 320;
+              if(Math.hypot(dx,dy) < minDist){ good = false; break; }
+           }
+           attempts++;
         }
+
+        // Fallback if no spot found (just skip or place anyway? Skip to avoid clutter)
+        if(!good && attempts >= 50) return;
 
         placed.push({x,y});
 
-        wrap.style.left = Math.max(0, x)+"px";
+        wrap.style.left = x+"px";
         wrap.style.top  = y+"px";
-        wrap.style.animationDuration = (16 + Math.random()*10)+"s";
+        // Slightly faster/slower based on depth feel?
+        wrap.style.animationDuration = (18 + Math.random()*12)+"s";
 
         wrap.appendChild(img);
         cont.appendChild(wrap);
-
-        // subtle twinkles around them (rare)
-        const tick = ()=>{
-          if(Math.random() < 0.28){
-            const rect = wrap.getBoundingClientRect();
-            const px = rect.left + rect.width * (0.2 + Math.random()*0.6);
-            const py = rect.top  + rect.height* (0.2 + Math.random()*0.6);
-            const t = document.createElement("div");
-            t.className="twinkle";
-            t.style.left = px + "px";
-            t.style.top  = (py + window.scrollY) + "px";
-            cont.appendChild(t);
-            setTimeout(()=>t.remove(), 1300);
-          }
-        };
-        setInterval(tick, 2200 + Math.random()*1400);
       });
     }
 
@@ -2182,23 +2201,60 @@
       const fs = document.getElementById("fsBg");
       fs.innerHTML = "";
       if(!document.body.classList.contains("fs")) return;
+
       const W = fs.clientWidth || window.innerWidth;
       const H = fs.clientHeight || window.innerHeight;
-      const pick = [...BASES].sort(()=>Math.random()-0.5).slice(0,7);
+
+      const isMobile = W < 600;
+      const count = isMobile ? 4 : 6;
+      const scale = isMobile ? 0.6 : 1.0;
+
+      const pick = [...BASES].sort(()=>Math.random()-0.5).slice(0, count);
+      const placed = [];
+
       pick.forEach((b)=>{
         const wrap = document.createElement("div");
         wrap.className="bgLuv";
-        wrap.style.opacity = ".78";
-        wrap.style.width = "min(260px, 42vw)";
+        wrap.style.opacity = ".85"; // A bit more visible as requested
+        wrap.style.width = "min(260px, 40vw)"; // Dynamic width
+
+        if(isMobile) wrap.style.transform = `scale(${scale})`;
+
         const img = document.createElement("img");
         img.src=b.img; img.alt=b.name;
 
-        const leftZone = Math.random() < 0.5;
-        const x = leftZone ? Math.random()*(W*0.28) : (W-280) - Math.random()*(W*0.28);
-        const y = Math.random()*(H-240);
-        wrap.style.left = Math.max(0,x)+"px";
-        wrap.style.top  = Math.max(0,y)+"px";
-        wrap.style.animationDuration = (16 + Math.random()*10)+"s";
+        // Placement logic same as Global but for Screen rect
+        let x,y;
+        let attempts = 0;
+        let good = false;
+
+        while(!good && attempts < 50){
+           const leftZone = Math.random() < 0.5;
+           // In FS, board is center. Keep them clearly to sides.
+           const sideMargin = W * 0.15; // 15% from edge
+           if(leftZone){
+              x = Math.random() * sideMargin;
+           } else {
+              x = W - sideMargin - (Math.random()*50);
+           }
+           y = Math.random() * (H - 250);
+
+           good = true;
+           for(const p of placed){
+              const dx = p.x - x;
+              const dy = p.y - y;
+              const minDist = isMobile ? 160 : 300;
+              if(Math.hypot(dx,dy) < minDist){ good = false; break; }
+           }
+           attempts++;
+        }
+        if(!good) return;
+
+        placed.push({x,y});
+
+        wrap.style.left = x+"px";
+        wrap.style.top  = y+"px";
+        wrap.style.animationDuration = (20 + Math.random()*10)+"s";
 
         wrap.appendChild(img);
         fs.appendChild(wrap);
@@ -2381,7 +2437,7 @@
     }
 
     /**********************
-     * Pointer (click ???)
+     * Pointer (1:1 Dragging)
      **********************/
     function onPointerDown(e){
       if(busy || isGameOver) return;
@@ -2392,116 +2448,156 @@
       const tile = findTileById(id);
       if(!tile) return;
 
-      // Allow dragging even if Mellow (now moveable)
-      // Check blockage later on move
+      const {baseKey} = parseTypeId(tile.type);
+      if(baseKey==="myst") return; // ??? handled in Up (click only)
 
       pointer.down = true;
       pointer.id = id;
-      // Reset drag tracking
-      pointer.lastR = tile.r;
-      pointer.lastC = tile.c;
       pointer.startX = e.clientX;
       pointer.startY = e.clientY;
+      pointer.axis = null;
+      pointer.dragging = false;
+      lastLiveSwap = null;
 
+      // Capture element visuals for 1:1 drag
+      const el = tileEls.get(id);
+      if(el){
+         pointer.el = el;
+         el.classList.add("dragging");
+         // Fetch initial pixel position
+         pointer.baseX = parseFloat(el.style.getPropertyValue("--x"));
+         pointer.baseY = parseFloat(el.style.getPropertyValue("--y"));
+      }
       e.currentTarget.setPointerCapture(e.pointerId);
     }
 
     function onPointerUp(e){
       if(!pointer.down) return;
-      const id = pointer.id;
       pointer.down = false;
 
+      const id = pointer.id;
       const tile = findTileById(id);
+      const el = pointer.el;
+
+      if(el){
+         el.classList.remove("dragging");
+         el.style.transform = "";
+         pointer.el = null;
+      }
       if(!tile) return;
 
-      const dx = e.clientX - pointer.startX;
-      const dy = e.clientY - pointer.startY;
-      const dist = Math.hypot(dx,dy);
-      const {baseKey} = parseTypeId(tile.type);
+      // Check if it was just a click (little movement)
+      const totalDist = Math.hypot(e.clientX - pointer.startX, e.clientY - pointer.startY);
+      // Note: startX/Y reset on swap, so this is diff from last swap base
 
-      // ??? Klick -> random reveal
-      if(baseKey==="myst" && dist < 10){
+      const {baseKey} = parseTypeId(tile.type);
+      if(!pointer.dragging && baseKey==="myst"){
         revealMyst(tile);
         return;
       }
 
-      // Release Drag -> Resolve
-      resolveAll(false, true);
+      // Check for Powerup Interaction on final drop
+      if(lastLiveSwap){
+         const {t1, t2, dir} = lastLiveSwap;
+         const aBk = parseTypeId(t1.type).baseKey;
+         const bBk = parseTypeId(t2.type).baseKey;
+
+         if(isPowerupKey(aBk) || isPowerupKey(bBk)){
+            spendMoves(1);
+            resolvePowerSwap(t1, t2, dir);
+            setTimeout(()=>{ dropDown(); mergeMellows(); resolveAll(false, true); }, 220);
+            return;
+         }
+      }
+
+      // Finalize the chain
+      const ok = hasAnyMatchOrSpecial();
+      if(ok){
+         resolveAll(false, true);
+      } else {
+         // No matches generated by this sequence.
+         // If we actually MOVED (pointer.dragging was true), it's a "bad move".
+         if(pointer.dragging){
+            toast("Ouch 😵","Kein Match: −3 Moves", 3000);
+            spendMoves(3);
+            combo=1;
+            updateUI();
+         }
+      }
     }
 
     ui.board.addEventListener("pointermove", (e)=>{
       if(!pointer.down) return;
-      if(busy || isGameOver || moves <= 0){ pointer.down=false; return; }
-
+      if(!pointer.el) return;
       const tile = findTileById(pointer.id);
       if(!tile) return;
 
-      const {baseKey} = parseTypeId(tile.type);
-      if(baseKey==="myst") return; // ??? cannot move
-
-      // Determine target cell based on pointer position relative to board
-      // Or easier: relative to current tile center?
-      // Problem: fast drag might skip cells.
-      // Better: get element under cursor? No, pointer capture is on original element.
-      // We calculate dragging delta.
-
-      // Simple Grid Logic:
-      // If cursor moves > 60% of CELL size into a direction, swap.
-      // Reset startXY to new center.
-
       const dx = e.clientX - pointer.startX;
       const dy = e.clientY - pointer.startY;
-      const threshold = CELL * 0.55;
+      const adx = Math.abs(dx);
+      const ady = Math.abs(dy);
 
-      let dr=0, dc=0;
-      if(Math.abs(dx) > threshold && Math.abs(dx) > Math.abs(dy)){
-          dc = dx > 0 ? 1 : -1;
-      } else if(Math.abs(dy) > threshold && Math.abs(dy) > Math.abs(dx)){
-          dr = dy > 0 ? 1 : -1;
+      // Deadzone start
+      if(!pointer.dragging && adx<5 && ady<5) return;
+      pointer.dragging = true;
+
+      // Threshold to swap
+      const threshold = (CELL + GAP) * 0.55;
+
+      // Check Neighbors
+      let swapTarget = null;
+
+      if(dx > threshold)       swapTarget = {r:tile.r, c:tile.c+1, dx: 1, dy: 0};
+      else if(dx < -threshold) swapTarget = {r:tile.r, c:tile.c-1, dx: -1, dy: 0};
+      else if(dy > threshold)  swapTarget = {r:tile.r+1, c:tile.c, dx: 0, dy: 1};
+      else if(dy < -threshold) swapTarget = {r:tile.r-1, c:tile.c, dx: 0, dy: -1};
+
+      if(swapTarget){
+         const {r,c,dx:dirX,dy:dirY} = swapTarget;
+         if(inBounds(r,c)){
+            const target = grid[r][c];
+            if(target && (!isBlocker(target) || isSwappable(target))){
+               // LIVE SWAP
+               liveSwap(tile, target);
+               lastLiveSwap = {t1:tile, t2:target, dir:{dr:dirY, dc:dirX}};
+
+               // Adjust Pointer Base to new cell
+               pointer.startX += (CELL+GAP) * dirX;
+               pointer.startY += (CELL+GAP) * dirY;
+
+               // Update baseX/Y from element again
+               pointer.baseX = parseFloat(pointer.el.style.getPropertyValue("--x"));
+               pointer.baseY = parseFloat(pointer.el.style.getPropertyValue("--y"));
+            }
+         }
       }
 
-      if(dr===0 && dc===0) return;
+      // Update Visuals relative to current base
+      const visDx = e.clientX - pointer.startX;
+      const visDy = e.clientY - pointer.startY;
 
-      const r2 = tile.r + dr;
-      const c2 = tile.c + dc;
-
-      if(!inBounds(r2,c2)) return;
-
-      // Check target tile
-      const target = grid[r2][c2];
-      if(!target) return;
-      if(isBlocker(target) && !isSwappable(target)) return; // Strict blocker check
-
-      // Perform Swap
-      doSwap(tile.r, tile.c, r2, c2);
-
-      // Update pointer reference to new center so we can continue dragging
-      pointer.startX = e.clientX;
-      pointer.startY = e.clientY;
-
-      // Cost Logic
-      // Mellow (Small) -> 0 Cost
-      // Others -> 1 Cost
-      const isMellow = (baseKey==="mellow" && !tile.big);
-      if(!isMellow){
-          spendMoves(1);
-          // Update UI immediately
-          updateUI();
-          if(moves <= 0){
-             pointer.down = false;
-             resolveAll(false, true);
-             return;
-          }
-      } else {
-          // Mellow free move
-      }
-
-      // Visual Feedback?
-      // doSwap handles visual position
+      pointer.el.style.transform = `translate(${visDx}px, ${visDy}px)`;
     });
+
+    function liveSwap(t1, t2){
+       const aBk = parseTypeId(t1.type).baseKey;
+       const bBk = parseTypeId(t2.type).baseKey;
+       const isFree = (aBk==="mellow" && !t1.big) || (bBk==="mellow" && !t2.big);
+       const cost = isFree ? 0 : 1;
+
+       if(cost > 0) spendMoves(cost);
+       else toast("Mellow Move 🍬", "Kostenlos!", 1000);
+
+       doSwap(t1.r, t1.c, t2.r, t2.c);
+       updateUI();
+    }
+
     ui.board.addEventListener("pointercancel", ()=>{
+       if(pointer.el){
+         pointer.el.classList.remove("dragging");
+         pointer.el.style.transform = "";
+       }
        pointer.down=false;
-       resolveAll(false, true);
     });
 
     /**********************
@@ -2672,10 +2768,14 @@
         const aBk = parseTypeId(A.type).baseKey;
         const bBk = parseTypeId(B.type).baseKey;
 
+        // Check for Free Move (Small Mellow)
+        const isFreeSwap = (aBk==="mellow" && !A.big) || (bBk==="mellow" && !B.big);
+        const cost = isFreeSwap ? 0 : 1;
+
         if(isPowerupKey(aBk) || isPowerupKey(bBk)){
-          spendMoves(1);
+          spendMoves(cost);
           resolvePowerSwap(A,B,{dr:r2-r1, dc:c2-c1});
-          setTimeout(()=>{ dropDown(); mergeMellows(); resolveAll(false); }, 220);
+          setTimeout(()=>{ dropDown(); mergeMellows(); resolveAll(false, true); }, 220);
           return;
         }
 
@@ -2705,8 +2805,10 @@
           toast("Ouch 😵","Falscher Swap: −3 Moves", 3200);
           return;
         }
-        spendMoves(1);
-        resolveAll(false);
+
+        if(isFreeSwap) toast("Mellow Move 🍬", "Kostenlos!", 1500);
+        spendMoves(cost);
+        resolveAll(false, true);
       }, 185);
     }
 
@@ -4108,12 +4210,13 @@
       syncTheme();
     });
 
-    // FX Slider (Filter + Brightness)
+    // FX Slider (Dimmer via Overlay)
     function updateFx(v){
       // v: 0-80 (Dimmer only)
-      // Brightness: 100% -> 20%
-      const bri = 100 - v;
-      document.body.style.filter = `brightness(${bri}%)`;
+      // 0 = opacity 0, 80 = opacity 0.8
+      const op = v / 100;
+      const overlay = document.getElementById("darkOverlay");
+      if(overlay) overlay.style.opacity = op;
 
       // Sync sliders
       if(document.getElementById("fxSlider")) document.getElementById("fxSlider").value = v;
