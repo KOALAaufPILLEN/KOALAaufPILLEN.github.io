@@ -432,6 +432,8 @@
       border: 1px solid rgba(255,255,255,.12);
       box-shadow: 0 18px 70px rgba(0,0,0,.5), 0 6px 16px rgba(0,0,0,.3) inset;
     }
+    /* Dark Mode Text in FS HUD */
+    body.dark .hudProg .tiny { color: #2b1b4f; } /* Keep it readable on light background */
     @keyframes boardFade{
       0%{ filter:hue-rotate(0deg) saturate(1) }
       50%{ filter:hue-rotate(10deg) saturate(1.04) }
@@ -1335,15 +1337,15 @@
             <div class="hudLeft">
               <div class="hudChip color" id="hudLevel">Level 1</div>
               <div class="hudChip color" id="hudScore">Score 0</div>
-              <div class="hudChip" id="hudMoves">Moves 0</div>
-              <div class="hudChip" id="hudCombo">Combo x1</div>
+              <div class="hudChip color" id="hudMoves">Moves 0</div>
+              <div class="hudChip color" id="hudCombo">Combo x1</div>
             </div>
 
             <div class="hudCenter">
               <div class="hudProg">
-                <div class="tiny" style="opacity:.85;">Ziel</div>
+                <div class="tiny" style="opacity:.85; color:var(--txt);">Ziel</div>
                 <div class="pbar"><i id="hudBar"></i></div>
-                <div class="tiny" id="hudPct" style="min-width:40px;text-align:right;">0%</div>
+                <div class="tiny" id="hudPct" style="min-width:40px;text-align:right; color:var(--txt);">0%</div>
               </div>
             </div>
 
@@ -1746,15 +1748,21 @@
     function isBlocker(t){
       if(!t) return false;
       const bk = parseTypeId(t.type).baseKey;
-      if(bk==="mellow" || bk==="mellowlord" || bk==="mellowzilla") return true;
+      // Small Mellow is NOT a blocker anymore (can be moved)
+      if(bk==="mellow" && !t.big) return false;
+
+      if(bk==="mellowlord" || bk==="mellowzilla") return true;
       if(isPlaceholder(t)) return true;
       return false;
     }
 
     function isSwappable(tile){
       if(!tile) return false;
-      if(isBlocker(tile)) return false;
+      // Small Mellow is explicitly swappable
       const {baseKey} = parseTypeId(tile.type);
+      if(baseKey==="mellow" && !tile.big) return true;
+
+      if(isBlocker(tile)) return false;
       if(baseKey==="myst") return false; // ??? nur klicken
       return true;
     }
@@ -2376,18 +2384,25 @@
      * Pointer (click ???)
      **********************/
     function onPointerDown(e){
-      if(busy || isGameOver) return; // Strict lock
-      if(moves <= 0) return; // No moves allowed
+      if(busy || isGameOver) return;
+      if(moves <= 0) return;
 
       clearHints();
       const id = e.currentTarget.dataset.id;
       const tile = findTileById(id);
       if(!tile) return;
 
+      // Allow dragging even if Mellow (now moveable)
+      // Check blockage later on move
+
       pointer.down = true;
       pointer.id = id;
+      // Reset drag tracking
+      pointer.lastR = tile.r;
+      pointer.lastC = tile.c;
       pointer.startX = e.clientX;
       pointer.startY = e.clientY;
+
       e.currentTarget.setPointerCapture(e.pointerId);
     }
 
@@ -2407,40 +2422,87 @@
       // ??? Klick -> random reveal
       if(baseKey==="myst" && dist < 10){
         revealMyst(tile);
+        return;
       }
+
+      // Release Drag -> Resolve
+      resolveAll(false, true);
     }
 
     ui.board.addEventListener("pointermove", (e)=>{
       if(!pointer.down) return;
-      if(busy || isGameOver || moves <= 0){ pointer.down=false; return; } // Safety check during drag
+      if(busy || isGameOver || moves <= 0){ pointer.down=false; return; }
 
       const tile = findTileById(pointer.id);
       if(!tile) return;
 
+      const {baseKey} = parseTypeId(tile.type);
+      if(baseKey==="myst") return; // ??? cannot move
+
+      // Determine target cell based on pointer position relative to board
+      // Or easier: relative to current tile center?
+      // Problem: fast drag might skip cells.
+      // Better: get element under cursor? No, pointer capture is on original element.
+      // We calculate dragging delta.
+
+      // Simple Grid Logic:
+      // If cursor moves > 60% of CELL size into a direction, swap.
+      // Reset startXY to new center.
+
       const dx = e.clientX - pointer.startX;
       const dy = e.clientY - pointer.startY;
-      if(Math.hypot(dx,dy) < 12) return;
+      const threshold = CELL * 0.55;
 
-      const {baseKey} = parseTypeId(tile.type);
-      if(baseKey==="myst") { pointer.down=false; return; }
+      let dr=0, dc=0;
+      if(Math.abs(dx) > threshold && Math.abs(dx) > Math.abs(dy)){
+          dc = dx > 0 ? 1 : -1;
+      } else if(Math.abs(dy) > threshold && Math.abs(dy) > Math.abs(dx)){
+          dr = dy > 0 ? 1 : -1;
+      }
 
-      if(!isSwappable(tile)) { pointer.down=false; return; }
-
-      let dir;
-      if(Math.abs(dx) > Math.abs(dy)) dir = dx>0 ? "R" : "L";
-      else dir = dy>0 ? "D" : "U";
-
-      const dr = (dir==="D")?1:(dir==="U")?-1:0;
-      const dc = (dir==="R")?1:(dir==="L")?-1:0;
+      if(dr===0 && dc===0) return;
 
       const r2 = tile.r + dr;
       const c2 = tile.c + dc;
-      if(!inBounds(r2,c2)) { pointer.down=false; return; }
 
-      pointer.down=false;
-      trySwap(tile.r, tile.c, r2, c2);
+      if(!inBounds(r2,c2)) return;
+
+      // Check target tile
+      const target = grid[r2][c2];
+      if(!target) return;
+      if(isBlocker(target) && !isSwappable(target)) return; // Strict blocker check
+
+      // Perform Swap
+      doSwap(tile.r, tile.c, r2, c2);
+
+      // Update pointer reference to new center so we can continue dragging
+      pointer.startX = e.clientX;
+      pointer.startY = e.clientY;
+
+      // Cost Logic
+      // Mellow (Small) -> 0 Cost
+      // Others -> 1 Cost
+      const isMellow = (baseKey==="mellow" && !tile.big);
+      if(!isMellow){
+          spendMoves(1);
+          // Update UI immediately
+          updateUI();
+          if(moves <= 0){
+             pointer.down = false;
+             resolveAll(false, true);
+             return;
+          }
+      } else {
+          // Mellow free move
+      }
+
+      // Visual Feedback?
+      // doSwap handles visual position
     });
-    ui.board.addEventListener("pointercancel", ()=>{ pointer.down=false; });
+    ui.board.addEventListener("pointercancel", ()=>{
+       pointer.down=false;
+       resolveAll(false, true);
+    });
 
     /**********************
      * Gameplay core (Swap/Resolve)
@@ -2655,6 +2717,9 @@
         const bigId = t.partOf;
         const big = bigMellows.get(bigId);
         if(!big) return false;
+
+        // Custom HP Logic for Bosses
+        // They take damage normally here
         big.hp = Math.max(0, big.hp - dmg);
         const anchorTile = grid[big.r][big.c];
         if(anchorTile){
@@ -2667,18 +2732,19 @@
 
       const bk = parseTypeId(t.type).baseKey;
       if(bk==="mellow"){
-        t.hp = Math.max(0, t.hp - dmg);
-        updateMellowHp(t);
-        if(t.hp<=0){
-          const el = tileEls.get(t.id);
-          if(el){
-            el.classList.add("pop");
-            setTimeout(()=>{ el.remove(); tileEls.delete(t.id); }, 420);
-          }
-          grid[r][c]=null;
-          toast("Mellow gelöst! ✨","Weiter!", 2600);
+        // Small Mellows are IMMORTAL/Indestructible by matches
+        // They only merge into Lords.
+        // Return true to block the clear? Or return false so the match happens around them?
+        // User: "Mellow (hat kein leben mehr)" -> Implies they persist.
+        // Return true implies "hit something", which often stops explosion propagation or adds score.
+        // Let's visual bounce them but not kill them.
+        const el = tileEls.get(t.id);
+        if(el){
+           el.classList.remove("jellyLand");
+           void el.offsetWidth;
+           el.classList.add("jellyLand"); // Bounce
         }
-        return true;
+        return true; // Absorbs the hit but doesn't die
       }
       return false;
     }
@@ -2877,7 +2943,71 @@
       }
     }
 
+    function checkMellowMerge(){
+      // Scan for 2x2 Mellows
+      // Only merge if not already big
+      let merged = false;
+      for(let r=0; r<rows-1; r++){
+        for(let c=0; c<cols-1; c++){
+           const a = grid[r][c];
+           const b = grid[r][c+1];
+           const d = grid[r+1][c];
+           const e = grid[r+1][c+1];
+
+           if(!a||!b||!d||!e) continue;
+
+           const parse = (t) => {
+              if(t.big || isPlaceholder(t)) return null;
+              const p = parseTypeId(t.type);
+              return p.baseKey === "mellow" ? t : null;
+           };
+
+           if(parse(a) && parse(b) && parse(d) && parse(e)){
+               // Found 2x2!
+               // Remove old
+               [a,b,d,e].forEach(t=>{
+                 const el = tileEls.get(t.id);
+                 if(el){ el.remove(); tileEls.delete(t.id); }
+               });
+
+               // Spawn MellowLord
+               const bigId = makeId();
+               const hp = 50 + (level * 5); // Fair but hard
+               const bigTile = { id: bigId, r, c, type: "mellowlord:P", hp: hp, big:true };
+               bigMellows.set(bigId, {id:bigId, r, c, hp:hp, type:"mellowlord"});
+
+               grid[r][c] = bigTile;
+               grid[r][c+1] = { type:"mellow_part", partOf: bigId };
+               grid[r+1][c] = { type:"mellow_part", partOf: bigId };
+               grid[r+1][c+1] = { type:"mellow_part", partOf: bigId };
+
+               const el = createTileEl(bigTile, false);
+               el.classList.add("spawnGlow"); // Cute animation
+               tileEls.set(bigTile.id, el);
+               ui.board.appendChild(el);
+
+               // FX
+               const ctr = tileCenter(r,c);
+               // Center of 2x2 is +cell/2 +gap/2 roughly
+               burstFx(ctr.x + CELL/2, ctr.y + CELL/2, 30);
+               toast("MellowLord!", "Entwickelt! 🍬", 2500);
+               merged = true;
+           }
+        }
+      }
+      return merged;
+    }
+
     function resolveAll(initial=false, isPlayerSwap=false){
+      // Check for Mellow Merges first!
+      if(checkMellowMerge()){
+         // If merged, wait a bit then continue resolving (gravity might apply if things moved?)
+         // Actually, merge replaces 4 tiles with 1 big one. No gravity needed usually unless holes appeared?
+         // But let's let standard loop handle checks.
+         setTimeout(()=>resolveAll(false, false), 300);
+         return;
+      }
+
       let isFirstStep = true;
       // Boss AI Step (only if isPlayerSwap to count turns properly?)
       // User says "Attacke 2 Züge vorher rot an".
@@ -3377,7 +3507,9 @@
       const cc = Math.floor(cols/2)-1;
 
       const bigId = makeId();
-      const zilla = { id: bigId, r: cr, c: cc, type: "mellowzilla:P", hp: 100, big:true, zilla:true };
+      // HP Formula: 250 + Level*15
+      const hp = 250 + (level * 15);
+      const zilla = { id: bigId, r: cr, c: cc, type: "mellowzilla:P", hp: hp, big:true, zilla:true };
 
       for(let r=cr; r<cr+3; r++){
         for(let c=cc; c<cc+3; c++){
