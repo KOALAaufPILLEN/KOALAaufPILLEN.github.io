@@ -722,6 +722,12 @@
       border-radius:16px;
       padding:10px 10px;
       box-shadow: 0 10px 24px rgba(20,10,60,.07);
+      opacity:0;
+      animation: lbSlideIn 0.4s cubic-bezier(.2,.9,.2,1) forwards;
+    }
+    @keyframes lbSlideIn{
+      from{ opacity:0; transform: translateY(12px) scale(.96); }
+      to{ opacity:1; transform: translateY(0) scale(1); }
     }
     .lbItem .left b{display:block}
     .lbItem .left small{opacity:.7;font-weight:900}
@@ -1044,6 +1050,15 @@
       body.fs #boardWrap{ padding-top: 16px; padding-bottom: 110px; }
       .hudProg{ min-width: min(560px, 92vw); }
     }
+
+    /* Better large screen FS */
+    @media (min-width: 1600px) and (min-height: 900px){
+       body.fs #boardWrap{ padding-top: 60px; padding-bottom: 40px; min-height: 100vh; }
+       #scrollBg{ min-height: 150vh; }
+    }
+    @media (min-height: 1400px){
+       body.fs #boardWrap{ min-height: 1500px; justify-content:center; }
+    }
   </style>
 </head>
 
@@ -1226,7 +1241,7 @@
           </div>
           <div style="height:1px;background:rgba(17,13,26,.08);"></div>
           <div style="display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;">
-            <h3 style="margin:0;">Leaderboard</h3>
+            <h3 style="margin:0;" id="lbTitle">Leaderboard</h3>
             <div class="lbRow">
               <input id="lbName" maxlength="24" placeholder="Dein Name (z.B. KOALAaufPILLEN)" />
               <label class="tiny" style="display:flex;align-items:center;gap:6px;">
@@ -1303,7 +1318,7 @@
      * Images
      **********************/
     const IMG = {
-      logo:     "https://static.wixstatic.com/media/d05122_7c445c8b5f3d46cdb778711661f2351e~mv2.png",
+      logo:     "https://static.wixstatic.com/media/d05122_6062723c34eb4dfb9e49339e09d06024~mv2.png",
       sweety:   "https://static.wixstatic.com/media/d05122_efe39fec7e5c4d569dfb3fef75e5b6ff~mv2.png",
       sleepy:   "https://static.wixstatic.com/media/d05122_cfd779a0aad04c72bd08efbc0f363f53~mv2.png",
       normal:   "https://static.wixstatic.com/media/d05122_8a7c2f43a31247a6994651163c2898c5~mv2.png",
@@ -1597,7 +1612,7 @@
     function isBlocker(t){
       if(!t) return false;
       const bk = parseTypeId(t.type).baseKey;
-      if(bk==="mellow") return true;
+      if(bk==="mellow" || bk==="mellowlord" || bk==="mellowzilla") return true;
       if(isPlaceholder(t)) return true;
       return false;
     }
@@ -2713,6 +2728,14 @@
 
         combo = clamp(combo+1, 1, 99);
 
+        // Failsafe: Stop infinite loops if combo gets too high
+        if(combo > 25){
+           busy = false;
+           updateUI();
+           ensureMovesOrShuffle();
+           return;
+        }
+
         let acceptedSpecials = specials;
         // User requested: Special combos only on player swap to prevent loops
         // Only accept specials on the VERY FIRST step of a player swap.
@@ -3400,7 +3423,10 @@
     function gameOver(){
       // Show dedicated Game Over Modal
       document.getElementById("goScore").textContent = fmt(totalScore);
-      document.getElementById("goName").value = document.getElementById("lbName").value || document.getElementById("greetName").value || "";
+
+      const saved = getCookie("luvvies_name");
+      document.getElementById("goName").value = saved || document.getElementById("lbName").value || document.getElementById("greetName").value || "";
+
       document.getElementById("gameOverBack").style.display = "flex";
 
       // Auto-fill lbName if changed
@@ -3529,7 +3555,7 @@
       let u = getCookie("luvvies_uuid");
       if(!u){
         u = crypto.randomUUID();
-        setCookie("luvvies_uuid", u, 3650); // 10 years
+        setCookie("luvvies_uuid", u, 36500); // 100 years
       }
       return u;
     }
@@ -3538,7 +3564,18 @@
       if(!sb){ toast("Leaderboard offline","(Supabase nicht erreichbar)", 3200); return; }
       let name = (document.getElementById("lbName").value || document.getElementById("greetName").value || "Anonymous").trim().slice(0,24);
       name = cleanName(name);
-      const uuid = getUuid();
+
+      // Save name to cookie
+      setCookie("luvvies_name", name, 36500);
+
+      // Check for name change -> New UUID
+      let uuid = getUuid();
+      const last = localStorage.getItem("luvvies_last_name");
+      if(last && last !== name){
+         uuid = crypto.randomUUID();
+         setCookie("luvvies_uuid", uuid, 36500);
+      }
+      localStorage.setItem("luvvies_last_name", name);
 
       try{
         const payload = {
@@ -3565,6 +3602,9 @@
 
     async function refreshLeaderboard(){
       const list = document.getElementById("lbList");
+      const title = document.getElementById("lbTitle");
+      if(title) title.textContent = "Leaderboard (" + diff.name + ")";
+
       list.innerHTML = "";
       if(!sb){
         list.innerHTML = `<div class="tiny">Leaderboard aktuell nicht verfügbar.</div>`;
@@ -3574,19 +3614,19 @@
         // Filter by current difficulty
         const { data, error } = await sb
           .from(SCORE_TABLE)
-          .select("player_name,score,level,difficulty,created_at")
+          .select("player_name,score,level,difficulty,created_at,user_id")
           .eq('difficulty', diff.key) // Only current difficulty
           .order("score", { ascending:false })
           .limit(80);
         if(error) throw error;
 
-        // Filter unique player names (keep best score)
+        // Filter unique by UUID
         const unique = [];
         const seen = new Set();
         for(const row of (data||[])){
-           const n = (row.player_name||"").toLowerCase();
-           if(seen.has(n)) continue;
-           seen.add(n);
+           const key = row.user_id || (row.player_name||"").toLowerCase();
+           if(seen.has(key)) continue;
+           seen.add(key);
            unique.push(row);
            if(unique.length >= 25) break;
         }
@@ -3594,6 +3634,7 @@
         unique.forEach((x, i)=>{
           const item = document.createElement("div");
           item.className="lbItem";
+          item.style.animationDelay = (i * 0.05) + "s";
           if(i===0) item.classList.add("rank1");
           if(i===1) item.classList.add("rank2");
           if(i===2) item.classList.add("rank3");
