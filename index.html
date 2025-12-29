@@ -1170,6 +1170,7 @@
 
     <div id="app">
       <div class="topRow">
+        <img id="mainLogo" alt="Luvvies Crush" style="height:46px;width:auto;margin-right:auto;filter:drop-shadow(0 4px 6px rgba(0,0,0,.1));display:block;" />
         <div class="diffWrap">
           <div class="label">Schwierigkeit</div>
           <div class="diffPills" id="diffPills">
@@ -1352,6 +1353,8 @@
       supernuss: "https://static.wixstatic.com/media/d05122_2f10d70e51b1473ca4d4fc0e2ccb2f30~mv2.png"
     };
     document.getElementById("greetLogo").src = IMG.logo;
+    const ml = document.getElementById("mainLogo");
+    if(ml) ml.src = IMG.logo;
 
     /**********************
      * Mystery reveal weights (Wurm > Cit > Mellow > Koala > Lovelie)
