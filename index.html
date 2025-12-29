@@ -189,7 +189,7 @@
 
     #infoBack{ z-index: 100000; } /* Ensure Bio is above Menu */
     /* Hide menus in fullscreen */
-    body.fs .below, body.fs .topRow, body.fs .stats, body.fs .progressRow, body.fs #luvPanel, body.fs #rightPanel {
+    body.fs .below, body.fs .topRow, body.fs .stats, body.fs .progressRow, body.fs #luvPanel, body.fs #rightPanel, body.fs #settingsBack {
       display: none !important;
     }
 
@@ -1205,6 +1205,33 @@
       </div>
     </div>
 
+    <div class="modalBack" id="fsMenuBack" style="z-index:99999;">
+      <div class="modal">
+         <h2>Pause</h2>
+         <div class="tiny" style="margin-bottom:12px;">Fullscreen Menü</div>
+
+         <div class="panel" style="margin-bottom:10px; display:flex; align-items:center; gap:10px;">
+            <b>FX Dimmer</b>
+            <input type="range" id="fsMenuFx" min="0" max="100" value="0" style="flex:1">
+         </div>
+
+         <div class="panel" style="margin-bottom:12px;">
+            <h3>Quick-Tipps</h3>
+            <div class="tiny" id="fsMenuTips"></div>
+         </div>
+
+         <div class="cta" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <button class="Btn secondary" id="fsMenuClose">Weiter</button>
+            <button class="Btn ghost" id="fsMenuIntro">Anleitung</button>
+            <button class="Btn" id="fsMenuLuv">Luvvies</button>
+            <button class="Btn" id="fsMenuTheme">🌙</button>
+         </div>
+         <div style="margin-top:12px; text-align:center;">
+            <button class="Btn ghost" onclick="document.exitFullscreen()">Exit Fullscreen</button>
+         </div>
+      </div>
+    </div>
+
     <div id="app">
       <div class="topRow">
         <img id="mainLogo" alt="Luvvies Crush" style="height:46px;width:auto;margin-right:12px;filter:drop-shadow(0 4px 6px rgba(0,0,0,.1));display:block;" />
@@ -1781,8 +1808,8 @@
 
       // Aggressively maximize width (near zero padding)
       const padW = isFs ? 2 : 10;
-      // Increased padH to prevent cut-off at bottom in FS (HUD + safe area)
-      const padH = isFs ? 160 : 20;
+      // Reduced padH to fill screen (matches CSS padding ~90px)
+      const padH = isFs ? 90 : 20;
 
       const usableW = Math.max(260, wrapW - padW);
       const usableH = Math.max(260, wrapH - padH);
@@ -2301,9 +2328,9 @@
       const boardRect = ui.board.getBoundingClientRect();
 
       // Calculate offset relative to board for 1:1 dragging
-      // CSS --x, --y are relative to board top-left
-      const currentLeft = parseFloat(getComputedStyle(tEl).getPropertyValue('--x')) || 0;
-      const currentTop = parseFloat(getComputedStyle(tEl).getPropertyValue('--y')) || 0;
+      // We calculate position from grid (r,c) to avoid DOM read errors (0,0 jump)
+      const currentLeft = tile.c * (CELL+GAP) + PAD;
+      const currentTop  = tile.r * (CELL+GAP) + PAD;
 
       dragStart = {
         x: e.clientX,
@@ -2913,6 +2940,7 @@
     }
 
     function resolveAll(initial=false, isPlayerSwap=false){
+      busy = true; // Safety lock
       let isFirstStep = true;
       // Boss AI Step (only if isPlayerSwap to count turns properly?)
       // User says "Attacke 2 Züge vorher rot an".
@@ -3556,6 +3584,8 @@
       if(busy) return;
       if(hasMove()) return;
       if(moves <= 0) return; // Prevent infinite loop if game over
+
+      busy = true; // STRICT BUSY LOCK during shuffle
 
       toast("Keine Züge möglich 😵","Auto-Shuffle: −1 Move", 3600);
       spendMoves(1);
