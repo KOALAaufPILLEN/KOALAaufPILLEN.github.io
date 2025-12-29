@@ -1179,29 +1179,48 @@
       </div>
     </div>
 
+    <div class="modalBack" id="settingsBack">
+      <div class="modal">
+         <h2>Einstellungen & Menü</h2>
+         <div class="panel" style="margin-bottom:10px">
+            <b>Schwierigkeit</b>
+            <div class="diffPills" id="diffPills">
+              <input type="radio" name="diff" id="d_easy" value="easy" checked><label for="d_easy">Easy</label>
+              <input type="radio" name="diff" id="d_normal" value="normal"><label for="d_normal">Normal</label>
+              <input type="radio" name="diff" id="d_hard" value="hard"><label for="d_hard">Hard</label>
+              <input type="radio" name="diff" id="d_shock" value="shock"><label for="d_shock">Zuckerschock</label>
+            </div>
+         </div>
+         <div class="panel" style="margin-bottom:10px; display:flex; align-items:center; gap:10px;">
+            <b>Zoom</b>
+            <input type="range" id="zoomSlider" min="0.6" max="1.4" step="0.1" value="1.0" style="flex:1">
+         </div>
+         <div class="panel" style="margin-bottom:10px; display:flex; align-items:center; gap:10px;">
+            <b>FX Dimmer</b>
+            <input type="range" id="fxSlider" min="0" max="100" value="0" style="flex:1">
+         </div>
+
+         <div class="cta" style="margin:16px 0; justify-content:center; gap:10px;">
+            <button class="Btn secondary" id="menuNew">Neues Spiel</button>
+            <button class="Btn ghost" id="menuIntro">Anleitung</button>
+            <button class="Btn" id="menuFs">Vollbild</button>
+            <button class="Btn" id="menuHint">Hint</button>
+         </div>
+
+         <div class="panel">
+            <h3>Deine Luvvies</h3>
+            <div class="luvGrid" id="menuLuvGrid"></div>
+         </div>
+         <div class="foot"><button class="Btn ghost" id="menuClose">Schließen</button></div>
+      </div>
+    </div>
+
     <div id="app">
       <div class="topRow">
         <img id="mainLogo" alt="Luvvies Crush" style="height:46px;width:auto;margin-right:auto;filter:drop-shadow(0 4px 6px rgba(0,0,0,.1));display:block;" />
-        <div class="diffWrap">
-          <div class="label">Schwierigkeit</div>
-          <div class="diffPills" id="diffPills">
-            <input type="radio" name="diff" id="d_easy" value="easy" checked><label for="d_easy">Easy</label>
-            <input type="radio" name="diff" id="d_normal" value="normal"><label for="d_normal">Normal</label>
-            <input type="radio" name="diff" id="d_hard" value="hard"><label for="d_hard">Hard</label>
-            <input type="radio" name="diff" id="d_shock" value="shock"><label for="d_shock">Zuckerschock</label>
-          </div>
-        </div>
-
         <div class="actions">
-          <button class="Btn ghost" id="btnIntro">Anleitung</button>
-          <button class="Btn secondary" id="btnNew">Neues Spiel</button>
-          <button class="Btn" id="btnHint">Hint</button>
-          <button class="Btn" id="btnFs">Vollbild</button>
           <button class="Btn ghost" id="btnTheme" style="padding:0 12px;min-width:46px;">🌙</button>
-          <div style="display:flex;align-items:center;gap:6px;margin-left:8px;">
-            <span style="font-size:12px;font-weight:900;opacity:.7">FX</span>
-            <input type="range" id="fxSlider" min="0" max="100" value="0" style="width:60px;">
-          </div>
+          <button class="Btn" id="btnMenu">Menü</button>
         </div>
       </div>
 
@@ -1676,17 +1695,37 @@
      * FX helpers
      **********************/
     function tileCenter(r,c){
-      const x = PAD + c*(CELL+GAP) + CELL/2;
-      const y = PAD + r*(CELL+GAP) + CELL/2;
-      return {x, y};
+      // Use getBoundingClientRect to map board cell to FX layer space
+      // Find a tile at this pos, or calculate where it would be
+      // If tile exists, use it. If not, use slot calc.
+      // But calculating slot position relative to boardWrap is tricky if board is centered.
+      // Best way: Use the 'board' element rect.
+      const boardRect = ui.board.getBoundingClientRect();
+      const fxRect = ui.fx.getBoundingClientRect();
+
+      const localX = PAD + c*(CELL+GAP) + CELL/2;
+      const localY = PAD + r*(CELL+GAP) + CELL/2;
+
+      // Board Pos relative to FX layer
+      const boardX = boardRect.left - fxRect.left;
+      const boardY = boardRect.top - fxRect.top;
+
+      return { x: boardX + localX, y: boardY + localY };
     }
+
     function makeStar(x,y, big=false){
       const s = document.createElement("div");
       s.className="star";
       s.style.left = x+"px";
       s.style.top  = y+"px";
-      s.style.width = big ? "16px":"12px";
-      s.style.height= big ? "16px":"12px";
+      s.style.width = big ? "22px":"14px";
+      s.style.height= big ? "22px":"14px";
+
+      // Pastel colors
+      const hues = [330, 290, 240, 200, 160, 40, 10]; // Pink, Purple, Blue, Sky, Green, Orange, Red
+      const h = hues[Math.floor(Math.random()*hues.length)];
+      s.style.background = `radial-gradient(circle at 30% 30%, hsl(${h}, 90%, 85%), hsl(${h}, 80%, 60%))`;
+
       ui.fx.appendChild(s);
       setTimeout(()=>s.remove(), 900);
     }
@@ -1701,8 +1740,8 @@
       ringFx(x,y);
       for(let i=0;i<count;i++){
         const ang = Math.random()*Math.PI*2;
-        const dist = 8 + Math.random()*30;
-        makeStar(x + Math.cos(ang)*dist, y + Math.sin(ang)*dist, Math.random()<0.35);
+        const dist = 10 + Math.random()*40;
+        makeStar(x + Math.cos(ang)*dist, y + Math.sin(ang)*dist, Math.random()<0.4);
       }
     }
 
@@ -1721,7 +1760,7 @@
       // Aggressively maximize width (near zero padding)
       const padW = isFs ? 2 : 10;
       // Increased padH to prevent cut-off at bottom in FS (HUD + safe area)
-      const padH = isFs ? 140 : 20;
+      const padH = isFs ? 160 : 20;
 
       const usableW = Math.max(260, wrapW - padW);
       const usableH = Math.max(260, wrapH - padH);
@@ -1732,9 +1771,12 @@
       const cellW = Math.floor((usableW - (cols-1)*GAP - effectivePad*2) / cols);
       const cellH = Math.floor((usableH - (rows-1)*GAP - effectivePad*2) / rows);
 
-      // Allow larger tiles in FS on large screens
+      // Zoom factor from slider (global var state.zoom or css var?)
+      // Let's assume a global zoomFactor = 1.0;
+      const zoom = window.gameZoomFactor || 1.0;
+
       const max = isFs ? 160 : 100;
-      return clamp(Math.min(cellW, cellH), 34, max);
+      return clamp(Math.min(cellW, cellH) * zoom, 20, max * 1.5);
     }
 
     function setTileXY(el, r, c){
@@ -1857,7 +1899,7 @@
           const center = tileCenter(tile.r, tile.c);
           makeStar(center.x, center.y, true);
           setTimeout(()=>el.classList.remove("land"), 560);
-        }, 280);
+        }, 300);
       }
 
       el.addEventListener("pointerdown", onPointerDown);
@@ -2350,7 +2392,7 @@
             koalaMagicOn(k2);
             clearCells([{r:t1.r,c:t1.c}]);
             spendMoves(1);
-            setTimeout(()=>{ dropDown(); mergeMellows(); resolveAll(false); }, 300);
+            setTimeout(()=>{ dropDown(); mergeMellows(); resolveAll(false); }, 320);
             return;
          }
 
@@ -2359,7 +2401,7 @@
             else clearRow(r);
             clearCells([{r:t1.r,c:t1.c}]);
             spendMoves(1);
-            setTimeout(()=>{ dropDown(); mergeMellows(); resolveAll(false); }, 300);
+            setTimeout(()=>{ dropDown(); mergeMellows(); resolveAll(false); }, 320);
             return;
          }
 
@@ -2367,7 +2409,7 @@
              citBlast(r,c,3);
              clearCells([{r:t1.r,c:t1.c}]);
              spendMoves(1);
-             setTimeout(()=>{ dropDown(); mergeMellows(); resolveAll(false); }, 300);
+             setTimeout(()=>{ dropDown(); mergeMellows(); resolveAll(false); }, 320);
              return;
          }
 
@@ -3673,6 +3715,9 @@
      **********************/
     function buildMenu(){
       ui.menu.innerHTML="";
+      const menuGrid = document.getElementById("menuLuvGrid");
+      if(menuGrid) menuGrid.innerHTML="";
+
       const all = [...BASES,
         {key:"myst",name:"???",img:null,tag:"powerup",ability:"Klicken → random Reveal (Puff!)",story:"Mystery ist Glück + Rarity.",lines:{easy:["???","Puff ✨","Glück!"],normal:["Reveal time.","Puff.","Random!"],hard:["Risk it.","Puff.","Roll!"],shock:["ALL IN 😈","Puff!","GAMBLE!"]}},
         {key:"worm",name:"Sourworm",img:IMG.worm,tag:"powerup",ability:"Reihe/Spalte (je nach Drag)",story:"Sauer, aber räumt sauber.",lines:{easy:["Chomp!","Weg damit!","Sauer!"],normal:["Line clear.","Crunch.","Nice."],hard:["Präzise.","Perfekt.","Clean."],shock:["WELLE!","CRUNCH!","RIP Reihe!"]}},
@@ -3681,7 +3726,8 @@
         {key:"mellow",name:"Mellow",img:IMG.mellow,tag:"obstacle",ability:"Block (3 HP) – Clears daneben ziehen HP ab",story:"Klebt fest… bis du ihn knackbar machst.",lines:{easy:["Kleb 😈","HP runter!","Block!"],normal:["Nicht ignorieren.","Knacken!","Weg!"],hard:["Gefährlich.","Planen.","Ziel!"],shock:["BLOCK HELL 😈","RIP Moves","KNACKEN!"]}},
         {key:"lovelie",name:"Lovelie",img:IMG.lovelie,tag:"bonus",ability:"Ultra selten (Bonus)",story:"Wenn Lovelie kommt, lohnt’s sich.",lines:{easy:["OMG 💖","So selten!","Bonus!"],normal:["Lovelie!","Lucky!","Nice."],hard:["Rare!","Take it.","Value!"],shock:["ULTRA RARE 💖","LETS GO!","HYPE!"]}},
       ];
-      for(const b of all){
+
+      const createCard = (b) => {
         const card=document.createElement("div");
         card.className="luvCard";
         const imgHtml = b.img ?
@@ -3694,7 +3740,12 @@
           </div>
         `;
         card.addEventListener("click", ()=>openInfo(b));
-        ui.menu.appendChild(card);
+        return card;
+      };
+
+      for(const b of all){
+        ui.menu.appendChild(createCard(b));
+        if(menuGrid) menuGrid.appendChild(createCard(b));
       }
       syncLbHeight();
     }
@@ -3898,16 +3949,49 @@
       document.getElementById("introBack").style.display="flex";
     });
 
-    document.getElementById("btnIntro").addEventListener("click", ()=>document.getElementById("introBack").style.display="flex");
     document.getElementById("introClose").addEventListener("click", ()=>document.getElementById("introBack").style.display="none");
     document.getElementById("infoClose").addEventListener("click", ()=>document.getElementById("infoBack").style.display="none");
 
     /**********************
-     * Buttons
+     * Buttons & Menu
      **********************/
-    document.getElementById("btnNew").addEventListener("click", ()=>newGame(false));
-    document.getElementById("btnHint").addEventListener("click", hint);
-    document.getElementById("btnFs").addEventListener("click", toggleFullscreen);
+    // Old listeners removed (btnNew, btnHint etc replaced by menu versions)
+
+    // Main Menu Trigger
+    document.getElementById("btnMenu").addEventListener("click", ()=>{
+       document.getElementById("settingsBack").style.display = "flex";
+    });
+    document.getElementById("menuClose").addEventListener("click", ()=>{
+       document.getElementById("settingsBack").style.display = "none";
+    });
+
+    // Menu Actions
+    document.getElementById("menuNew").addEventListener("click", ()=>{
+       document.getElementById("settingsBack").style.display = "none";
+       newGame(false);
+    });
+    document.getElementById("menuHint").addEventListener("click", ()=>{
+       document.getElementById("settingsBack").style.display = "none";
+       hint();
+    });
+    document.getElementById("menuFs").addEventListener("click", ()=>{
+       document.getElementById("settingsBack").style.display = "none";
+       toggleFullscreen();
+    });
+    document.getElementById("menuIntro").addEventListener("click", ()=>{
+       document.getElementById("settingsBack").style.display = "none";
+       document.getElementById("introBack").style.display = "flex";
+    });
+
+    // Zoom Slider
+    const zoomSlider = document.getElementById("zoomSlider");
+    if(zoomSlider){
+      zoomSlider.addEventListener("input", (e)=>{
+         window.gameZoomFactor = parseFloat(e.target.value);
+         layoutBoard();
+      });
+    }
+
     document.getElementById("btnPost").addEventListener("click", postScore);
     document.getElementById("btnRefresh").addEventListener("click", refreshLeaderboard);
 
