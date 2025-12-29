@@ -186,6 +186,8 @@
       position:relative;
       z-index:6;
     }
+
+    #infoBack{ z-index: 100000; } /* Ensure Bio is above Menu */
     /* Hide menus in fullscreen */
     body.fs .below, body.fs .topRow, body.fs .stats, body.fs .progressRow, body.fs #luvPanel, body.fs #rightPanel {
       display: none !important;
@@ -1181,20 +1183,8 @@
 
     <div class="modalBack" id="settingsBack">
       <div class="modal">
-         <h2>Einstellungen & Menü</h2>
-         <div class="panel" style="margin-bottom:10px">
-            <b>Schwierigkeit</b>
-            <div class="diffPills" id="diffPills">
-              <input type="radio" name="diff" id="d_easy" value="easy" checked><label for="d_easy">Easy</label>
-              <input type="radio" name="diff" id="d_normal" value="normal"><label for="d_normal">Normal</label>
-              <input type="radio" name="diff" id="d_hard" value="hard"><label for="d_hard">Hard</label>
-              <input type="radio" name="diff" id="d_shock" value="shock"><label for="d_shock">Zuckerschock</label>
-            </div>
-         </div>
-         <div class="panel" style="margin-bottom:10px; display:flex; align-items:center; gap:10px;">
-            <b>Zoom</b>
-            <input type="range" id="zoomSlider" min="0.6" max="1.4" step="0.1" value="1.0" style="flex:1">
-         </div>
+         <h2>Menü</h2>
+
          <div class="panel" style="margin-bottom:10px; display:flex; align-items:center; gap:10px;">
             <b>FX Dimmer</b>
             <input type="range" id="fxSlider" min="0" max="100" value="0" style="flex:1">
@@ -1217,7 +1207,24 @@
 
     <div id="app">
       <div class="topRow">
-        <img id="mainLogo" alt="Luvvies Crush" style="height:46px;width:auto;margin-right:auto;filter:drop-shadow(0 4px 6px rgba(0,0,0,.1));display:block;" />
+        <img id="mainLogo" alt="Luvvies Crush" style="height:46px;width:auto;margin-right:12px;filter:drop-shadow(0 4px 6px rgba(0,0,0,.1));display:block;" />
+
+        <div class="diffWrap">
+          <div class="diffPills" id="diffPills">
+            <input type="radio" name="diff" id="d_easy" value="easy" checked><label for="d_easy">Easy</label>
+            <input type="radio" name="diff" id="d_normal" value="normal"><label for="d_normal">Normal</label>
+            <input type="radio" name="diff" id="d_hard" value="hard"><label for="d_hard">Hard</label>
+            <input type="radio" name="diff" id="d_shock" value="shock"><label for="d_shock">Zuckerschock</label>
+          </div>
+        </div>
+
+        <div style="flex:1; min-width:10px;"></div>
+
+        <div style="display:flex; flex-direction:column; align-items:center; margin:0 10px;">
+           <span class="tiny" style="line-height:1;">Zoom</span>
+           <input type="range" id="zoomSlider" min="0.6" max="1.4" step="0.1" value="1.0" style="width:80px">
+        </div>
+
         <div class="actions">
           <button class="Btn ghost" id="btnTheme" style="padding:0 12px;min-width:46px;">🌙</button>
           <button class="Btn" id="btnMenu">Menü</button>
@@ -1282,7 +1289,15 @@
           </div>
           <div style="height:1px;background:rgba(17,13,26,.08);"></div>
           <div style="display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;">
-            <h3 style="margin:0;" id="lbTitle">Leaderboard</h3>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+               <h3 style="margin:0;" id="lbTitle">Leaderboard</h3>
+               <select id="lbDiffSelect" style="border-radius:8px;border:1px solid rgba(0,0,0,.1);padding:4px 8px;font-size:12px;font-weight:900;background:rgba(255,255,255,0.9);">
+                 <option value="easy">Easy</option>
+                 <option value="normal">Normal</option>
+                 <option value="hard">Hard</option>
+                 <option value="shock">Zuckerschock</option>
+               </select>
+            </div>
             <div class="lbRow">
               <input id="lbName" maxlength="24" placeholder="Dein Name (z.B. KOALAaufPILLEN)" />
               <label class="tiny" style="display:flex;align-items:center;gap:6px;">
@@ -1718,13 +1733,20 @@
       s.className="star";
       s.style.left = x+"px";
       s.style.top  = y+"px";
-      s.style.width = big ? "22px":"14px";
-      s.style.height= big ? "22px":"14px";
 
-      // Pastel colors
-      const hues = [330, 290, 240, 200, 160, 40, 10]; // Pink, Purple, Blue, Sky, Green, Orange, Red
-      const h = hues[Math.floor(Math.random()*hues.length)];
-      s.style.background = `radial-gradient(circle at 30% 30%, hsl(${h}, 90%, 85%), hsl(${h}, 80%, 60%))`;
+      // Random size for "unique peng"
+      const size = big ? (20 + Math.random()*12) : (10 + Math.random()*8);
+      s.style.width = size+"px";
+      s.style.height= size+"px";
+
+      // Fully random pastel color
+      const h = Math.floor(Math.random()*360);
+      const sat = 70 + Math.random()*30;
+      const light = 70 + Math.random()*20;
+
+      s.style.background = `radial-gradient(circle at 30% 30%, hsl(${h}, ${sat}%, ${light+10}%), hsl(${h}, ${sat}%, ${light-10}%))`;
+      // Random rotation
+      s.style.transform = `translate(-50%, -50%) rotate(${Math.random()*360}deg)`;
 
       ui.fx.appendChild(s);
       setTimeout(()=>s.remove(), 900);
@@ -3839,8 +3861,12 @@
 
     async function refreshLeaderboard(){
       const list = document.getElementById("lbList");
+      const sel = document.getElementById("lbDiffSelect");
+      // Use selected diff if available, else current game diff
+      let dKey = sel ? sel.value : diff.key;
+
       const title = document.getElementById("lbTitle");
-      if(title) title.textContent = "Leaderboard (" + diff.name + ")";
+      // if(title) title.textContent = "Leaderboard"; // Static title now
 
       list.innerHTML = "";
       if(!sb){
@@ -3848,11 +3874,11 @@
         return;
       }
       try{
-        // Filter by current difficulty
+        // Filter by selected difficulty
         const { data, error } = await sb
           .from(SCORE_TABLE)
           .select("player_name,score,level,difficulty,created_at,user_id")
-          .eq('difficulty', diff.key) // Only current difficulty
+          .eq('difficulty', dKey)
           .order("score", { ascending:false })
           .limit(80);
         if(error) throw error;
@@ -3983,17 +4009,33 @@
        document.getElementById("introBack").style.display = "flex";
     });
 
-    // Zoom Slider
+    // Zoom Slider & Persistence
     const zoomSlider = document.getElementById("zoomSlider");
     if(zoomSlider){
+      // Load saved zoom
+      const savedZoom = getCookie("luvvies_zoom");
+      if(savedZoom){
+         const z = parseFloat(savedZoom);
+         if(!isNaN(z) && z>=0.6 && z<=1.4){
+           zoomSlider.value = z;
+           window.gameZoomFactor = z;
+           layoutBoard();
+         }
+      }
+
       zoomSlider.addEventListener("input", (e)=>{
-         window.gameZoomFactor = parseFloat(e.target.value);
+         const z = parseFloat(e.target.value);
+         window.gameZoomFactor = z;
          layoutBoard();
+         setCookie("luvvies_zoom", z, 30); // 30 days
       });
     }
 
     document.getElementById("btnPost").addEventListener("click", postScore);
     document.getElementById("btnRefresh").addEventListener("click", refreshLeaderboard);
+
+    const lbSel = document.getElementById("lbDiffSelect");
+    if(lbSel) lbSel.addEventListener("change", refreshLeaderboard);
 
     // Dark Mode
     const btnTheme = document.getElementById("btnTheme");
@@ -4035,6 +4077,11 @@
     document.getElementById("diffPills").addEventListener("change", ()=>{
       const v = document.querySelector('input[name="diff"]:checked').value;
       diff = DIFFS[v];
+
+      // Sync leaderboard filter
+      const lbSel = document.getElementById("lbDiffSelect");
+      if(lbSel) lbSel.value = v;
+
       newGame(true);
       buildGlobalBg();
       buildFsBg();
