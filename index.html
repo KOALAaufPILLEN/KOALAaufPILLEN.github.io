@@ -176,6 +176,10 @@
       position:relative;
       z-index:6;
     }
+    /* Hide menus in fullscreen */
+    body.fs .below, body.fs .topRow, body.fs .stats, body.fs .progressRow, body.fs #luvPanel, body.fs #rightPanel {
+      display: none !important;
+    }
 
     .diffWrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
     .diffWrap .label{font-weight:900;opacity:.9;margin-right:4px}
@@ -1043,7 +1047,7 @@
 
     /* Mobile/Tablet fullscreen layout */
     @media (max-width: 820px){
-      body.fs #boardWrap{ padding-top: 14px; padding-bottom: 102px; min-height: 92vh; }
+      body.fs #boardWrap{ padding-top: 2px; padding-bottom: 90px; min-height: 98vh; }
       #fsHud{
         top:auto;
         bottom: 10px;
@@ -1700,14 +1704,18 @@
       // In Fullscreen, prioritize Board Fit
       const isFs = document.body.classList.contains("fs");
 
-      const padW = isFs ? 20 : 40;
-      const padH = isFs ? 100 : 20; // Account for HUD in FS (bottom/top)
+      // Aggressively maximize width (near zero padding)
+      const padW = isFs ? 2 : 10;
+      const padH = isFs ? 110 : 20; // Account for HUD in FS (bottom/top)
 
       const usableW = Math.max(260, wrapW - padW);
       const usableH = Math.max(260, wrapH - padH);
 
-      const cellW = Math.floor((usableW - (cols-1)*GAP - PAD*2) / cols);
-      const cellH = Math.floor((usableH - (rows-1)*GAP - PAD*2) / rows);
+      // Minimal PAD inside board
+      const effectivePad = isFs ? 4 : PAD;
+
+      const cellW = Math.floor((usableW - (cols-1)*GAP - effectivePad*2) / cols);
+      const cellH = Math.floor((usableH - (rows-1)*GAP - effectivePad*2) / rows);
 
       // Allow larger tiles in FS on large screens
       const max = isFs ? 160 : 100;
@@ -2192,70 +2200,186 @@
     }
 
     /**********************
-     * Pointer (click ???)
+     * Pointer & Drag System (1:1 Drag + Powerup Locking)
      **********************/
+    let dragStart = {x:0, y:0};
+    let currentDrag = null; // {id, el, r, c, startLeft, startTop}
+
     function onPointerDown(e){
       if(busy) return;
-      clearHints();
-      const id = e.currentTarget.dataset.id;
+      const tEl = e.currentTarget;
+      const id = tEl.dataset.id;
       const tile = findTileById(id);
       if(!tile) return;
 
-      pointer.down = true;
-      pointer.id = id;
-      pointer.startX = e.clientX;
-      pointer.startY = e.clientY;
-      e.currentTarget.setPointerCapture(e.pointerId);
+      // Stop previous drag if any
+      if(currentDrag) return;
+
+      clearHints();
+      tEl.setPointerCapture(e.pointerId);
+
+      const rect = tEl.getBoundingClientRect();
+      const boardRect = ui.board.getBoundingClientRect();
+
+      // Calculate offset relative to board for 1:1 dragging
+      // CSS --x, --y are relative to board top-left
+      const currentLeft = parseFloat(getComputedStyle(tEl).getPropertyValue('--x')) || 0;
+      const currentTop = parseFloat(getComputedStyle(tEl).getPropertyValue('--y')) || 0;
+
+      dragStart = {
+        x: e.clientX,
+        y: e.clientY,
+        tileX: currentLeft,
+        tileY: currentTop,
+        offsetX: e.clientX - rect.left, // Click offset within tile
+        offsetY: e.clientY - rect.top
+      };
+
+      currentDrag = {
+        id: id,
+        el: tEl,
+        r: tile.r,
+        c: tile.c,
+        moved: false
+      };
+
+      tEl.classList.add("dragging");
     }
 
-    function onPointerUp(e){
-      if(!pointer.down) return;
-      const id = pointer.id;
-      pointer.down = false;
+    function onPointerMove(e){
+      if(!currentDrag) return;
+      const dx = e.clientX - dragStart.x;
+      const dy = e.clientY - dragStart.y;
 
-      const tile = findTileById(id);
-      if(!tile) return;
+      // Threshold to start moving visual
+      if(!currentDrag.moved && Math.hypot(dx,dy) > 5) currentDrag.moved = true;
 
-      const dx = e.clientX - pointer.startX;
-      const dy = e.clientY - pointer.startY;
-      const dist = Math.hypot(dx,dy);
-      const {baseKey} = parseTypeId(tile.type);
+      if(currentDrag.moved){
+         // Visual Update 1:1
+         // New position = Current Board Relative Mouse Pos - Click Offset inside tile
+         // We need board bounding rect
+         const boardRect = ui.board.getBoundingClientRect();
+         // Mouse pos relative to board
+         const relX = e.clientX - boardRect.left;
+         const relY = e.clientY - boardRect.top;
 
-      // ??? Klick -> random reveal
-      if(baseKey==="myst" && dist < 10){
-        revealMyst(tile);
+         // New Pos = DragStart.tileX + dx
+         const newX = dragStart.tileX + dx;
+         const newY = dragStart.tileY + dy;
+
+         currentDrag.el.style.setProperty('--x', newX+"px");
+         currentDrag.el.style.setProperty('--y', newY+"px");
       }
     }
 
-    ui.board.addEventListener("pointermove", (e)=>{
-      if(!pointer.down) return;
-      const tile = findTileById(pointer.id);
-      if(!tile) return;
+    function onPointerUp(e){
+      if(!currentDrag) return;
+      const {id, el, r, c, moved} = currentDrag;
+      const tile = findTileById(id);
+      currentDrag = null;
+      el.classList.remove("dragging");
 
-      const dx = e.clientX - pointer.startX;
-      const dy = e.clientY - pointer.startY;
-      if(Math.hypot(dx,dy) < 12) return;
+      // Always reset position visually first (snap back),
+      // if swap is valid, it will animate to new pos or be swapped
+      setTileXY(el, r, c); // Revert visual to grid slot
 
-      const {baseKey} = parseTypeId(tile.type);
-      if(baseKey==="myst") { pointer.down=false; return; }
+      if(!moved){
+         // Click detection (e.g. for ???)
+         if(tile && tile.type.startsWith("myst")) revealMyst(tile);
+         return;
+      }
 
-      if(!isSwappable(tile)) { pointer.down=false; return; }
+      const dx = e.clientX - dragStart.x;
+      const dy = e.clientY - dragStart.y;
 
-      let dir;
-      if(Math.abs(dx) > Math.abs(dy)) dir = dx>0 ? "R" : "L";
-      else dir = dy>0 ? "D" : "U";
+      if(Math.hypot(dx,dy) < 20) return; // Too short drag
 
-      const dr = (dir==="D")?1:(dir==="U")?-1:0;
-      const dc = (dir==="R")?1:(dir==="L")?-1:0;
+      // Direction
+      let dirStr = "";
+      if(Math.abs(dx) > Math.abs(dy)) dirStr = dx>0 ? "R" : "L";
+      else dirStr = dy>0 ? "D" : "U";
 
-      const r2 = tile.r + dr;
-      const c2 = tile.c + dc;
-      if(!inBounds(r2,c2)) { pointer.down=false; return; }
+      const dr = (dirStr==="D")?1:(dirStr==="U")?-1:0;
+      const dc = (dirStr==="R")?1:(dirStr==="L")?-1:0;
 
-      pointer.down=false;
-      trySwap(tile.r, tile.c, r2, c2);
-    });
-    ui.board.addEventListener("pointercancel", ()=>{ pointer.down=false; });
+      const r2 = r + dr;
+      const c2 = c + dc;
+
+      if(!inBounds(r2,c2)) return;
+
+      // Determine Lock/Direction Logic
+      const t1 = tile;
+      const t2 = grid[r2][c2];
+
+      if(!t1 || !t2) return;
+      if(isBlocker(t1) || isBlocker(t2)) return;
+
+      const k1 = parseTypeId(t1.type).baseKey;
+      const k2 = parseTypeId(t2.type).baseKey;
+      const p1 = isPowerupKey(k1);
+      const p2 = isPowerupKey(k2);
+
+      // Case 1: Powerup + Powerup -> FORCE SWAP (Combo)
+      if(p1 && p2){
+         trySwap(r, c, r2, c2);
+         return;
+      }
+
+      // Case 2: Dragging FROM Powerup (Powerup + Normal) -> LOCK & ACTIVATE
+      if(p1 && !p2){
+         // Activate Powerup t1 in direction (dr,dc)
+         // Visual feedback?
+         toast("Powerup Activate! 💥", "Direction: "+dirStr, 1500);
+
+         if(k1 === "koala"){
+            // Koala activation without swap? Maybe target the neighbor's color?
+            // "Koala + Sorte clear"
+            // So if I drag Koala -> Blue, it clears Blue.
+            koalaMagicOn(k2); // Clear type of neighbor
+            // Destroy Koala
+            clearCells([{r:t1.r,c:t1.c}]);
+            spendMoves(1);
+            setTimeout(()=>resolveAll(false), 300);
+            return;
+         }
+
+         if(k1 === "worm"){
+            // Fire in drag direction
+            if(dr !== 0) clearCol(c); // Dragged Vertical -> Clear Col
+            else clearRow(r); // Dragged Horizontal -> Clear Row
+            clearCells([{r:t1.r,c:t1.c}]);
+            spendMoves(1);
+            setTimeout(()=>resolveAll(false), 300);
+            return;
+         }
+
+         if(k1 === "cit"){
+             // Cit just explodes
+             citBlast(r,c,3);
+             clearCells([{r:t1.r,c:t1.c}]);
+             spendMoves(1);
+             setTimeout(()=>resolveAll(false), 300);
+             return;
+         }
+
+         return;
+      }
+
+      // Case 3: Dragging Normal -> Powerup
+      if(!p1 && p2){
+         // "Nie Powerups verschieben" -> Blocked.
+         toast("Blockiert!", "Powerups sind fest verankert.", 1000);
+         return;
+      }
+
+      // Case 4: Normal Swap
+      trySwap(r, c, r2, c2);
+    }
+
+    ui.board.removeEventListener("pointermove", ()=>{});
+    ui.board.addEventListener("pointermove", onPointerMove);
+    ui.board.addEventListener("pointerup", onPointerUp);
+    ui.board.addEventListener("pointercancel", onPointerUp);
 
     /**********************
      * Gameplay core (Swap/Resolve)
@@ -2621,6 +2745,29 @@
       const aBk = parseTypeId(A.type).baseKey;
       const bBk = parseTypeId(B.type).baseKey;
 
+      if((aBk==="koala" && bBk==="worm") || (aBk==="worm" && bBk==="koala")){
+        toast("🐨🪱 KOALA × WORM!", "MEGA CROSS BLAST! 💥", 3500);
+        // Clear 3 lines Horizontal, 3 lines Vertical centered on A and B
+        // Center point: Average of A and B? Or just clear both rows/cols + neighbors
+        const rMid = Math.round((A.r + B.r)/2);
+        const cMid = Math.round((A.c + B.c)/2);
+
+        const cells = [];
+        // Horizontal bands
+        for(let r=rMid-1; r<=rMid+1; r++){
+            if(r<0 || r>=rows) continue;
+            for(let c=0; c<cols; c++) cells.push({r,c});
+        }
+        // Vertical bands
+        for(let c=cMid-1; c<=cMid+1; c++){
+            if(c<0 || c>=cols) continue;
+            for(let r=0; r<rows; r++) cells.push({r,c});
+        }
+
+        clearCells(cells);
+        return;
+      }
+
       if((aBk==="koala" && bBk==="cit") || (aBk==="cit" && bBk==="koala")){
         toast("🐨🍋 KOALA × Citrussy!", "DOUBLE BOARD CLEAN ×2 💥💥", 3800);
 
@@ -2877,7 +3024,7 @@
           setTimeout(()=>{
             dropDown();
             mergeMellows();
-            setTimeout(step, 260);
+            setTimeout(step, 320);
           }, 240);
           checkLevelUp();
           updateUI();
