@@ -117,6 +117,16 @@
       overflow:hidden;
     }
 
+    #darkOverlay{
+      position:fixed;
+      inset:0;
+      z-index:4;
+      background:#000;
+      opacity:0;
+      pointer-events:none;
+      transition: opacity 0.2s ease;
+    }
+
     /* Background luvvies: langsamer + fade, immer hinter allem */
     .bgLuv{
       position:absolute;
@@ -1076,6 +1086,7 @@
   <div id="page">
     <div id="scrollBg"></div>
     <div id="globalBg"></div>
+    <div id="darkOverlay"></div>
     <div id="toast"></div>
 
     <div class="modalBack" id="greetBack">
@@ -1709,7 +1720,8 @@
 
       // Aggressively maximize width (near zero padding)
       const padW = isFs ? 2 : 10;
-      const padH = isFs ? 110 : 20; // Account for HUD in FS (bottom/top)
+      // Increased padH to prevent cut-off at bottom in FS (HUD + safe area)
+      const padH = isFs ? 140 : 20;
 
       const usableW = Math.max(260, wrapW - padW);
       const usableH = Math.max(260, wrapH - padH);
@@ -1833,19 +1845,19 @@
         const fallDist = (tile.r + 3) * (CELL+GAP);
         plate.style.setProperty("--oy", `-${fallDist}px`);
         plate.style.setProperty("--op", "0");
+
         requestAnimationFrame(()=>{
           plate.style.setProperty("--oy", "0px");
           plate.style.setProperty("--op", "1");
         });
-        const onEnd = (ev)=>{
-          if(ev.propertyName !== "transform") return;
-          plate.removeEventListener("transitionend", onEnd);
+
+        // Use timeout instead of transitionend for reliability
+        setTimeout(()=>{
           el.classList.add("land");
           const center = tileCenter(tile.r, tile.c);
           makeStar(center.x, center.y, true);
           setTimeout(()=>el.classList.remove("land"), 560);
-        };
-        plate.addEventListener("transitionend", onEnd);
+        }, 280);
       }
 
       el.addEventListener("pointerdown", onPointerDown);
@@ -2335,33 +2347,27 @@
          toast("Powerup Activate! 💥", "Direction: "+dirStr, 1500);
 
          if(k1 === "koala"){
-            // Koala activation without swap? Maybe target the neighbor's color?
-            // "Koala + Sorte clear"
-            // So if I drag Koala -> Blue, it clears Blue.
-            koalaMagicOn(k2); // Clear type of neighbor
-            // Destroy Koala
+            koalaMagicOn(k2);
             clearCells([{r:t1.r,c:t1.c}]);
             spendMoves(1);
-            setTimeout(()=>resolveAll(false), 300);
+            setTimeout(()=>{ dropDown(); mergeMellows(); resolveAll(false); }, 300);
             return;
          }
 
          if(k1 === "worm"){
-            // Fire in drag direction
-            if(dr !== 0) clearCol(c); // Dragged Vertical -> Clear Col
-            else clearRow(r); // Dragged Horizontal -> Clear Row
+            if(dr !== 0) clearCol(c);
+            else clearRow(r);
             clearCells([{r:t1.r,c:t1.c}]);
             spendMoves(1);
-            setTimeout(()=>resolveAll(false), 300);
+            setTimeout(()=>{ dropDown(); mergeMellows(); resolveAll(false); }, 300);
             return;
          }
 
          if(k1 === "cit"){
-             // Cit just explodes
              citBlast(r,c,3);
              clearCells([{r:t1.r,c:t1.c}]);
              spendMoves(1);
-             setTimeout(()=>resolveAll(false), 300);
+             setTimeout(()=>{ dropDown(); mergeMellows(); resolveAll(false); }, 300);
              return;
          }
 
@@ -3921,16 +3927,15 @@
       syncTheme();
     });
 
-    // FX Slider (Filter + Brightness)
+    // FX Slider (Dimmer Overlay)
     function updateFx(v){
-      // v: 0-100
-      // Hue shift: 0 -> 90deg (subtle)
-      // Brightness: 100% -> 40% (darker)
-      // Saturation: 100% -> 120%
-      const hue = v * 0.9;
-      const bri = 100 - (v * 0.6);
-      const sat = 100 + (v * 0.2);
-      document.body.style.filter = `hue-rotate(${hue}deg) brightness(${bri}%) saturate(${sat}%)`;
+      // v: 0-100. Opacity: 0 -> 0.7
+      const op = (v / 100) * 0.7;
+      const ov = document.getElementById("darkOverlay");
+      if(ov) ov.style.opacity = op;
+
+      // Reset filter on body if switching back from old method
+      document.body.style.filter = "none";
 
       // Sync sliders
       if(document.getElementById("fxSlider")) document.getElementById("fxSlider").value = v;
