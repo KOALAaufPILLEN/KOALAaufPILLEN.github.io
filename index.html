@@ -3785,6 +3785,9 @@
           if(!t || isBlocker(t)) continue;
           if(!isSwappable(t)) continue;
 
+          // Free move logic: if t is mellow, it's always movable
+          const isMellow = parseTypeId(t.type).baseKey === "mellow";
+
           const dirs=[[1,0],[0,1]];
           for(const [dr,dc] of dirs){
             const rr=r+dr, cc=c+dc;
@@ -3792,6 +3795,10 @@
             const u=grid[rr][cc];
             if(!u || isBlocker(u)) continue;
             if(!isSwappable(u)) continue;
+
+            if(isMellow) return true;
+            const uIsMellow = parseTypeId(u.type).baseKey === "mellow";
+            if(uIsMellow) return true;
 
             doSwap(r,c,rr,cc);
             const ok = hasAnyMatchOrSpecial();
