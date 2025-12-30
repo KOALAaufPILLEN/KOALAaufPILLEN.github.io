@@ -2762,7 +2762,14 @@
           toast("Ouch 😵","Falscher Swap", 1000);
           return;
         }
-        spendMoves(1);
+
+        // Check if Mellow is involved (Free move)
+        if(aBk === "mellow" || bBk === "mellow"){
+           // 0 Cost
+        } else {
+           spendMoves(1);
+        }
+
         resolveAll(false, true);
       }, 185);
     }
@@ -3369,7 +3376,7 @@
           setTimeout(()=>{
             dropDown();
             mergeMellows();
-            setTimeout(step, 320);
+            setTimeout(step, 450); // Increased delay to prevent ghost combos
           }, 240);
           checkLevelUp();
           updateUI();
@@ -3503,7 +3510,7 @@
           mergeMellows();
           isFirstStep = false;
           // Add timeout limit for safety?
-          setTimeout(step, 260);
+          setTimeout(step, 420); // Increased delay to prevent ghost combos
         }, 240);
         checkLevelUp();
         updateUI();
@@ -3635,7 +3642,7 @@
           if(a.big || b.big || d.big || e.big) continue;
 
           const hpSum = (a.hp||0) + (b.hp||0) + (d.hp||0) + (e.hp||0);
-          const bigHp = Math.max(1, Math.ceil(hpSum/2));
+          const bigHp = 15; // Fixed HP for MellowLord
 
           [a,b,d,e].forEach(t=>{
             const el = tileEls.get(t.id);
@@ -3684,7 +3691,7 @@
       const cc = Math.floor(cols/2)-1;
 
       const bigId = makeId();
-      const zilla = { id: bigId, r: cr, c: cc, type: "mellowzilla:P", hp: 100, big:true, zilla:true };
+      const zilla = { id: bigId, r: cr, c: cc, type: "mellowzilla:P", hp: 45, big:true, zilla:true };
 
       for(let r=cr; r<cr+3; r++){
         for(let c=cc; c<cc+3; c++){
