@@ -6,25 +6,28 @@ def run():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
+
+        # Subscribe to console events
+        page.on("console", lambda msg: print(f"CONSOLE: {msg.text}"))
+        page.on("pageerror", lambda exc: print(f"PAGE ERROR: {exc}"))
+
         # Open the local file
-        page.goto(f"file://{os.path.abspath('index.html')}")
+        url = f"file://{os.path.abspath('index.html')}"
+        print(f"Navigating to {url}")
+        page.goto(url)
 
         # Check if title exists
         print(f"Title: {page.title()}")
 
-        # Wait for board to appear
-        try:
-            page.wait_for_selector("#board", state="visible", timeout=3000)
-            print("Board found.")
-        except:
-            print("Board NOT found.")
+        # Wait a bit for JS to execute
+        page.wait_for_timeout(2000)
 
         # Check for tiles
         tiles = page.locator(".tile").count()
         print(f"Tiles found: {tiles}")
 
         # Take screenshot
-        page.screenshot(path="screenshot_check.png")
+        page.screenshot(path="debug_screenshot.png")
 
         browser.close()
 
