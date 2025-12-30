@@ -1721,7 +1721,8 @@
     function isBlocker(t){
       if(!t) return false;
       const bk = parseTypeId(t.type).baseKey;
-      if(bk==="mellow" || bk==="mellowlord" || bk==="mellowzilla") return true;
+      // Small mellow is NO LONGER a blocker (so it falls/swaps)
+      if(bk==="mellowlord" || bk==="mellowzilla") return true;
       if(isPlaceholder(t)) return true;
       return false;
     }
@@ -2785,17 +2786,9 @@
 
       const bk = parseTypeId(t.type).baseKey;
       if(bk==="mellow"){
-        t.hp = Math.max(0, t.hp - dmg);
-        updateMellowHp(t);
-        if(t.hp<=0){
-          const el = tileEls.get(t.id);
-          if(el){
-            el.classList.add("pop");
-            setTimeout(()=>{ el.remove(); tileEls.delete(t.id); }, 420);
-          }
-          grid[r][c]=null;
-          toast("Mellow gelöst! ✨","Weiter!", 2600);
-        }
+        // Small Mellow is INVINCIBLE (absorbs hit but takes no damage)
+        // It must be merged to form MellowLord to be destroyable (or cleared by special effects?)
+        // User said: "mellow sollte unsterblich sein ... 2x2 zusammen packen damit er zu mellowlord wird"
         return true;
       }
       return false;
@@ -3186,6 +3179,12 @@
 
     function resolveAll(initial=false, isPlayerSwap=false){
       busy = true; // Safety lock
+
+      // Safety: Auto-reset busy if something hangs deep in recursion
+      setTimeout(()=>{
+         if(busy && !document.querySelector(".tile.dragging")) busy = false;
+      }, 5000);
+
       let isFirstStep = true;
       // Boss AI Step (only if isPlayerSwap to count turns properly?)
       // User says "Attacke 2 Züge vorher rot an".
@@ -4401,22 +4400,65 @@
     syncBgHeight();
     function refreshActivePool(){
       let pool = BASES.filter(b => (b.minLevel||1) <= level);
-      // Shuffle pool slightly to vary? No, keep stable.
-      // Limit count
+
+      const pairs = [
+        ["sleepy", "mond"],
+        ["joyce", "smokey"],
+        ["simba", "smokey"],
+        ["grumpy", "happy"],
+        ["donut", "sweety"]
+      ];
+
       let max = 6;
       if(diff.key === "easy") max = 7;
       if(diff.key === "normal") max = 6;
       if(diff.key === "hard") max = 6;
       if(diff.key === "shock") max = 5;
 
-      if(pool.length > max){
-        // Heuristic: Keep characters that have combos (Donut, Happy, Grumpy, Smokey, Joyce, Simba) if possible?
-        // Or just the newest unlocked + basics?
-        // Let's just slice for now to strictly limit colors.
-        gameActivePool = pool.slice(0, max);
-      } else {
-        gameActivePool = pool;
+      const selected = new Set();
+      const add = (k) => {
+         if(selected.has(k)) return;
+         if(selected.size >= max) return;
+         selected.add(k);
+      };
+
+      // Shuffle pool
+      const shuffled = [...pool].sort(()=>Math.random()-0.5);
+
+      for(const b of shuffled){
+         if(selected.size >= max) break;
+
+         const myPairs = pairs.filter(p => p.includes(b.key));
+         if(myPairs.length > 0){
+            // Has partner
+            const partnerKey = myPairs[0].find(k => k !== b.key);
+            // Check if partner exists in pool (level req)
+            if(!pool.find(x=>x.key===partnerKey)){
+               add(b.key); // Partner not available (level too low), add alone
+               continue;
+            }
+
+            // Check space
+            if(!selected.has(partnerKey) && selected.size >= max - 1){
+               // Not enough space for pair
+               continue;
+            }
+            add(b.key);
+            add(partnerKey);
+         } else {
+            add(b.key);
+         }
       }
+
+      // Fallback fill
+      if(selected.size < 4){
+         for(const b of pool){
+            if(selected.size >= max) break;
+            add(b.key);
+         }
+      }
+
+      gameActivePool = BASES.filter(b => selected.has(b.key));
     }
 
     resetUnlocked();
