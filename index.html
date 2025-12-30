@@ -2721,6 +2721,7 @@
 
       doSwap(r1,c1,r2,c2);
       setTimeout(()=>{
+       try{
         const A = grid[r1][c1];
         const B = grid[r2][c2];
         const aBk = parseTypeId(A.type).baseKey;
@@ -2728,7 +2729,7 @@
 
         const aIsSuper = aBk==="supernuss";
         const bIsSuper = bBk==="supernuss";
-        // Check standard powerups OR Special combos (Lovelie+Lovelie, Powerup+SuperNuss)
+
         if( isPowerupKey(aBk) || isPowerupKey(bBk) ||
            (aBk==="lovelie" && bBk==="lovelie") ||
            (isPowerupKey(aBk) && bIsSuper) || (aIsSuper && isPowerupKey(bBk))
