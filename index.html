@@ -2576,43 +2576,46 @@
       }
     }
 
-    function tripletMatchKind(t1,t2,t3){
-      if(!t1||!t2||!t3) return null;
-      // Specials invoke mixed types, so standard isMatchable might return false if we strictly check colors?
-      // Actually isMatchable only filters Blockers/Specials. Normal luvvies are fine.
-      if(isBlocker(t1)||isBlocker(t2)||isBlocker(t3)) return null;
+    function quadMatchKind(t1,t2,t3,t4){
+      if(!t1||!t2||!t3||!t4) return null;
+      if(isBlocker(t1)||isBlocker(t2)||isBlocker(t3)||isBlocker(t4)) return null;
 
-      const p1=parseTypeId(t1.type), p2=parseTypeId(t2.type), p3=parseTypeId(t3.type);
-      const keys=[p1.baseKey,p2.baseKey,p3.baseKey];
+      const p1=parseTypeId(t1.type), p2=parseTypeId(t2.type), p3=parseTypeId(t3.type), p4=parseTypeId(t4.type);
+      const keys=[p1.baseKey,p2.baseKey,p3.baseKey,p4.baseKey];
       const count=(k)=>keys.filter(x=>x===k).length;
 
-      // Explicitly ignore variants (A vs B)
-      if(count("sleepy")===2 && count("mond")===1) return "moonshuffle";
-      if(count("grumpy")===2 && count("happy")===1) return "therapy";
-      if(count("donut")===2 && count("sweety")===1) return "sprinkle";
-      if(count("donut")===2 && count("happy")===1) return "sugar";
-      if(count("smokey")===2 && count("joyce")===1) return "buddies";
-      if(count("joyce")===2 && count("smokey")===1) return "buddies";
-      if(count("smokey")===2 && count("simba")===1) return "bestbuddies";
-      if(count("simba")===2 && count("smokey")===1) return "bestbuddies";
+      // 3+1 Logic (Ghost combo fix)
+      if(count("sleepy")===3 && count("mond")===1) return "moonshuffle";
+      if(count("grumpy")===3 && count("happy")===1) return "therapy";
+      if(count("donut")===3 && count("sweety")===1) return "sprinkle";
+      if(count("donut")===3 && count("happy")===1) return "sugar";
+
+      // Buddies: 3 of either + 1 of other
+      if(count("smokey")===3 && count("joyce")===1) return "buddies";
+      if(count("joyce")===3 && count("smokey")===1) return "buddies";
+
+      if(count("smokey")===3 && count("simba")===1) return "bestbuddies";
+      if(count("simba")===3 && count("smokey")===1) return "bestbuddies";
 
       return null;
     }
 
-    function findSpecialTriples(){
+    function findSpecialQuads(){
       const found=[];
+      // Horizontal Quads
       for(let r=0;r<rows;r++){
-        for(let c=0;c<cols-2;c++){
-          const t1=grid[r][c], t2=grid[r][c+1], t3=grid[r][c+2];
-          const kind = tripletMatchKind(t1,t2,t3);
-          if(kind) found.push({kind, cells:[{r,c},{r,c:c+1},{r,c:c+2}]});
+        for(let c=0;c<cols-3;c++){
+          const t1=grid[r][c], t2=grid[r][c+1], t3=grid[r][c+2], t4=grid[r][c+3];
+          const kind = quadMatchKind(t1,t2,t3,t4);
+          if(kind) found.push({kind, cells:[{r,c},{r,c:c+1},{r,c:c+2},{r,c:c+3}]});
         }
       }
+      // Vertical Quads
       for(let c=0;c<cols;c++){
-        for(let r=0;r<rows-2;r++){
-          const t1=grid[r][c], t2=grid[r+1][c], t3=grid[r+2][c];
-          const kind = tripletMatchKind(t1,t2,t3);
-          if(kind) found.push({kind, cells:[{r,c},{r:r+1,c},{r:r+2,c}]});
+        for(let r=0;r<rows-3;r++){
+          const t1=grid[r][c], t2=grid[r+1][c], t3=grid[r+2][c], t4=grid[r+3][c];
+          const kind = quadMatchKind(t1,t2,t3,t4);
+          if(kind) found.push({kind, cells:[{r,c},{r:r+1,c},{r:r+2,c},{r:r+3,c}]});
         }
       }
       return found;
@@ -3238,7 +3241,7 @@
       }
 
       const step = ()=>{
-        const specials = findSpecialTriples();
+        const specials = findSpecialQuads();
         const mm = findLineMatches();
 
         if(mm.clear.size===0 && specials.length===0){
