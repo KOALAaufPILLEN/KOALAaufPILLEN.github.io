@@ -2704,8 +2704,35 @@
     function hasAnyMatchOrSpecial(){
       const mm = findLineMatches();
       if(mm.clear.size>0) return true;
-      const sp = findSpecialTriples();
+      const sp = findSpecialQuads();
       return sp.length>0;
+    }
+
+    function checkPowerSwap(t1, t2){
+      if(!t1 || !t2) return false;
+      const p1 = parseTypeId(t1.type).baseKey;
+      const p2 = parseTypeId(t2.type).baseKey;
+
+      const isP1 = isPowerupKey(p1);
+      const isP2 = isPowerupKey(p2);
+      const isS1 = p1 === "supernuss";
+      const isS2 = p2 === "supernuss";
+      const isL1 = p1 === "lovelie";
+      const isL2 = p2 === "lovelie";
+
+      // 1. Lovelie + Lovelie
+      if(isL1 && isL2) return true;
+
+      // 2. Powerup + SuperNuss
+      if((isP1 && isS2) || (isP2 && isS1)) return true;
+
+      // 3. Any Powerup involved (Combo or Single)
+      // This covers Power+Power, Power+Normal, Lovelie+Power
+      if(isP1 || isP2) return true;
+
+      // 4. SuperNuss + SuperNuss? (If logic requires, though usually Powerup+SuperNuss is the key)
+
+      return false;
     }
 
     function trySwap(r1,c1,r2,c2){
@@ -2727,13 +2754,7 @@
         const aBk = parseTypeId(A.type).baseKey;
         const bBk = parseTypeId(B.type).baseKey;
 
-        const aIsSuper = aBk==="supernuss";
-        const bIsSuper = bBk==="supernuss";
-
-        if( isPowerupKey(aBk) || isPowerupKey(bBk) ||
-           (aBk==="lovelie" && bBk==="lovelie") ||
-           (isPowerupKey(aBk) && bIsSuper) || (aIsSuper && isPowerupKey(bBk))
-        ){
+        if( checkPowerSwap(A, B) ){
           spendMoves(1);
           resolvePowerSwap(A,B,{dr:r2-r1, dc:c2-c1});
           setTimeout(()=>{ dropDown(); mergeMellows(); resolveAll(false); }, 220);
@@ -2741,7 +2762,9 @@
         }
 
         const ok = hasAnyMatchOrSpecial();
-        if(!ok){
+        const isMellowSwap = (aBk === "mellow" || bBk === "mellow");
+
+        if(!ok && !isMellowSwap){
           // Swap back visual + logic
           doSwap(r1,c1,r2,c2);
 
@@ -2775,14 +2798,23 @@
         }
 
         resolveAll(false, true);
+       }catch(e){
+         console.error(e);
+         busy=false;
+         doSwap(r1,c1,r2,c2); // undo on error
+       }
       }, 185);
     }
 
     function hitMellowAt(r,c, dmg=1){
       const t = grid[r][c];
       if(!t) return false;
-      if(isPlaceholder(t)){
-        const bigId = t.partOf;
+
+      let bigId = null;
+      if(isPlaceholder(t)) bigId = t.partOf;
+      else if(t.big && bigMellows.has(t.id)) bigId = t.id;
+
+      if(bigId){
         const big = bigMellows.get(bigId);
         if(!big) return false;
         big.hp = Math.max(0, big.hp - dmg);
