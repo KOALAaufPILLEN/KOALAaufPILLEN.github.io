@@ -2078,13 +2078,14 @@
     }
 
     function wouldCreateMatch(r,c,type){
+      const k = parseTypeId(type).baseKey;
       if(c>=2){
         const a=grid[r][c-1], b=grid[r][c-2];
-        if(a && b && a.type===type && b.type===type && isMatchable(a) && isMatchable(b)) return true;
+        if(a && b && parseTypeId(a.type).baseKey===k && parseTypeId(b.type).baseKey===k && isMatchable(a) && isMatchable(b)) return true;
       }
       if(r>=2){
         const a=grid[r-1][c], b=grid[r-2][c];
-        if(a && b && a.type===type && b.type===type && isMatchable(a) && isMatchable(b)) return true;
+        if(a && b && parseTypeId(a.type).baseKey===k && parseTypeId(b.type).baseKey===k && isMatchable(a) && isMatchable(b)) return true;
       }
       return false;
     }
@@ -2626,8 +2627,9 @@
         while(c<cols){
           const t = grid[r][c];
           if(!isMatchable(t)){ c++; continue; }
+          const k = parseTypeId(t.type).baseKey;
           let start=c;
-          while(c<cols && grid[r][c] && isMatchable(grid[r][c]) && grid[r][c].type===t.type) c++;
+          while(c<cols && grid[r][c] && isMatchable(grid[r][c]) && parseTypeId(grid[r][c].type).baseKey===k) c++;
           const len = c-start;
           if(len>=3){
             const cells=[];
@@ -2645,8 +2647,9 @@
         while(r<rows){
           const t = grid[r][c];
           if(!isMatchable(t)){ r++; continue; }
+          const k = parseTypeId(t.type).baseKey;
           let start=r;
-          while(r<rows && grid[r][c] && isMatchable(grid[r][c]) && grid[r][c].type===t.type) r++;
+          while(r<rows && grid[r][c] && isMatchable(grid[r][c]) && parseTypeId(grid[r][c].type).baseKey===k) r++;
           const len = r-start;
           if(len>=3){
             const cells=[];
