@@ -1146,8 +1146,8 @@
           <li><b>2× Smokey + 1× Simba</b> → Best Buddy Wave (ab Lvl 4)</li>
           <li><b>Mellow</b> ab Level 3 (alle 4 Level), hat 3 HP • Clears daneben ziehen HP ab</li>
           <li><b>???</b> klicken → <b>random</b> Powerup/Bonus/Block (mit Puff-Animation)</li>
-          <li><b>Falscher Swap</b> kostet <b>3 Moves</b> (außer Powerup-Combos).</li>
-          <li><b>Keine Züge</b> → Auto-Shuffle, −3 Moves.</li>
+          <li><b>Swap ohne Match</b> kostet <b>1 Move</b> (Live-Swap).</li>
+          <li><b>Keine Züge</b> → Auto-Shuffle, −1 Move.</li>
         </ul>
         <div class="foot">
           <button class="Btn ghost" id="introClose">Schließen</button>
@@ -2762,41 +2762,19 @@
         }
 
         const ok = hasAnyMatchOrSpecial();
-        const isMellowSwap = (aBk === "mellow" || bBk === "mellow");
 
-        if(!ok && !isMellowSwap){
-          // Swap back visual + logic
-          doSwap(r1,c1,r2,c2);
-
-          // Ensure visual sync after a slight delay to make the swap-back visible
-          setTimeout(()=>{
-             const a = grid[r1][c1];
-             const b = grid[r2][c2];
-             if(a) {
-                const el = tileEls.get(a.id);
-                if(el) setTileXY(el, r1, c1);
-             }
-             if(b) {
-                const el = tileEls.get(b.id);
-                if(el) setTileXY(el, r2, c2);
-             }
-             busy=false;
-          }, 220);
-
-          // spendMoves(3); // Penalty removed
-          combo = 1;
-          updateUI();
-          toast("Ouch 😵","Falscher Swap", 1000);
-          return;
-        }
-
+        // Free Swapping: No revert if no match.
         // Check if Mellow is involved (Free move)
+        const aBk = parseTypeId(A.type).baseKey;
+        const bBk = parseTypeId(B.type).baseKey;
         if(aBk === "mellow" || bBk === "mellow"){
            // 0 Cost
         } else {
            spendMoves(1);
         }
 
+        // Even if no match immediately, we resolve (maybe gravity falls? no, just check matches)
+        // If ok is false, resolveAll will basically find nothing and just unlock busy.
         resolveAll(false, true);
        }catch(e){
          console.error(e);
