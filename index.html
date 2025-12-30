@@ -1250,7 +1250,7 @@
 
         <div style="display:flex; flex-direction:column; align-items:center; margin:0 10px;">
            <span class="tiny" style="line-height:1;">Zoom</span>
-           <input type="range" id="zoomSlider" min="0.6" max="1.4" step="0.1" value="1.0" style="width:80px">
+           <input type="range" id="zoomSlider" min="0.6" max="1.2" step="0.2" value="1.0" style="width:80px">
         </div>
 
         <div class="actions">
@@ -1445,7 +1445,7 @@
      **********************/
     const BASES = [
       { key:"fledernuss", name:"Fledernuss", img:IMG.fledernuss, tag:"normal", minLevel:10,
-        palettes:{ A:["#5d4037","#8d6e63"], B:["#8d6e63","#a1887f"] },
+        palettes:{ A:["#8d6e63","#a1887f"], B:["#a1887f","#bcaaa4"] },
         ability:"Evolves to FlederHeld",
         story:"Kleine Nuss mit großen Träumen.",
         lines:{
@@ -1468,7 +1468,7 @@
         lines:{ easy:["BOOM!"], normal:["SUPER!"], hard:["MEGA!"], shock:["ULTRA!"] }
       },
       { key:"sweety", name:"Sweety", img:IMG.sweety, tag:"normal",
-        palettes:{ A:["#ff4fb9","#ff9adf"], B:["#46e4c2","#a7fff0"] },
+        palettes:{ A:["#f8bbd0","#f48fb1"], B:["#f48fb1","#ec407a"] },
         ability:"Glitzer-Queen: cleanes Match 3+.",
         story:"Sweety liebt Kettenreaktionen – je mehr es bounct, desto besser.",
         lines:{
@@ -1479,7 +1479,7 @@
         }
       },
       { key:"sleepy", name:"Sleepy", img:IMG.sleepy, tag:"normal",
-        palettes:{ A:["#7ad8ff","#b7f0ff"], B:["#ffd46a","#fff2b7"] },
+        palettes:{ A:["#e3f2fd","#bbdefb"], B:["#bbdefb","#90caf9"] },
         ability:"2× Sleepy + 1× Mondlie → Shuffle 4×4 ✨",
         story:"Wirkt müde… aber sein Shuffle ist brutal effektiv.",
         lines:{
@@ -1490,7 +1490,7 @@
         }
       },
       { key:"normal", name:"Normal", img:IMG.normal, tag:"normal",
-        palettes:{ A:["#7b7bff","#cbbcff"], B:["#ff7bd6","#ffd0f1"] },
+        palettes:{ A:["#f3e5f5","#e1bee7"], B:["#ce93d8","#ba68c8"] },
         ability:"Klassiker: stabiler Tile für sichere Lines.",
         story:"Normal ist der Anker – wenn’s brennt, rettet er dein Board.",
         lines:{
@@ -1501,7 +1501,7 @@
         }
       },
       { key:"cry", name:"Cry", img:IMG.cry, tag:"normal",
-        palettes:{ A:["#1fd1ff","#b8b1ff"], B:["#5ef2b5","#b6ffd6"] },
+        palettes:{ A:["#e0f2f1","#b2dfdb"], B:["#80cbc4","#4db6ac"] },
         ability:"Emo-Boost: fühlt jede Chain-Reaction.",
         story:"Cry weint… aber nur weil’s so schön glitzert.",
         lines:{
@@ -1512,7 +1512,7 @@
         }
       },
       { key:"happy", name:"Happy Cookie", img:IMG.happy, tag:"normal",
-        palettes:{ A:["#5ef2b5","#b6ffd6"], B:["#7ad8ff","#b7f0ff"] },
+        palettes:{ A:["#fff3e0","#ffe0b2"], B:["#ffcc80","#ffb74d"] },
         ability:"Therapy Time (2× Grumpy + 1× Happy) → +3 Moves, Grumpy→Happy.",
         story:"Happy macht selbst Grumpy weich. 🍪✨",
         lines:{
@@ -1523,7 +1523,7 @@
         }
       },
       { key:"grumpy", name:"Grumpy Cookie", img:IMG.grumpy, tag:"normal",
-        palettes:{ A:["#ff6b6b","#ffb3b3"], B:["#ffcf5a","#fff2b7"] },
+        palettes:{ A:["#ffebee","#ffcdd2"], B:["#ef9a9a","#e57373"] },
         ability:"Therapy Time (2× Grumpy + 1× Happy).",
         story:"Grumpy sagt 'nein'… aber liebt +Moves heimlich.",
         lines:{
@@ -1534,7 +1534,7 @@
         }
       },
       { key:"mond", name:"Mondlie", img:IMG.mond, tag:"normal",
-        palettes:{ A:["#2b2b2b","#9b59ff"], B:["#ff4fb9","#7ad8ff"] },
+        palettes:{ A:["#ede7f6","#d1c4e9"], B:["#b39ddb","#9575cd"] },
         ability:"2× Sleepy + 1× Mondlie → Shuffle 4×4 ✨",
         story:"Mondlie ist selten ruhig… sein Shuffle ist Nachtmagie.",
         lines:{
@@ -1545,7 +1545,7 @@
         }
       },
       { key:"donut", name:"Donutlie", img:IMG.donut, tag:"normal",
-        palettes:{ A:["#ffd1f2","#c9fffb"], B:["#ffcf5a","#ff9adf"] },
+        palettes:{ A:["#fce4ec","#f8bbd0"], B:["#f48fb1","#f06292"] },
         ability:"2× Donut + Sweety → Sprinkle Beam • 2× Donut + Happy → Sugar Rush.",
         story:"Wenn Donut kommt, wird’s zuckrig gefährlich. 🍩",
         lines:{
@@ -1556,7 +1556,7 @@
         }
       },
       { key:"joyce", name:"Joyce Podenko", img:IMG.joyce, tag:"normal",
-        palettes:{ A:["#7ad8ff","#b8b1ff"], B:["#ff4fb9","#ffd1f2"] },
+        palettes:{ A:["#efebe9","#d7ccc8"], B:["#bcaaa4","#a1887f"] },
         ability:"2× Joyce + 1× Smokey (oder umgekehrt) → Buddy Burst.",
         story:"Joyce ist loyal – wenn Smokey da ist, zündet’s richtig.",
         lines:{
@@ -1567,7 +1567,7 @@
         }
       },
       { key:"smokey", name:"Smokey", img:IMG.smokey, tag:"normal",
-        palettes:{ A:["#ffcf5a","#ffd9a5"], B:["#5ef2b5","#b6ffd6"] },
+        palettes:{ A:["#f5f5f5","#e0e0e0"], B:["#bdbdbd","#9e9e9e"] },
         ability:"2× Smokey + 1× Joyce (oder umgekehrt) → Buddy Burst.",
         story:"Smokey ist Boss-Katze – und Boss-Katzen räumen auf.",
         lines:{
@@ -1578,7 +1578,7 @@
         }
       },
       { key:"simba", name:"Simba", img:IMG.simba, tag:"normal", minLevel:4,
-        palettes:{ A:["#ff9d3c","#ffd1a1"], B:["#7ad8ff","#b7f0ff"] },
+        palettes:{ A:["#fff8e1","#ffecb3"], B:["#ffe0b2","#ffcc80"] },
         ability:"Best Buddies: 2× Smokey + 1× Simba (oder umgekehrt) → Buddy Wave ✨",
         story:"Simba ist mutig und liebt Smokey – zusammen sind sie unaufhaltbar.",
         lines:{
@@ -2438,6 +2438,7 @@
        try{
          // Activate Powerup t1 in direction (dr,dc)
          toast("Powerup Activate! 💥", "Direction: "+dirStr, 1500);
+         busy = true; // Lock input immediately
 
          if(k1 === "koala"){
             koalaMagicOn(k2);
@@ -2463,6 +2464,7 @@
              setTimeout(()=>{ dropDown(); mergeMellows(); resolveAll(false); }, 320);
              return;
          }
+         busy = false; // Reset if fallthrough
        }catch(e){
          console.error(e);
          busy=false; // Safety reset
@@ -2681,10 +2683,10 @@
              busy=false;
           }, 220);
 
-          spendMoves(3);
+          // spendMoves(3); // Penalty removed
           combo = 1;
           updateUI();
-          toast("Ouch 😵","Falscher Swap: −3 Moves", 3200);
+          toast("Ouch 😵","Falscher Swap", 1000);
           return;
         }
         spendMoves(1);
@@ -4037,7 +4039,7 @@
       const savedZoom = getCookie("luvvies_zoom");
       if(savedZoom){
          const z = parseFloat(savedZoom);
-         if(!isNaN(z) && z>=0.6 && z<=1.4){
+         if(!isNaN(z) && z>=0.6 && z<=1.2){
            zoomSlider.value = z;
            window.gameZoomFactor = z;
            layoutBoard();
