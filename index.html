@@ -2317,6 +2317,16 @@
       }, 360);
     }
 
+    function collectBonus(tile){
+       if(busy) return;
+       busy=true;
+       toast("Bonus! 💖", "Lovelie collected!", 2000);
+       clearCells([{r:tile.r, c:tile.c}]);
+       totalScore += 5000;
+       updateUI();
+       setTimeout(()=>{ dropDown(); mergeMellows(); resolveAll(false); }, 300);
+    }
+
     /**********************
      * Pointer & Drag System (1:1 Drag + Powerup Locking)
      **********************/
@@ -2402,8 +2412,9 @@
       setTileXY(el, r, c); // Revert visual to grid slot
 
       if(!moved){
-         // Click detection (e.g. for ???)
+         // Click detection
          if(tile && tile.type.startsWith("myst")) revealMyst(tile);
+         if(tile && parseTypeId(tile.type).baseKey === "lovelie") collectBonus(tile);
          return;
       }
 
@@ -2436,6 +2447,10 @@
       const k2 = parseTypeId(t2.type).baseKey;
       const p1 = isPowerupKey(k1);
       const p2 = isPowerupKey(k2);
+
+      // Bonus: Lovelie interaction
+      if(parseTypeId(t1.type).baseKey === "lovelie"){ collectBonus(t1); return; }
+      if(parseTypeId(t2.type).baseKey === "lovelie"){ collectBonus(t2); return; }
 
       // Case 1: Powerup + Powerup -> FORCE SWAP (Combo)
       if(p1 && p2){
