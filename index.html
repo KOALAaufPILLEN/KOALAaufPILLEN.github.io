@@ -2249,7 +2249,7 @@
           if(getSpecial(bk)) continue;
 
           const m = makeTile(r,c,typeId("mellow","P"));
-          m.hp = 3;
+          m.hp = 0; // Small mellow has no HP (invincible)
           const oldEl = tileEls.get(cur.id);
           if(oldEl){ oldEl.remove(); tileEls.delete(cur.id); }
 
