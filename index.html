@@ -931,7 +931,7 @@
     body.fs{ overflow:hidden; }
     body.fs #app{ width: min(1200px, 98vw); margin: 10px auto; }
     body.fs #boardWrap{
-      min-height: 92vh;
+      min-height: 100vh;
       padding-top: 84px;
       padding-bottom: 12px;
     }
@@ -1859,16 +1859,26 @@
     }
 
     let ro=null;
+    let resizeTimer;
     function attachResize(){
+      const handler = () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(()=>{
+           layoutBoard();
+           syncBgHeight();
+           buildGlobalBg();
+           buildFsBg();
+        }, 150);
+      };
+
       try{
-        ro = new ResizeObserver(()=>layoutBoard());
+        ro = new ResizeObserver(handler);
         ro.observe(document.getElementById("boardWrap"));
       }catch(e){
-        window.addEventListener("resize", layoutBoard);
+        window.addEventListener("resize", handler);
       }
-      window.addEventListener("resize", syncBgHeight);
+      window.addEventListener("resize", handler);
       document.getElementById("page").addEventListener("scroll", syncBgHeight, {passive:true});
-      window.addEventListener("resize", ()=>{ buildGlobalBg(); buildFsBg(); });
     }
 
     function syncBgHeight(){
