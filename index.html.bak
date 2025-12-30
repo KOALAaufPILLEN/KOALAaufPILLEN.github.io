@@ -371,20 +371,6 @@
       position:relative;
       overflow:visible;
       z-index:6; /* Vordergrund */
-      transition: all 0.3s ease;
-    }
-
-    /* Maximize Mode */
-    body.maximized .topRow, body.maximized .stats, body.maximized .progressRow, body.maximized .below {
-       display:none !important;
-    }
-    body.maximized #app {
-       width: 98vw; margin: 10px auto;
-    }
-    body.maximized .playArea {
-       height: 90vh; /* force height */
-       padding: 4px;
-       border-radius: 12px;
     }
 
     #boardWrap{
@@ -398,7 +384,6 @@
       padding: 8px;
       touch-action: none;
     }
-    body.maximized #boardWrap { min-height: 90vh; }
 
     #board{
       position:relative;
@@ -500,27 +485,20 @@
     .plate{
       width:100%; height:100%;
       border-radius: 16px;
-      /* Neutral glassy look to make luvvies pop */
       background:
-        radial-gradient(circle at 30% 20%, rgba(255,255,255,.9), rgba(255,255,255,0.4)),
-        linear-gradient(135deg, rgba(255,255,255,.5), rgba(240,240,250,.3));
-      border: 1px solid rgba(255,255,255,.60);
-      /* Use the palette color for a subtle border/glow instead of full fill */
+        radial-gradient(circle at 22% 18%, rgba(255,255,255,.88), rgba(255,255,255,0) 40%),
+        linear-gradient(135deg, var(--p1), var(--p2));
+      border: 1px solid rgba(255,255,255,.50);
       box-shadow:
-        0 0 0 1px var(--p1) inset,
         0 14px 24px rgba(20,10,60,.10),
         0 4px 8px rgba(0,0,0,.06),
-        0 -6px 14px rgba(255,255,255,.6) inset;
+        0 -10px 18px rgba(255,255,255,.45) inset;
       position:relative;
       overflow:hidden;
 
       transform: translateY(var(--oy, 0px)) scale(1);
       opacity: var(--op, 1);
       transition: transform 260ms cubic-bezier(.2,.9,.2,1), opacity 260ms ease;
-    }
-    /* Enhance image contrast */
-    .tile img {
-       filter: drop-shadow(0 4px 8px rgba(0,0,0,.15)) saturate(1.1);
     }
     .tile.bigMellow .plate{ border-radius: 26px; }
 
@@ -1276,7 +1254,6 @@
         </div>
 
         <div class="actions">
-          <button class="Btn ghost" id="btnMax" title="Maximize Board">⛶</button>
           <button class="Btn ghost" id="btnTheme" style="padding:0 12px;min-width:46px;">🌙</button>
           <button class="Btn" id="btnMenu">Menü</button>
         </div>
@@ -1827,32 +1804,30 @@
       const wrapW = wrap.clientWidth;
       const wrapH = wrap.clientHeight || window.innerHeight;
 
+      // In Fullscreen, prioritize Board Fit
       const isFs = document.body.classList.contains("fs");
-      const isMax = document.body.classList.contains("maximized");
 
-      // Margins/Padding
-      // In FS or Max, we want minimal side padding to fill the "red area"
-      const padW = (isFs||isMax) ? 4 : 20;
-      // Vertical padding: FS needs space for HUD (top ~100px) + bottom margin
-      // Normal: Needs space for topRow + stats
-      const padH = (isFs) ? 140 : (isMax ? 60 : 40);
-
-      // If Maximized/FS, use Window Height as constraint to avoid scrolling
-      const availH = (isFs || isMax) ? window.innerHeight : wrapH;
+      // Aggressively maximize width (near zero padding)
+      const padW = isFs ? 2 : 10;
+      // Reduced padH to fill screen (matches CSS padding ~90px)
+      const padH = isFs ? 90 : 20;
 
       const usableW = Math.max(260, wrapW - padW);
-      const usableH = Math.max(260, availH - padH);
+      const usableH = Math.max(260, wrapH - padH);
 
-      const effectivePad = (isFs||isMax) ? 4 : PAD;
+      // Minimal PAD inside board
+      const effectivePad = isFs ? 4 : PAD;
 
       const cellW = Math.floor((usableW - (cols-1)*GAP - effectivePad*2) / cols);
       const cellH = Math.floor((usableH - (rows-1)*GAP - effectivePad*2) / rows);
 
+      // Zoom factor from slider (global var state.zoom or css var?)
+      // Let's assume a global zoomFactor = 1.0;
       const zoom = window.gameZoomFactor || 1.0;
 
-      // No strict max cap, allow filling the screen
-      const max = 400;
-      return clamp(Math.min(cellW, cellH) * zoom, 20, max);
+      // Increase caps for huge resolutions
+      const max = isFs ? 220 : 140;
+      return clamp(Math.min(cellW, cellH) * zoom, 20, max * 2.5);
     }
 
     function setTileXY(el, r, c){
@@ -2353,10 +2328,10 @@
     }
 
     /**********************
-     * Pointer & Drag System (1:1 Drag Fix)
+     * Pointer & Drag System (1:1 Drag + Powerup Locking)
      **********************/
     let dragStart = {x:0, y:0};
-    let currentDrag = null;
+    let currentDrag = null; // {id, el, r, c, startLeft, startTop}
 
     function onPointerDown(e){
       if(busy) return;
@@ -2365,6 +2340,7 @@
       const tile = findTileById(id);
       if(!tile) return;
 
+      // Stop previous drag if any
       if(currentDrag) return;
 
       clearHints();
@@ -2373,17 +2349,18 @@
       const rect = tEl.getBoundingClientRect();
       const boardRect = ui.board.getBoundingClientRect();
 
-      // We calculate current position based on grid logic to ensure we start from "true" position
-      // Visual drag uses CSS translate.
-      // 1:1 Dragging means: Mouse Delta = Tile Delta.
+      // Calculate offset relative to board for 1:1 dragging
+      // We calculate position from grid (r,c) to avoid DOM read errors (0,0 jump)
+      const currentLeft = tile.c * (CELL+GAP) + PAD;
+      const currentTop  = tile.r * (CELL+GAP) + PAD;
 
-      // Store initial mouse pos
       dragStart = {
-        startX: e.clientX,
-        startY: e.clientY,
-        // Store initial CSS transform values
-        initialLeft: tile.c * (CELL+GAP) + PAD,
-        initialTop:  tile.r * (CELL+GAP) + PAD,
+        x: e.clientX,
+        y: e.clientY,
+        tileX: currentLeft,
+        tileY: currentTop,
+        offsetX: e.clientX - rect.left, // Click offset within tile
+        offsetY: e.clientY - rect.top
       };
 
       currentDrag = {
@@ -2399,16 +2376,24 @@
 
     function onPointerMove(e){
       if(!currentDrag) return;
-      const dx = e.clientX - dragStart.startX;
-      const dy = e.clientY - dragStart.startY;
+      const dx = e.clientX - dragStart.x;
+      const dy = e.clientY - dragStart.y;
 
-      if(!currentDrag.moved && Math.hypot(dx,dy) > 6) currentDrag.moved = true;
+      // Threshold to start moving visual
+      if(!currentDrag.moved && Math.hypot(dx,dy) > 5) currentDrag.moved = true;
 
       if(currentDrag.moved){
-         // Apply exact delta to initial CSS position
-         // This ensures 1:1 movement regardless of parent scaling/offsets
-         const newX = dragStart.initialLeft + dx;
-         const newY = dragStart.initialTop + dy;
+         // Visual Update 1:1
+         // New position = Current Board Relative Mouse Pos - Click Offset inside tile
+         // We need board bounding rect
+         const boardRect = ui.board.getBoundingClientRect();
+         // Mouse pos relative to board
+         const relX = e.clientX - boardRect.left;
+         const relY = e.clientY - boardRect.top;
+
+         // New Pos = DragStart.tileX + dx
+         const newX = dragStart.tileX + dx;
+         const newY = dragStart.tileY + dy;
 
          currentDrag.el.style.setProperty('--x', newX+"px");
          currentDrag.el.style.setProperty('--y', newY+"px");
@@ -2421,25 +2406,22 @@
       const tile = findTileById(id);
       currentDrag = null;
       el.classList.remove("dragging");
-      el.releasePointerCapture(e.pointerId);
 
-      // Revert visual to grid slot immediately (animation happens if swap valid)
-      setTileXY(el, r, c);
+      // Always reset position visually first (snap back),
+      // if swap is valid, it will animate to new pos or be swapped
+      setTileXY(el, r, c); // Revert visual to grid slot
 
       if(!moved){
+         // Click detection
          if(tile && tile.type.startsWith("myst")) revealMyst(tile);
          if(tile && parseTypeId(tile.type).baseKey === "lovelie") collectBonus(tile);
          return;
       }
 
-      const dx = e.clientX - dragStart.startX;
-      const dy = e.clientY - dragStart.startY;
+      const dx = e.clientX - dragStart.x;
+      const dy = e.clientY - dragStart.y;
 
-      // Determine drag direction based on movement
-      // Use threshold relative to cell size for better feel?
-      // User requested 1:1 follows.
-      // Simple threshold 20px
-      if(Math.hypot(dx,dy) < 15) return;
+      if(Math.hypot(dx,dy) < 20) return; // Too short drag
 
       // Direction
       let dirStr = "";
@@ -2466,15 +2448,9 @@
       const p1 = isPowerupKey(k1);
       const p2 = isPowerupKey(k2);
 
-      // Bonus: Lovelie interaction logic
-      // Priority 1: If mixing with Powerup -> Swap/Combo
-      if((k1==="lovelie" && p2) || (k2==="lovelie" && p1)){
-         trySwap(r, c, r2, c2);
-         return;
-      }
-      // Priority 2: Just clicking/swapping with normal -> Collect Bonus
-      if(k1 === "lovelie"){ collectBonus(t1); return; }
-      if(k2 === "lovelie"){ collectBonus(t2); return; }
+      // Bonus: Lovelie interaction
+      if(parseTypeId(t1.type).baseKey === "lovelie"){ collectBonus(t1); return; }
+      if(parseTypeId(t2.type).baseKey === "lovelie"){ collectBonus(t2); return; }
 
       // Case 1: Powerup + Powerup -> FORCE SWAP (Combo)
       if(p1 && p2){
@@ -2562,24 +2538,24 @@
 
     function tripletMatchKind(t1,t2,t3){
       if(!t1||!t2||!t3) return null;
-      // Specials invoke mixed types, so standard isMatchable might return false if we strictly check colors?
-      // Actually isMatchable only filters Blockers/Specials. Normal luvvies are fine.
-      if(isBlocker(t1)||isBlocker(t2)||isBlocker(t3)) return null;
+      if(!isMatchable(t1)||!isMatchable(t2)||!isMatchable(t3)) return null;
 
       const p1=parseTypeId(t1.type), p2=parseTypeId(t2.type), p3=parseTypeId(t3.type);
+      // Removed variant check: allow mixed variants for special combos
+      // if(!(p1.variant===p2.variant && p2.variant===p3.variant)) return null;
+
       const keys=[p1.baseKey,p2.baseKey,p3.baseKey];
       const count=(k)=>keys.filter(x=>x===k).length;
-
-      // Explicitly ignore variants (A vs B)
       if(count("sleepy")===2 && count("mond")===1) return "moonshuffle";
       if(count("grumpy")===2 && count("happy")===1) return "therapy";
       if(count("donut")===2 && count("sweety")===1) return "sprinkle";
       if(count("donut")===2 && count("happy")===1) return "sugar";
+      // Buddy Burst: beide Richtungen
       if(count("smokey")===2 && count("joyce")===1) return "buddies";
       if(count("joyce")===2 && count("smokey")===1) return "buddies";
+      // Best Buddies (Smokey + Simba)
       if(count("smokey")===2 && count("simba")===1) return "bestbuddies";
       if(count("simba")===2 && count("smokey")===1) return "bestbuddies";
-
       return null;
     }
 
@@ -2901,99 +2877,67 @@
       const aBk = parseTypeId(A.type).baseKey;
       const bBk = parseTypeId(B.type).baseKey;
 
-      // === Generic Lovelie Combo (Lovelie + Powerup) ===
-      if(aBk==="lovelie" && isPowerupKey(bBk)){
-         activateLovelieCombo(B, A); return;
-      }
-      if(bBk==="lovelie" && isPowerupKey(aBk)){
-         activateLovelieCombo(A, B); return;
-      }
-
-      // === Powerup + Powerup Interactions ===
-
-      // Koala + Worm
       if((aBk==="koala" && bBk==="worm") || (aBk==="worm" && bBk==="koala")){
         toast("🐨🪱 KOALA × WORM!", "MEGA CROSS BLAST! 💥", 3500);
+        // Clear 3 lines Horizontal, 3 lines Vertical centered on A and B
+        // Center point: Average of A and B? Or just clear both rows/cols + neighbors
         const rMid = Math.round((A.r + B.r)/2);
         const cMid = Math.round((A.c + B.c)/2);
+
         const cells = [];
+        // Horizontal bands
         for(let r=rMid-1; r<=rMid+1; r++){
             if(r<0 || r>=rows) continue;
             for(let c=0; c<cols; c++) cells.push({r,c});
         }
+        // Vertical bands
         for(let c=cMid-1; c<=cMid+1; c++){
             if(c<0 || c>=cols) continue;
             for(let r=0; r<rows; r++) cells.push({r,c});
         }
+
         clearCells(cells);
         return;
       }
 
-      // Koala + Citrussy
       if((aBk==="koala" && bBk==="cit") || (aBk==="cit" && bBk==="koala")){
         toast("🐨🍋 KOALA × Citrussy!", "DOUBLE BOARD CLEAN ×2 💥💥", 3800);
+
+        // 1) first clear
         clearWholeBoard();
+
+        // 2) after refill -> clear again
         setTimeout(()=>{
           dropDown();
           mergeMellows();
+
           setTimeout(()=>{
             clearWholeBoard();
+
+            // double points reward
             const bonus = Math.round(2200 * diff.scoreMult);
             totalScore += bonus;
             levelScore += bonus;
+
             setTimeout(()=>{
-              dropDown(); mergeMellows(); resolveAll(false, true);
+              dropDown();
+              mergeMellows();
+              resolveAll(false, true); // Use safe resolve
             }, 240);
+
           }, 260);
         }, 260);
+
         clearCells([{r:A.r,c:A.c},{r:B.r,c:B.c}]);
         return;
       }
 
-      // Worm + Worm
       if(aBk==="worm" && bBk==="worm"){
         toast("🪱🪱 Zu sauer!","Welle down!", 3200);
         wormWave6(A.r,A.c,B.r,B.c);
         clearCells([{r:A.r,c:A.c},{r:B.r,c:B.c}]);
         return;
       }
-
-      // Cit + Cit
-      if(aBk==="cit" && bBk==="cit"){
-        toast("🍋🍋 DOUBLE CIT!", "Big Bang! 💥", 3200);
-        citBlast(A.r,A.c,6); // Bigger radius
-        clearCells([{r:A.r,c:A.c},{r:B.r,c:B.c}]);
-        return;
-      }
-
-      // Koala + Koala
-      if(aBk==="koala" && bBk==="koala"){
-        toast("🐨🐨 DOUBLE KOALA!", "Magic Wipe! ✨", 3200);
-        clearWholeBoard();
-        clearCells([{r:A.r,c:A.c},{r:B.r,c:B.c}]);
-        return;
-      }
-
-      // Worm + Cit
-      if((aBk==="worm" && bBk==="cit") || (aBk==="cit" && bBk==="worm")){
-         toast("🪱🍋 WORM × CIT!", "Star Rows! 💥", 3400);
-         // Clear 3 Rows + 3 Cols
-         const rMid = Math.round((A.r + B.r)/2);
-         const cMid = Math.round((A.c + B.c)/2);
-         // 3 Rows
-         const cells = [];
-         for(let r=rMid-1; r<=rMid+1; r++){
-            if(r>=0 && r<rows) for(let c=0; c<cols; c++) cells.push({r,c});
-         }
-         // 3 Cols
-         for(let c=cMid-1; c<=cMid+1; c++){
-            if(c>=0 && c<cols) for(let r=0; r<rows; r++) cells.push({r,c});
-         }
-         clearCells(cells);
-         return;
-      }
-
-      // === Single Powerup Activation (Swap with Normal) ===
 
       if(aBk==="koala" && !getSpecial(bBk)){
         koalaMagicOn(bBk);
@@ -3025,32 +2969,6 @@
         citBlast(B.r,B.c,3);
         clearCells([{r:B.r,c:B.c}]);
       }
-    }
-
-    function activateLovelieCombo(powerupTile, lovelieTile){
-       const pk = parseTypeId(powerupTile.type).baseKey;
-       toast("LOVELIE POWER! 💖", pk.toUpperCase()+" WAVE!", 3000);
-
-       // Massive effect based on powerup
-       if(pk === "worm"){
-          // Turn 5 random tiles into worms and activate them?
-          // Or just clear 5 random rows?
-          // Let's clear 5 random rows.
-          const rowsToClear = new Set();
-          while(rowsToClear.size < 5) rowsToClear.add(Math.floor(Math.random()*rows));
-          rowsToClear.forEach(r => clearRow(r));
-       } else if(pk === "cit"){
-          // 5 random Cit blasts
-          for(let i=0;i<5;i++){
-             citBlast(Math.floor(Math.random()*rows), Math.floor(Math.random()*cols), 3);
-          }
-       } else if(pk === "koala"){
-          // Clear board + extra points
-          clearWholeBoard();
-          totalScore += 5000;
-       }
-
-       clearCells([{r:powerupTile.r, c:powerupTile.c}, {r:lovelieTile.r, c:lovelieTile.c}]);
     }
 
     function resolveAll(initial=false, isPlayerSwap=false){
@@ -4182,15 +4100,6 @@
       document.body.classList.toggle("dark");
       syncTheme();
     });
-
-    // Maximize Button
-    const btnMax = document.getElementById("btnMax");
-    if(btnMax){
-       btnMax.addEventListener("click", ()=>{
-          document.body.classList.toggle("maximized");
-          layoutBoard();
-       });
-    }
 
     // FX Slider (Dimmer Overlay)
     function updateFx(v){
