@@ -675,6 +675,15 @@
       55%{ transform: translateY(-2px) scale(1.14); opacity:1; }
       100%{ transform: translateY(8px) scale(.30); opacity:0; }
     }
+    /* Jelly bump when combos resolve */
+    .tile.bump .plate{ animation: jellyBump 540ms cubic-bezier(.18,.95,.2,1.05) both; }
+    @keyframes jellyBump{
+      0%{ transform: translateY(0) scale(1); }
+      20%{ transform: translateY(-9px) scale(1.10, 0.90); }
+      45%{ transform: translateY(6px) scale(0.92, 1.10); }
+      70%{ transform: translateY(-4px) scale(1.05, 0.96); }
+      100%{ transform: translateY(0) scale(1); }
+    }
 
     /* Landing bounce */
     .land .plate{ animation: landPlate 560ms cubic-bezier(.2,.9,.2,1) both; }
@@ -1534,10 +1543,87 @@
       B: ["#ffcf5a", "#8b5cf6"]       // knallig gelb -> violet
     };
 
-    function neutralPalForTile(tile){
-      // Nur 2 Varianten (A/B) - nicht nach Tile-ID, damit keine "Pseudo-Varianten" entstehen.
-      const v = (parseTypeId(tile?.type).variant || "A");
-      return (v === "B") ? NEUTRAL_PALS.B : NEUTRAL_PALS.A;
+    const SPECIAL_PALS = {
+      worm: ["#ffe082", "#ff7043"],
+      cit: ["#b2ff59", "#69f0ae"],
+      koala: ["#a5b4fc", "#7c3aed"],
+      mellow: ["#ffccbc", "#ff8a65"],
+      lovelie: ["#ff9adf", "#ff4fb9"],
+      myst: ["#d1c4e9", "#9575cd"],
+      supernuss: ["#ffd740", "#ff8f00"]
+    };
+
+    // Color helpers (small + cached) to derive complementary gradients per character
+    function hexToRgb(hex){
+      const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex||"");
+      if(!m) return null;
+      return { r: parseInt(m[1],16), g: parseInt(m[2],16), b: parseInt(m[3],16) };
+    }
+    function rgbToHsl(r,g,b){
+      r/=255; g/=255; b/=255;
+      const max=Math.max(r,g,b), min=Math.min(r,g,b);
+      let h,s,l=(max+min)/2;
+      if(max===min){ h=s=0; }
+      else{
+        const d=max-min;
+        s=l>0.5 ? d/(2-max-min) : d/(max+min);
+        switch(max){
+          case r: h=(g-b)/d+(g<b?6:0); break;
+          case g: h=(b-r)/d+2; break;
+          case b: h=(r-g)/d+4; break;
+        }
+        h/=6;
+      }
+      return {h,s,l};
+    }
+    function hslToHex(h,s,l){
+      const hue2rgb=(p,q,t)=>{
+        if(t<0) t+=1;
+        if(t>1) t-=1;
+        if(t<1/6) return p+(q-p)*6*t;
+        if(t<1/2) return q;
+        if(t<2/3) return p+(q-p)*(2/3 - t)*6;
+        return p;
+      };
+      let r,g,b;
+      if(s===0){ r=g=b=l; }
+      else{
+        const q=l<0.5 ? l*(1+s) : l+s-l*s;
+        const p=2*l-q;
+        r=hue2rgb(p,q,h+1/3);
+        g=hue2rgb(p,q,h);
+        b=hue2rgb(p,q,h-1/3);
+      }
+      const toHex=(x)=>{
+        const v=Math.round(x*255).toString(16).padStart(2,"0");
+        return v;
+      };
+      return "#"+toHex(r)+toHex(g)+toHex(b);
+    }
+    function complementHex(hex){
+      const rgb=hexToRgb(hex);
+      if(!rgb) return null;
+      const hsl=rgbToHsl(rgb.r,rgb.g,rgb.b);
+      const nh=((hsl.h*360 + 160) % 360)/360;
+      const ns=Math.min(1, hsl.s*0.9 + 0.05);
+      const nl=Math.min(1, hsl.l*0.9 + 0.08);
+      return hslToHex(nh, ns, nl);
+    }
+
+    function paletteForTile(tile){
+      const { baseKey, variant } = parseTypeId(tile?.type || "");
+      const base = getBase(baseKey);
+      if(base?.palettes){
+        const pal = base.palettes[variant] || base.palettes.A || Object.values(base.palettes)[0];
+        if(pal && pal.length>=2){
+          const c1 = complementHex(pal[0]);
+          const c2 = complementHex(pal[1]);
+          if(c1 && c2) return [c1, c2];
+        }
+      }
+      if(SPECIAL_PALS[baseKey]) return SPECIAL_PALS[baseKey];
+      const v = (variant || "A") === "B" ? "B" : "A";
+      return NEUTRAL_PALS[v];
     }
 /**********************
      * DOM safety: remove orphan tile elements (prevents rare "static tiles" you can't drag)
@@ -2139,7 +2225,7 @@ for(const [id, el] of tileEls){
       const meta = base || spec;
 
       // palettes (neutral): Background is NOT tied to the character (less confusion, more readable)
-      const pal = neutralPalForTile(tile);
+      const pal = paletteForTile(tile);
       el.style.setProperty("--p1", pal[0]);
       el.style.setProperty("--p2", pal[1]);
 
@@ -2190,7 +2276,7 @@ for(const [id, el] of tileEls){
 }
 
       el.appendChild(plate);
-      if(tile.big && (baseKey===\"mellowlord\" || baseKey===\"mellowzilla\" || baseKey===\"koalazilla\")){
+      if(tile.big && (baseKey==="mellowlord" || baseKey==="mellowzilla" || baseKey==="koalazilla")){
         const hp = document.createElement("div");
         hp.className="hp";
         hp.textContent = tile.hp;
@@ -2235,8 +2321,8 @@ function refreshTileEl(tile){
   const spec = getSpecial(baseKey);
   const meta = base || spec;
 
-  // palettes (neutral): Background is NOT tied to the character (less confusion, more readable)
-  const pal = neutralPalForTile(tile);
+  // palettes (character/complement based)
+  const pal = paletteForTile(tile);
   el.style.setProperty("--p1", pal[0]);
   el.style.setProperty("--p2", pal[1]);
 
@@ -2363,14 +2449,21 @@ function updateMellowHp(tile){
     /**********************
      * Background (no bubbles) + subtle twinkles
      **********************/
-    function buildGlobalBg(){
+    let globalBgSize = {w:0, h:0};
+    let fsBgSize = {w:0, h:0};
+
+    function buildGlobalBg(force=false){
       syncBgHeight();
       const cont = document.getElementById("globalBg");
-      cont.innerHTML = "";
 
       const page = document.getElementById("page");
       const W = page.clientWidth;
       const H = Math.max(page.scrollHeight, window.innerHeight);
+      if(!force && cont.children.length){
+        if(Math.abs(W - globalBgSize.w) < 40 && Math.abs(H - globalBgSize.h) < 40) return;
+      }
+      globalBgSize = {w:W, h:H};
+      cont.innerHTML = "";
       const bgChars = [...BASES].sort(()=>Math.random()-0.5).slice(0,8);
 
       bgChars.forEach((b)=>{
@@ -2411,12 +2504,16 @@ function updateMellowHp(tile){
       });
     }
 
-    function buildFsBg(){
+    function buildFsBg(force=false){
       const fs = document.getElementById("fsBg");
-      fs.innerHTML = "";
       if(!document.body.classList.contains("fs") && !document.body.classList.contains("maximized")) return;
       const W = fs.clientWidth || window.innerWidth;
       const H = fs.clientHeight || window.innerHeight;
+      if(!force && fs.children.length){
+        if(Math.abs(W - fsBgSize.w) < 40 && Math.abs(H - fsBgSize.h) < 40) return;
+      }
+      fsBgSize = {w:W, h:H};
+      fs.innerHTML = "";
       const pick = [...BASES].sort(()=>Math.random()-0.5).slice(0,7);
       pick.forEach((b)=>{
         const wrap = document.createElement("div");
@@ -3118,6 +3215,35 @@ function updateMellowHp(tile){
       }
     }
 
+    function jellyBumpAround(clearedCells){
+      const dirs = [
+        [1,0],[-1,0],[0,1],[0,-1],
+        [1,1],[1,-1],[-1,1],[-1,-1]
+      ];
+      const targets = new Set();
+      for(const p of clearedCells){
+        for(const [dr,dc] of dirs){
+          const rr = p.r + dr, cc = p.c + dc;
+          if(!inBounds(rr,cc)) continue;
+          const t = grid[rr][cc];
+          if(!t || isBlocker(t)) continue;
+          targets.add(posKey(rr,cc));
+        }
+      }
+      for(const key of targets){
+        const [r,c] = key.split(",").map(Number);
+        const t = grid[r][c];
+        if(!t) continue;
+        const el = tileEls.get(t.id);
+        if(!el) continue;
+        el.classList.remove("bump");
+        // reflow to restart animation
+        void el.offsetWidth;
+        el.classList.add("bump");
+        setTimeout(()=>el.classList.remove("bump"), 520);
+      }
+    }
+
     function clearCells(cells){
       const uniq = new Set(cells.map(p=>posKey(p.r,p.c)));
       const cleared = [];
@@ -3146,6 +3272,7 @@ function updateMellowHp(tile){
       }
 
       damageMellowsAround(cleared);
+      jellyBumpAround(cleared);
 
       const add = Math.round(cleared.length * scorePerTile() * 1.10);
       totalScore += add;
@@ -3552,11 +3679,11 @@ function updateMellowHp(tile){
         const mm = findLineMatches();
 
         if(mm.clear.size===0 && specials.length===0){
+          // Sicherstellen, dass das Board nach Level-Ups weiter spielbar bleibt
+          ensureMovesOrShuffle();
           busy=false;
           layoutBoard(); // Force sync visual positions to fix drag bugs
           updateUI();
-          // No forced shuffle here: swaps without immediate matches are allowed (tile-swapper style).
-          // Player can freely rearrange to create the next match.
           return;
         }
 
@@ -3931,6 +4058,16 @@ function updateMellowHp(tile){
       if(Math.random() < diff.lovelieChance*0.45){
         maybeSpawnLovelie();
       }
+
+      // After gravity settles, auto-resolve if matches are still present (failsafe for stuck boards)
+      setTimeout(()=>{
+        if(busy) return;
+        const pending = findLineMatches();
+        const specials = findSpecialQuads();
+        if((pending?.clear?.size||0) > 0 || (specials?.length||0) > 0){
+          resolveAll(false, false);
+        }
+      }, 40);
     }
 
     function mergeMellows(){
@@ -4166,11 +4303,24 @@ function updateMellowHp(tile){
       });
     }
 
-    function ensureMovesOrShuffle(){
-      // KOALA: Free-Swap Mode -> kein Auto-Shuffle bei 'keine Züge'
-      // Diese Funktion bleibt als Safety-Hook (z.B. gegen orphan tiles), aber verändert das Board nicht.
+    function ensurePlayableBoard(maxShuffles=6){
       try{ if(typeof pruneOrphanTileEls === "function") pruneOrphanTileEls(); }catch(e){}
-      return;
+      let tries = 0;
+      while(tries < maxShuffles){
+        if(hasAnyMatchOrSpecial()) return true; // immediate clearable match/special
+        if(hasMove()) return true;              // at least one possible swap-to-match
+        shuffleAll();
+        tries++;
+      }
+      return false;
+    }
+
+    function ensureMovesOrShuffle(){
+      if(ensurePlayableBoard()) return;
+      // Fallback: still stuck? force one last shuffle and try resolving
+      shuffleAll();
+      layoutBoard();
+      setTimeout(()=>resolveAll(false, false), 60);
     }
 
     function hint(){
@@ -4568,6 +4718,48 @@ clearHints();
       }
     }
 
+    function demoLeaderboardRows(diffKey){
+      const now = new Date().toISOString();
+      return [
+        { player_name:"CandyQueen", score:184200, level:14, difficulty:diffKey, created_at:now, user_id:"demo-1" },
+        { player_name:"KoalaChamp", score:152880, level:13, difficulty:diffKey, created_at:now, user_id:"demo-2" },
+        { player_name:"LuvMaster", score:120440, level:12, difficulty:diffKey, created_at:now, user_id:"demo-3" },
+        { player_name:"BubbleBuddy", score:84400, level:10, difficulty:diffKey, created_at:now, user_id:"demo-4" },
+        { player_name:"Sourworm", score:64200, level:9, difficulty:diffKey, created_at:now, user_id:"demo-5" }
+      ];
+    }
+
+    function renderLeaderboardRows(rows, note){
+      const list = document.getElementById("lbList");
+      list.innerHTML = "";
+      rows.forEach((x,i)=>{
+        const item = document.createElement("div");
+        item.className="lbItem";
+        item.style.animationDelay = (i * 0.05) + "s";
+        if(i===0) item.classList.add("rank1");
+        if(i===1) item.classList.add("rank2");
+        if(i===2) item.classList.add("rank3");
+
+        const d = new Date(x.created_at || Date.now());
+        const stamp = `${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")}.${d.getFullYear()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+        item.innerHTML = `
+          <div class="left">
+            <b>${i+1}. ${escapeHtml(x.player_name||"Anonymous")}</b>
+            <small>Lvl ${x.level||1} • ${diffLabel(x.difficulty||"easy")} • ${stamp}</small>
+          </div>
+          <div class="score">${fmt(x.score||0)}</div>
+        `;
+        list.appendChild(item);
+      });
+      if(note){
+        const info = document.createElement("div");
+        info.className = "tiny";
+        info.style.marginTop = "6px";
+        info.textContent = note;
+        list.appendChild(info);
+      }
+    }
+
     async function refreshLeaderboard(){
       const list = document.getElementById("lbList");
       const sel = document.getElementById("lbDiffSelect");
@@ -4579,9 +4771,8 @@ clearHints();
       const title = document.getElementById("lbTitle");
       if(title) title.textContent = "Leaderboard • " + season.label;
 
-      list.innerHTML = "";
       if(!sb){
-        list.innerHTML = `<div class="tiny">Leaderboard aktuell nicht verfügbar.</div>`;
+        renderLeaderboardRows(demoLeaderboardRows(dKey), "Leaderboard aktuell nicht verfügbar – zeige Demo-Einträge.");
         return;
       }
       try{
@@ -4606,33 +4797,15 @@ clearHints();
            if(unique.length >= 25) break;
         }
 
-        unique.forEach((x, i)=>{
-          const item = document.createElement("div");
-          item.className="lbItem";
-          item.style.animationDelay = (i * 0.05) + "s";
-          if(i===0) item.classList.add("rank1");
-          if(i===1) item.classList.add("rank2");
-          if(i===2) item.classList.add("rank3");
-
-          const d = new Date(x.created_at);
-          const stamp = `${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")}.${d.getFullYear()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
-          // Use diffLabel to force correct name
-          item.innerHTML = `
-            <div class="left">
-              <b>${i+1}. ${escapeHtml(x.player_name||"Anonymous")}</b>
-              <small>Lvl ${x.level} • ${diffLabel(x.difficulty)} • ${stamp}</small>
-            </div>
-            <div class="score">${fmt(x.score)}</div>
-          `;
-          list.appendChild(item);
-        });
-        if(!data || data.length===0){
-          list.innerHTML = `<div class="tiny">Noch keine Scores. Sei die/der Erste 😈✨</div>`;
+        if(!data || data.length===0 || unique.length===0){
+          renderLeaderboardRows(demoLeaderboardRows(dKey), "Noch keine Scores – Demo-Einträge aktiviert. Poste deinen ersten Run!");
+        } else {
+          renderLeaderboardRows(unique, "");
         }
       }catch(e){
         const msg = String(e?.message || e || "Unbekannter Fehler");
         console.error("Leaderboard error:", e);
-        list.innerHTML = `<div class="tiny">Leaderboard Fehler: ${escapeHtml(msg)}</div>`;
+        renderLeaderboardRows(demoLeaderboardRows(dKey), "Leaderboard Fehler: "+escapeHtml(msg)+" (zeige Demo)");
       }
       syncLbHeight();
     }
