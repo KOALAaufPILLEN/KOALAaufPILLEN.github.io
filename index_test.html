@@ -4753,7 +4753,14 @@ clearHints();
     function renderLeaderboardRows(rows, note){
       const list = document.getElementById("lbList");
       list.innerHTML = "";
-      rows.forEach((x,i)=>{
+      // Ensure we always have visible podium rows
+      const padded = [...rows];
+      const demo = demoLeaderboardRows(rows[0]?.difficulty || diff.key);
+      while(padded.length < 3 && demo.length){
+        padded.push(demo[padded.length % demo.length]);
+      }
+
+      padded.forEach((x,i)=>{
         const item = document.createElement("div");
         item.className="lbItem";
         item.style.animationDelay = (i * 0.05) + "s";
@@ -4761,11 +4768,12 @@ clearHints();
         if(i===1) item.classList.add("rank2");
         if(i===2) item.classList.add("rank3");
 
+        const rankNum = (typeof x.rank === "number" && !isNaN(x.rank)) ? x.rank : (i+1);
         const d = new Date(x.created_at || Date.now());
         const stamp = `${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")}.${d.getFullYear()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
         item.innerHTML = `
           <div class="left">
-            <b>${i+1}. ${escapeHtml(x.player_name||"Anonymous")}</b>
+            <b>${rankNum}. ${escapeHtml(x.player_name||"Anonymous")}</b>
             <small>Lvl ${x.level||1} • ${diffLabel(x.difficulty||"easy")} • ${stamp}</small>
           </div>
           <div class="score">${fmt(x.score||0)}</div>
