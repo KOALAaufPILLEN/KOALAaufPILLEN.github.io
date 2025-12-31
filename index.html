@@ -1146,8 +1146,8 @@
           <li><b>2× Smokey + 1× Simba</b> → Best Buddy Wave (ab Lvl 4)</li>
           <li><b>Mellow</b> ab Level 3 (alle 4 Level), hat 3 HP • Clears daneben ziehen HP ab</li>
           <li><b>???</b> klicken → <b>random</b> Powerup/Bonus/Block (mit Puff-Animation)</li>
-          <li><b>Falscher Swap</b> kostet <b>3 Moves</b> (außer Powerup-Combos).</li>
-          <li><b>Keine Züge</b> → Auto-Shuffle, −3 Moves.</li>
+          <li><b>Swap ohne Match</b> kostet <b>1 Move</b> (Live-Swap).</li>
+          <li><b>Keine Züge</b> → Auto-Shuffle, −1 Move.</li>
         </ul>
         <div class="foot">
           <button class="Btn ghost" id="introClose">Schließen</button>
@@ -1721,7 +1721,8 @@
     function isBlocker(t){
       if(!t) return false;
       const bk = parseTypeId(t.type).baseKey;
-      if(bk==="mellow" || bk==="mellowlord" || bk==="mellowzilla") return true;
+      // Small mellow is NO LONGER a blocker (so it falls/swaps)
+      if(bk==="mellowlord" || bk==="mellowzilla") return true;
       if(isPlaceholder(t)) return true;
       return false;
     }
@@ -2078,13 +2079,14 @@
     }
 
     function wouldCreateMatch(r,c,type){
+      const k = parseTypeId(type).baseKey;
       if(c>=2){
         const a=grid[r][c-1], b=grid[r][c-2];
-        if(a && b && a.type===type && b.type===type && isMatchable(a) && isMatchable(b)) return true;
+        if(a && b && parseTypeId(a.type).baseKey===k && parseTypeId(b.type).baseKey===k && isMatchable(a) && isMatchable(b)) return true;
       }
       if(r>=2){
         const a=grid[r-1][c], b=grid[r-2][c];
-        if(a && b && a.type===type && b.type===type && isMatchable(a) && isMatchable(b)) return true;
+        if(a && b && parseTypeId(a.type).baseKey===k && parseTypeId(b.type).baseKey===k && isMatchable(a) && isMatchable(b)) return true;
       }
       return false;
     }
@@ -2247,7 +2249,7 @@
           if(getSpecial(bk)) continue;
 
           const m = makeTile(r,c,typeId("mellow","P"));
-          m.hp = 3;
+          m.hp = 0; // Small mellow has no HP (invincible)
           const oldEl = tileEls.get(cur.id);
           if(oldEl){ oldEl.remove(); tileEls.delete(cur.id); }
 
@@ -2357,9 +2359,24 @@
      **********************/
     let dragStart = {x:0, y:0};
     let currentDrag = null;
+    let busyStart = 0; // Watchdog timestamp
 
     function onPointerDown(e){
-      if(busy) return;
+      // Watchdog: If busy for too long (>2.5s) without active resolution, force unlock
+      if(busy){
+         if(!busyStart) busyStart = Date.now();
+         if(Date.now() - busyStart > 2500){
+             console.warn("Busy state stuck, auto-recovering...");
+             busy = false;
+             busyStart = 0;
+             document.querySelectorAll('.tile.dragging').forEach(el=>el.classList.remove('dragging'));
+             toast("Auto-Fix 🛠️", "Input block gelöst.", 1500);
+         } else {
+             return;
+         }
+      }
+      busyStart = Date.now();
+
       const tEl = e.currentTarget;
       const id = tEl.dataset.id;
       const tile = findTileById(id);
@@ -2466,6 +2483,20 @@
       const p1 = isPowerupKey(k1);
       const p2 = isPowerupKey(k2);
 
+      // Special: Lovelie + Lovelie -> Harmony
+      if(k1==="lovelie" && k2==="lovelie"){
+         trySwap(r, c, r2, c2);
+         return;
+      }
+
+      // Special: Powerup + SuperNuss -> Super Combo
+      const sn1 = k1==="supernuss";
+      const sn2 = k2==="supernuss";
+      if((p1 && sn2) || (p2 && sn1)){
+         trySwap(r, c, r2, c2);
+         return;
+      }
+
       // Bonus: Lovelie interaction logic
       // Priority 1: If mixing with Powerup -> Swap/Combo
       if((k1==="lovelie" && p2) || (k2==="lovelie" && p1)){
@@ -2560,43 +2591,46 @@
       }
     }
 
-    function tripletMatchKind(t1,t2,t3){
-      if(!t1||!t2||!t3) return null;
-      // Specials invoke mixed types, so standard isMatchable might return false if we strictly check colors?
-      // Actually isMatchable only filters Blockers/Specials. Normal luvvies are fine.
-      if(isBlocker(t1)||isBlocker(t2)||isBlocker(t3)) return null;
+    function quadMatchKind(t1,t2,t3,t4){
+      if(!t1||!t2||!t3||!t4) return null;
+      if(isBlocker(t1)||isBlocker(t2)||isBlocker(t3)||isBlocker(t4)) return null;
 
-      const p1=parseTypeId(t1.type), p2=parseTypeId(t2.type), p3=parseTypeId(t3.type);
-      const keys=[p1.baseKey,p2.baseKey,p3.baseKey];
+      const p1=parseTypeId(t1.type), p2=parseTypeId(t2.type), p3=parseTypeId(t3.type), p4=parseTypeId(t4.type);
+      const keys=[p1.baseKey,p2.baseKey,p3.baseKey,p4.baseKey];
       const count=(k)=>keys.filter(x=>x===k).length;
 
-      // Explicitly ignore variants (A vs B)
-      if(count("sleepy")===2 && count("mond")===1) return "moonshuffle";
-      if(count("grumpy")===2 && count("happy")===1) return "therapy";
-      if(count("donut")===2 && count("sweety")===1) return "sprinkle";
-      if(count("donut")===2 && count("happy")===1) return "sugar";
-      if(count("smokey")===2 && count("joyce")===1) return "buddies";
-      if(count("joyce")===2 && count("smokey")===1) return "buddies";
-      if(count("smokey")===2 && count("simba")===1) return "bestbuddies";
-      if(count("simba")===2 && count("smokey")===1) return "bestbuddies";
+      // 3+1 Logic (Ghost combo fix)
+      if(count("sleepy")===3 && count("mond")===1) return "moonshuffle";
+      if(count("grumpy")===3 && count("happy")===1) return "therapy";
+      if(count("donut")===3 && count("sweety")===1) return "sprinkle";
+      if(count("donut")===3 && count("happy")===1) return "sugar";
+
+      // Buddies: 3 of either + 1 of other
+      if(count("smokey")===3 && count("joyce")===1) return "buddies";
+      if(count("joyce")===3 && count("smokey")===1) return "buddies";
+
+      if(count("smokey")===3 && count("simba")===1) return "bestbuddies";
+      if(count("simba")===3 && count("smokey")===1) return "bestbuddies";
 
       return null;
     }
 
-    function findSpecialTriples(){
+    function findSpecialQuads(){
       const found=[];
+      // Horizontal Quads
       for(let r=0;r<rows;r++){
-        for(let c=0;c<cols-2;c++){
-          const t1=grid[r][c], t2=grid[r][c+1], t3=grid[r][c+2];
-          const kind = tripletMatchKind(t1,t2,t3);
-          if(kind) found.push({kind, cells:[{r,c},{r,c:c+1},{r,c:c+2}]});
+        for(let c=0;c<cols-3;c++){
+          const t1=grid[r][c], t2=grid[r][c+1], t3=grid[r][c+2], t4=grid[r][c+3];
+          const kind = quadMatchKind(t1,t2,t3,t4);
+          if(kind) found.push({kind, cells:[{r,c},{r,c:c+1},{r,c:c+2},{r,c:c+3}]});
         }
       }
+      // Vertical Quads
       for(let c=0;c<cols;c++){
-        for(let r=0;r<rows-2;r++){
-          const t1=grid[r][c], t2=grid[r+1][c], t3=grid[r+2][c];
-          const kind = tripletMatchKind(t1,t2,t3);
-          if(kind) found.push({kind, cells:[{r,c},{r:r+1,c},{r:r+2,c}]});
+        for(let r=0;r<rows-3;r++){
+          const t1=grid[r][c], t2=grid[r+1][c], t3=grid[r+2][c], t4=grid[r+3][c];
+          const kind = quadMatchKind(t1,t2,t3,t4);
+          if(kind) found.push({kind, cells:[{r,c},{r:r+1,c},{r:r+2,c},{r:r+3,c}]});
         }
       }
       return found;
@@ -2612,8 +2646,9 @@
         while(c<cols){
           const t = grid[r][c];
           if(!isMatchable(t)){ c++; continue; }
+          const k = parseTypeId(t.type).baseKey;
           let start=c;
-          while(c<cols && grid[r][c] && isMatchable(grid[r][c]) && grid[r][c].type===t.type) c++;
+          while(c<cols && grid[r][c] && isMatchable(grid[r][c]) && parseTypeId(grid[r][c].type).baseKey===k) c++;
           const len = c-start;
           if(len>=3){
             const cells=[];
@@ -2631,8 +2666,9 @@
         while(r<rows){
           const t = grid[r][c];
           if(!isMatchable(t)){ r++; continue; }
+          const k = parseTypeId(t.type).baseKey;
           let start=r;
-          while(r<rows && grid[r][c] && isMatchable(grid[r][c]) && grid[r][c].type===t.type) r++;
+          while(r<rows && grid[r][c] && isMatchable(grid[r][c]) && parseTypeId(grid[r][c].type).baseKey===k) r++;
           const len = r-start;
           if(len>=3){
             const cells=[];
@@ -2683,8 +2719,35 @@
     function hasAnyMatchOrSpecial(){
       const mm = findLineMatches();
       if(mm.clear.size>0) return true;
-      const sp = findSpecialTriples();
+      const sp = findSpecialQuads();
       return sp.length>0;
+    }
+
+    function checkPowerSwap(t1, t2){
+      if(!t1 || !t2) return false;
+      const p1 = parseTypeId(t1.type).baseKey;
+      const p2 = parseTypeId(t2.type).baseKey;
+
+      const isP1 = isPowerupKey(p1);
+      const isP2 = isPowerupKey(p2);
+      const isS1 = p1 === "supernuss";
+      const isS2 = p2 === "supernuss";
+      const isL1 = p1 === "lovelie";
+      const isL2 = p2 === "lovelie";
+
+      // 1. Lovelie + Lovelie
+      if(isL1 && isL2) return true;
+
+      // 2. Powerup + SuperNuss
+      if((isP1 && isS2) || (isP2 && isS1)) return true;
+
+      // 3. Any Powerup involved (Combo or Single)
+      // This covers Power+Power, Power+Normal, Lovelie+Power
+      if(isP1 || isP2) return true;
+
+      // 4. SuperNuss + SuperNuss? (If logic requires, though usually Powerup+SuperNuss is the key)
+
+      return false;
     }
 
     function trySwap(r1,c1,r2,c2){
@@ -2700,12 +2763,13 @@
 
       doSwap(r1,c1,r2,c2);
       setTimeout(()=>{
+       try{
         const A = grid[r1][c1];
         const B = grid[r2][c2];
         const aBk = parseTypeId(A.type).baseKey;
         const bBk = parseTypeId(B.type).baseKey;
 
-        if(isPowerupKey(aBk) || isPowerupKey(bBk)){
+        if( checkPowerSwap(A, B) ){
           spendMoves(1);
           resolvePowerSwap(A,B,{dr:r2-r1, dc:c2-c1});
           setTimeout(()=>{ dropDown(); mergeMellows(); resolveAll(false); }, 220);
@@ -2713,41 +2777,35 @@
         }
 
         const ok = hasAnyMatchOrSpecial();
-        if(!ok){
-          // Swap back visual + logic
-          doSwap(r1,c1,r2,c2);
 
-          // Ensure visual sync after a slight delay to make the swap-back visible
-          setTimeout(()=>{
-             const a = grid[r1][c1];
-             const b = grid[r2][c2];
-             if(a) {
-                const el = tileEls.get(a.id);
-                if(el) setTileXY(el, r1, c1);
-             }
-             if(b) {
-                const el = tileEls.get(b.id);
-                if(el) setTileXY(el, r2, c2);
-             }
-             busy=false;
-          }, 220);
-
-          // spendMoves(3); // Penalty removed
-          combo = 1;
-          updateUI();
-          toast("Ouch 😵","Falscher Swap", 1000);
-          return;
+        // Free Swapping: No revert if no match.
+        // Check if Mellow is involved (Free move)
+        if(aBk === "mellow" || bBk === "mellow"){
+           // 0 Cost
+        } else {
+           spendMoves(1);
         }
-        spendMoves(1);
-        resolveAll(false);
+
+        // Even if no match immediately, we resolve (maybe gravity falls? no, just check matches)
+        // If ok is false, resolveAll will basically find nothing and just unlock busy.
+        resolveAll(false, true);
+       }catch(e){
+         console.error(e);
+         busy=false;
+         doSwap(r1,c1,r2,c2); // undo on error
+       }
       }, 185);
     }
 
     function hitMellowAt(r,c, dmg=1){
       const t = grid[r][c];
       if(!t) return false;
-      if(isPlaceholder(t)){
-        const bigId = t.partOf;
+
+      let bigId = null;
+      if(isPlaceholder(t)) bigId = t.partOf;
+      else if(t.big && bigMellows.has(t.id)) bigId = t.id;
+
+      if(bigId){
         const big = bigMellows.get(bigId);
         if(!big) return false;
         big.hp = Math.max(0, big.hp - dmg);
@@ -2762,17 +2820,9 @@
 
       const bk = parseTypeId(t.type).baseKey;
       if(bk==="mellow"){
-        t.hp = Math.max(0, t.hp - dmg);
-        updateMellowHp(t);
-        if(t.hp<=0){
-          const el = tileEls.get(t.id);
-          if(el){
-            el.classList.add("pop");
-            setTimeout(()=>{ el.remove(); tileEls.delete(t.id); }, 420);
-          }
-          grid[r][c]=null;
-          toast("Mellow gelöst! ✨","Weiter!", 2600);
-        }
+        // Small Mellow is INVINCIBLE (absorbs hit but takes no damage)
+        // It must be merged to form MellowLord to be destroyable (or cleared by special effects?)
+        // User said: "mellow sollte unsterblich sein ... 2x2 zusammen packen damit er zu mellowlord wird"
         return true;
       }
       return false;
@@ -2901,7 +2951,22 @@
       const aBk = parseTypeId(A.type).baseKey;
       const bBk = parseTypeId(B.type).baseKey;
 
-      // === Generic Lovelie Combo (Lovelie + Powerup) ===
+      // === 1. Lovelie + Lovelie ===
+      if(aBk==="lovelie" && bBk==="lovelie"){
+         lovelieHarmony(A,B);
+         return;
+      }
+
+      // === 2. SuperNuss + Powerup ===
+      // Check if one is Powerup and other is SuperNuss
+      if(isPowerupKey(aBk) && bBk==="supernuss"){
+         superNussCombo(A, B); return;
+      }
+      if(isPowerupKey(bBk) && aBk==="supernuss"){
+         superNussCombo(B, A); return;
+      }
+
+      // === 3. Lovelie + Powerup ===
       if(aBk==="lovelie" && isPowerupKey(bBk)){
          activateLovelieCombo(B, A); return;
       }
@@ -2909,7 +2974,7 @@
          activateLovelieCombo(A, B); return;
       }
 
-      // === Powerup + Powerup Interactions ===
+      // === 4. Powerup + Powerup ===
 
       // Koala + Worm
       if((aBk==="koala" && bBk==="worm") || (aBk==="worm" && bBk==="koala")){
@@ -2934,17 +2999,22 @@
         toast("🐨🍋 KOALA × Citrussy!", "DOUBLE BOARD CLEAN ×2 💥💥", 3800);
         clearWholeBoard();
         setTimeout(()=>{
+         try{
           dropDown();
           mergeMellows();
           setTimeout(()=>{
+           try{
             clearWholeBoard();
             const bonus = Math.round(2200 * diff.scoreMult);
             totalScore += bonus;
             levelScore += bonus;
             setTimeout(()=>{
-              dropDown(); mergeMellows(); resolveAll(false, true);
+              try{ dropDown(); mergeMellows(); resolveAll(false, true); }
+              catch(e){ console.error(e); busy=false; }
             }, 240);
+           }catch(e){ console.error(e); busy=false; }
           }, 260);
+         }catch(e){ console.error(e); busy=false; }
         }, 260);
         clearCells([{r:A.r,c:A.c},{r:B.r,c:B.c}]);
         return;
@@ -2952,9 +3022,8 @@
 
       // Worm + Worm
       if(aBk==="worm" && bBk==="worm"){
-        toast("🪱🪱 Zu sauer!","Welle down!", 3200);
-        wormWave6(A.r,A.c,B.r,B.c);
-        clearCells([{r:A.r,c:A.c},{r:B.r,c:B.c}]);
+        toast("🪱🪱 WEAVER WEB!", "Checkerboard Wipe! 🏁", 3200);
+        checkerboardWipe(A,B);
         return;
       }
 
@@ -2993,7 +3062,7 @@
          return;
       }
 
-      // === Single Powerup Activation (Swap with Normal) ===
+      // === 5. Single Powerup Activation ===
 
       if(aBk==="koala" && !getSpecial(bBk)){
         koalaMagicOn(bBk);
@@ -3027,6 +3096,100 @@
       }
     }
 
+    function lovelieHarmony(A,B){
+       toast("💖💖 PURE LOVE!", "Board Clean + Gifts! 🎁", 4000);
+       clearWholeBoard();
+       // Spawn 3 Powerups randomly
+       setTimeout(()=>{
+          for(let i=0;i<3;i++){
+             const r=Math.floor(Math.random()*rows);
+             const c=Math.floor(Math.random()*cols);
+             const types = ["worm:P", "cit:P", "koala:P"];
+             const tType = types[Math.floor(Math.random()*types.length)];
+
+             // Directly overwrite logic for spawn (simplified)
+             // We can just rely on normal dropDown, but we want to Force spawns.
+             // We can just set a flag or modify drop logic?
+             // Simplest: Wait for dropDown then replace 3 random tiles?
+             // Or just let normal drop happen and add points.
+             // Let's add massive points.
+             totalScore += 10000;
+          }
+          // Actually spawning specific powerups is hard because the board is empty and will be refilled by dropDown.
+          // Let's just give +10 Moves.
+          moves += 10;
+          toast("Lovelie Bonus!", "+10 Moves! 🎁", 3000);
+          updateUI();
+       }, 300);
+       clearCells([{r:A.r,c:A.c}, {r:B.r,c:B.c}]);
+    }
+
+    function checkerboardWipe(A, B){
+       const cells = [];
+       // Pattern: (r+c)%2 same as A? Or just a fixed checkerboard.
+       // Fixed checkerboard is cooler. (r+c)%2 === 0
+       for(let r=0;r<rows;r++){
+          for(let c=0;c<cols;c++){
+             if( (r+c)%2 === 0 ) cells.push({r,c});
+          }
+       }
+       clearCells(cells);
+       clearCells([{r:A.r,c:A.c}, {r:B.r,c:B.c}]);
+    }
+
+    function superNussCombo(powerup, supernuss){
+       const pk = parseTypeId(powerup.type).baseKey;
+
+       if(pk==="worm"){
+          toast("🪱🌰 GRAND CROSS!", "Rows+Cols+Diagonals! 💥", 3200);
+          // Rows + Cols + Diagonals from center
+          const r=supernuss.r, c=supernuss.c;
+          clearRow(r); clearCol(c);
+          const cells=[];
+          // Diagonals
+          for(let d=-Math.max(rows,cols); d<=Math.max(rows,cols); d++){
+             if(inBounds(r+d, c+d)) cells.push({r:r+d,c:c+d});
+             if(inBounds(r+d, c-d)) cells.push({r:r+d,c:c-d});
+          }
+          clearCells(cells);
+       }
+       else if(pk==="cit"){
+          toast("🍋🌰 GALAXY RING!", "Double Blast! 🪐", 3200);
+          // Radius 2 + Radius 4 rings
+          citBlast(supernuss.r, supernuss.c, 3); // Center blast
+          const cells=[];
+          const r=supernuss.r, c=supernuss.c;
+          // Radius 5 Ring
+          for(let rr=0;rr<rows;rr++){
+             for(let cc=0;cc<cols;cc++){
+                const dist = Math.hypot(rr-r, cc-c);
+                if(dist >= 4.5 && dist <= 5.5) cells.push({r:rr, c:cc});
+             }
+          }
+          clearCells(cells);
+       }
+       else if(pk==="koala"){
+           toast("🐨🌰 GOLDEN ARMY!", "Evolution & Detonation! 💥", 4000);
+           // Pick a random color present on board
+           // Or neighbor color?
+           // Random color.
+           const target = BASES[Math.floor(Math.random()*BASES.length)];
+           const tKey = target.key;
+
+           // Visual transform + Clear
+           const cells = [];
+           for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+              const t=grid[r][c];
+              if(t && parseTypeId(t.type).baseKey === tKey) cells.push({r,c});
+           }
+
+           // Clear them with delay to simulate explosion
+           clearCells(cells);
+       }
+
+       clearCells([{r:powerup.r,c:powerup.c}, {r:supernuss.r,c:supernuss.c}]);
+    }
+
     function activateLovelieCombo(powerupTile, lovelieTile){
        const pk = parseTypeId(powerupTile.type).baseKey;
        toast("LOVELIE POWER! 💖", pk.toUpperCase()+" WAVE!", 3000);
@@ -3055,6 +3218,12 @@
 
     function resolveAll(initial=false, isPlayerSwap=false){
       busy = true; // Safety lock
+
+      // Safety: Auto-reset busy if something hangs deep in recursion
+      setTimeout(()=>{
+         if(busy && !document.querySelector(".tile.dragging")) busy = false;
+      }, 5000);
+
       let isFirstStep = true;
       // Boss AI Step (only if isPlayerSwap to count turns properly?)
       // User says "Attacke 2 Züge vorher rot an".
@@ -3101,7 +3270,8 @@
       }
 
       const step = ()=>{
-        const specials = findSpecialTriples();
+       try {
+        const specials = findSpecialQuads();
         const mm = findLineMatches();
 
         if(mm.clear.size===0 && specials.length===0){
@@ -3239,7 +3409,7 @@
           setTimeout(()=>{
             dropDown();
             mergeMellows();
-            setTimeout(step, 320);
+            setTimeout(step, 450); // Increased delay to prevent ghost combos
           }, 240);
           checkLevelUp();
           updateUI();
@@ -3373,10 +3543,14 @@
           mergeMellows();
           isFirstStep = false;
           // Add timeout limit for safety?
-          setTimeout(step, 260);
+          setTimeout(step, 420); // Increased delay to prevent ghost combos
         }, 240);
         checkLevelUp();
         updateUI();
+       } catch(e) {
+         console.error("Game Logic Error:", e);
+         busy = false;
+       }
       };
 
       // Safety: If step crashes or hangs, reset busy after 5s?
@@ -3505,7 +3679,7 @@
           if(a.big || b.big || d.big || e.big) continue;
 
           const hpSum = (a.hp||0) + (b.hp||0) + (d.hp||0) + (e.hp||0);
-          const bigHp = Math.max(1, Math.ceil(hpSum/2));
+          const bigHp = 15; // Fixed HP for MellowLord
 
           [a,b,d,e].forEach(t=>{
             const el = tileEls.get(t.id);
@@ -3554,7 +3728,7 @@
       const cc = Math.floor(cols/2)-1;
 
       const bigId = makeId();
-      const zilla = { id: bigId, r: cr, c: cc, type: "mellowzilla:P", hp: 100, big:true, zilla:true };
+      const zilla = { id: bigId, r: cr, c: cc, type: "mellowzilla:P", hp: 45, big:true, zilla:true };
 
       for(let r=cr; r<cr+3; r++){
         for(let c=cc; c<cc+3; c++){
@@ -3645,6 +3819,9 @@
           if(!t || isBlocker(t)) continue;
           if(!isSwappable(t)) continue;
 
+          // Free move logic: if t is mellow, it's always movable
+          const isMellow = parseTypeId(t.type).baseKey === "mellow";
+
           const dirs=[[1,0],[0,1]];
           for(const [dr,dc] of dirs){
             const rr=r+dr, cc=c+dc;
@@ -3652,6 +3829,10 @@
             const u=grid[rr][cc];
             if(!u || isBlocker(u)) continue;
             if(!isSwappable(u)) continue;
+
+            if(isMellow) return true;
+            const uIsMellow = parseTypeId(u.type).baseKey === "mellow";
+            if(uIsMellow) return true;
 
             doSwap(r,c,rr,cc);
             const ok = hasAnyMatchOrSpecial();
@@ -4270,22 +4451,65 @@
     syncBgHeight();
     function refreshActivePool(){
       let pool = BASES.filter(b => (b.minLevel||1) <= level);
-      // Shuffle pool slightly to vary? No, keep stable.
-      // Limit count
+
+      const pairs = [
+        ["sleepy", "mond"],
+        ["joyce", "smokey"],
+        ["simba", "smokey"],
+        ["grumpy", "happy"],
+        ["donut", "sweety"]
+      ];
+
       let max = 6;
       if(diff.key === "easy") max = 7;
       if(diff.key === "normal") max = 6;
       if(diff.key === "hard") max = 6;
       if(diff.key === "shock") max = 5;
 
-      if(pool.length > max){
-        // Heuristic: Keep characters that have combos (Donut, Happy, Grumpy, Smokey, Joyce, Simba) if possible?
-        // Or just the newest unlocked + basics?
-        // Let's just slice for now to strictly limit colors.
-        gameActivePool = pool.slice(0, max);
-      } else {
-        gameActivePool = pool;
+      const selected = new Set();
+      const add = (k) => {
+         if(selected.has(k)) return;
+         if(selected.size >= max) return;
+         selected.add(k);
+      };
+
+      // Shuffle pool
+      const shuffled = [...pool].sort(()=>Math.random()-0.5);
+
+      for(const b of shuffled){
+         if(selected.size >= max) break;
+
+         const myPairs = pairs.filter(p => p.includes(b.key));
+         if(myPairs.length > 0){
+            // Has partner
+            const partnerKey = myPairs[0].find(k => k !== b.key);
+            // Check if partner exists in pool (level req)
+            if(!pool.find(x=>x.key===partnerKey)){
+               add(b.key); // Partner not available (level too low), add alone
+               continue;
+            }
+
+            // Check space
+            if(!selected.has(partnerKey) && selected.size >= max - 1){
+               // Not enough space for pair
+               continue;
+            }
+            add(b.key);
+            add(partnerKey);
+         } else {
+            add(b.key);
+         }
       }
+
+      // Fallback fill
+      if(selected.size < 4){
+         for(const b of pool){
+            if(selected.size >= max) break;
+            add(b.key);
+         }
+      }
+
+      gameActivePool = BASES.filter(b => selected.has(b.key));
     }
 
     resetUnlocked();
