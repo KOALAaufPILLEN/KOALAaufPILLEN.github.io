@@ -470,13 +470,19 @@
 
     #fsBg{
       position:absolute;
-      inset:0;
+      left:50%;
+      top:50%;
+      transform: translate(-50%, -50%);
+      width: 0px;
+      height: 0px;
       z-index:5; /* hinter board */
       pointer-events:none;
       overflow:hidden;
       display:none;
+      border-radius: var(--boardRadius);
     }
     body.fs #fsBg{ display:block; }
+    body.maximized #fsBg{ display:block; }
 
     /* Tiles */
     .tile{
@@ -543,6 +549,10 @@
     }
 
     /* Variant B: clear visual difference (helps prevent "combo feels broken") */
+    /* KOALA_VARIANT_OUTLINE: extra klare A/B Abgrenzung */
+    .tile[data-variant="A"] .plate{ outline: 2px solid rgba(255,255,255,.55); }
+    .tile[data-variant="B"] .plate{ outline: 3px solid rgba(0,0,0,.22); }
+
     .tile[data-variant="B"] .plate{
       filter: saturate(1.18) contrast(1.06);
     }
@@ -576,7 +586,7 @@
     }
     /* Enhance image contrast */
     .tile img {
-       filter: drop-shadow(0 4px 8px rgba(0,0,0,.15)) saturate(1.1);
+       filter: drop-shadow(0 10px 14px rgba(0,0,0,.18)) drop-shadow(0 0 1px rgba(255,255,255,.60)) saturate(1.18) contrast(1.05);
     }
     .tile.bigMellow .plate{ border-radius: 26px; }
 
@@ -604,6 +614,22 @@
         0 2px 0 rgba(255,255,255,.55) inset,
         0 -6px 12px rgba(0,0,0,.10) inset;
       pointer-events:none;
+    }
+
+    /* Zilla attack warning */
+    .attackWarn{
+      position:absolute;
+      background: rgba(255,0,0,.18);
+      border: 2px dashed rgba(255,0,0,.65);
+      border-radius: 10px;
+      pointer-events:none;
+      animation: attackPulse 0.8s ease-in-out infinite;
+      box-shadow: 0 0 18px rgba(255,0,0,.35);
+    }
+    @keyframes attackPulse{
+      0%{ opacity:.6; transform: scale(1); }
+      50%{ opacity:1; transform: scale(1.03); }
+      100%{ opacity:.6; transform: scale(1); }
     }
 
     /* Luvvies auf der Karte größer */
@@ -642,12 +668,30 @@
     .powerAnim .plate{
       background: linear-gradient(135deg, #ff4fb9, #ffcf5a, #7ad8ff, #8b5cf6, #ff4fb9) !important;
       background-size: 320% 100% !important;
-      animation: mystHue 3.8s ease-in-out infinite;
+      animation: mystHue 3.8s ease-in-out infinite, powerPulse 1.8s ease-in-out infinite;
+      box-shadow: 0 0 22px rgba(255,79,185,.45), 0 0 32px rgba(122,216,255,.35);
     }
     @keyframes mystHue{
       0%{background-position:0% 50%}
       50%{background-position:100% 50%}
       100%{background-position:0% 50%}
+    }
+    @keyframes powerPulse{
+      0%{ transform: scale(1); filter:saturate(1); }
+      50%{ transform: scale(1.05); filter:saturate(1.2); }
+      100%{ transform: scale(1); filter:saturate(1); }
+    }
+    /* Boss tint */
+    .tile[data-base="mellowzilla"] .plate,
+    .tile[data-base="koalazilla"] .plate{
+      filter: hue-rotate(-12deg) saturate(1.2);
+      box-shadow: 0 0 30px rgba(255,80,80,.45), 0 0 40px rgba(255,120,120,.35);
+    }
+    .tile[data-base="mellowzilla"] img,
+    .tile[data-base="koalazilla"] img{
+      inset: 0;
+      width:100%;
+      height:100%;
     }
 
     /* Puff reveal (??? -> random) */
@@ -664,6 +708,15 @@
       0%{ transform: translateY(0) scale(1); opacity:1; }
       55%{ transform: translateY(-2px) scale(1.14); opacity:1; }
       100%{ transform: translateY(8px) scale(.30); opacity:0; }
+    }
+    /* Jelly bump when combos resolve */
+    .tile.bump .plate{ animation: jellyBump 540ms cubic-bezier(.18,.95,.2,1.05) both; }
+    @keyframes jellyBump{
+      0%{ transform: translateY(0) scale(1); }
+      20%{ transform: translateY(-9px) scale(1.10, 0.90); }
+      45%{ transform: translateY(6px) scale(0.92, 1.10); }
+      70%{ transform: translateY(-4px) scale(1.05, 0.96); }
+      100%{ transform: translateY(0) scale(1); }
     }
 
     /* Landing bounce */
@@ -812,8 +865,8 @@
 
     .lbItem{
       display:flex; justify-content:space-between; align-items:center; gap:10px;
-      background: rgba(255,255,255,.82);
-      border:1px solid rgba(17,13,26,.08);
+      background: linear-gradient(135deg, rgba(255,255,255,.95), rgba(245,245,255,.85));
+      border:1px solid rgba(17,13,26,.06);
       border-radius:16px;
       padding:10px 10px;
       box-shadow: 0 10px 24px rgba(20,10,60,.07);
@@ -826,7 +879,10 @@
     }
     .lbItem .left b{display:block}
     .lbItem .left small{opacity:.7;font-weight:900}
-    .lbItem .score{font-weight:1000}
+    .lbItem .score{
+      font-weight:1000;
+      color:#4a2c6f;
+    }
 
     /* Ranks */
     .lbItem.rank1{
@@ -843,6 +899,14 @@
       background:linear-gradient(90deg, rgba(205,127,50,.25), rgba(255,255,255,.10));
       box-shadow:0 0 12px rgba(205,127,50,.55);
       animation:bounceMedal 1.6s ease-in-out infinite;
+    }
+    /* Non-podium entries: cooler lilac gradient */
+    .lbItem:not(.rank1):not(.rank2):not(.rank3){
+      background: linear-gradient(135deg, rgba(234, 231, 255, 0.92), rgba(220, 240, 255, 0.92));
+      border:1px solid rgba(111, 80, 200, 0.18);
+      box-shadow:
+        0 14px 30px rgba(20,10,60,.10),
+        0 0 0 1px rgba(255,255,255,.35) inset;
     }
     @keyframes shine{
       0%{filter:brightness(1)}
@@ -1160,7 +1224,61 @@
     @media (min-height: 1400px){
        body.fs #boardWrap{ min-height: 1500px; justify-content:center; }
     }
-  </style>
+  
+
+    /* Maximize HUD (shown in body.maximized) */
+    #maxHud{
+      display:none;
+      position:fixed;
+      left:50%;
+      top:10px;
+      transform: translateX(-50%);
+      z-index:99998;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      padding:10px 12px;
+      border-radius:18px;
+      background: rgba(255,255,255,.86);
+      border:1px solid rgba(17,13,26,.10);
+      box-shadow: 0 16px 40px rgba(20,10,60,.10);
+      backdrop-filter: blur(10px);
+    }
+    body.dark #maxHud{
+      background: rgba(40,35,60,.86);
+      border:1px solid rgba(255,255,255,.12);
+    }
+    body.maximized #maxHud{ display:flex; }
+
+    #maxHud .pill{
+      padding:8px 10px;
+      border-radius:14px;
+      background: rgba(255,255,255,.72);
+      border:1px solid rgba(17,13,26,.08);
+      font-weight:900;
+      display:flex; gap:6px; align-items:center;
+    }
+    body.dark #maxHud .pill{
+      background: rgba(30,26,45,.72);
+      border:1px solid rgba(255,255,255,.10);
+    }
+
+
+    /* Luvvies cards: subtle per-character background to make them easier to recognize */
+    .luvCard.hasPal{
+      background:
+        linear-gradient(145deg, rgba(255,255,255,.88), rgba(255,255,255,.70)),
+        radial-gradient(circle at 20% 20%, var(--c1, #ffffff), transparent 55%),
+        radial-gradient(circle at 80% 80%, var(--c2, #f2f3ff), transparent 60%);
+    }
+    body.dark .luvCard.hasPal{
+      background:
+        linear-gradient(145deg, rgba(40,35,60,.86), rgba(30,26,45,.80)),
+        radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--c1, #ffffff) 30%, transparent), transparent 60%),
+        radial-gradient(circle at 80% 80%, color-mix(in srgb, var(--c2, #ffffff) 25%, transparent), transparent 65%);
+      border:1px solid rgba(255,255,255,.10);
+    }
+</style>
 </head>
 
 <body>
@@ -1183,7 +1301,7 @@
           <button class="Btn ghost" id="greetGuide">Anleitung</button>
           <button class="Btn secondary" id="greetPlay">Spielen</button>
         </div>
-        <div class="tiny" style="margin-top:10px;">(Dieser Screen erscheint nur 1× pro Tag.)</div>
+        <div class="tiny" style="margin-top:10px;">(Dieser Screen erscheint ca. alle 3 Stunden.)</div>
       </div>
     </div>
 
@@ -1267,12 +1385,14 @@
          <div class="panel" style="margin-bottom:10px; display:flex; align-items:center; gap:10px;">
             <b>FX Dimmer</b>
             <input type="range" id="fxSlider" min="0" max="100" value="0" style="flex:1">
+         
+            <button class="Btn ghost" id="menuHintQuick" style="height:40px;min-width:86px;">Hint</button>
          </div>
 
          <div class="cta" style="margin:16px 0; justify-content:center; gap:10px;">
             <button class="Btn secondary" id="menuNew">Neues Spiel</button>
             <button class="Btn ghost" id="menuIntro">Anleitung</button>
-            <button class="Btn" id="menuFs">Vollbild</button>
+            <!-- Fullscreen handled via top bar -->
             <button class="Btn" id="menuHint">Hint</button>
          </div>
 
@@ -1334,6 +1454,7 @@
         <div class="actions">
           <button class="Btn ghost" id="btnMax" title="Maximize Board">⛶</button>
           <button class="Btn ghost" id="btnTheme" style="padding:0 12px;min-width:46px;">🌙</button>
+          <button class="Btn ghost" id="btnHintTop" title="Hint (kostet 1 Move)">💡</button>
           <button class="Btn" id="btnMenu">Menü</button>
         </div>
       </div>
@@ -1382,11 +1503,22 @@
           </div>
         </div>
       </div>
+        <!-- Maximize HUD: visible when board is maximized (so you still see score + can go back) -->
+        <div id="maxHud">
+          <button class="hudBtn exit" id="btnUnmax">Zurück</button>
+          <div class="pill"><b>Lvl</b> <span id="maxLvl">1</span></div>
+          <div class="pill"><b>Score</b> <span id="maxScore">0</span></div>
+          <div class="pill"><b>Moves</b> <span id="maxMoves">0</span></div>
+          <div class="pill"><b>Combo</b> <span id="maxCombo">x1</span></div>
+          <button class="hudBtn hint" id="maxHint">Hint</button>
+        </div>
+
 
       <div class="below">
         <div class="panel" id="luvPanel">
           <h3>Deine Luvvies <span class="tiny">(anklicken für Steckbrief)</span></h3>
           <div class="luvGrid" id="luvMenu"></div>
+          <div id="comboList" class="tiny" style="margin-top:6px;"></div>
         </div>
 
         <div class="panel" id="rightPanel">
@@ -1396,9 +1528,19 @@
           </div>
           <div style="height:1px;background:rgba(17,13,26,.08);"></div>
           <div style="display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
                <h3 style="margin:0;" id="lbTitle">Leaderboard</h3>
-               <select id="lbDiffSelect" style="border-radius:8px;border:1px solid rgba(0,0,0,.1);padding:4px 8px;font-size:12px;font-weight:900;background:rgba(255,255,255,0.9);">
+
+               <!-- Leaderboard filter tabs (like the difficulty pills above) -->
+               <div class="diffPills" id="lbTabs">
+                 <input type="radio" name="lbDiff" id="lb_easy" value="easy" checked><label for="lb_easy">Easy</label>
+                 <input type="radio" name="lbDiff" id="lb_normal" value="normal"><label for="lb_normal">Normal</label>
+                 <input type="radio" name="lbDiff" id="lb_hard" value="hard"><label for="lb_hard">Hard</label>
+                 <input type="radio" name="lbDiff" id="lb_shock" value="shock"><label for="lb_shock">Zuckerschock</label>
+               </div>
+
+               <!-- Keep select for compatibility, but hide it (tabs drive the selection) -->
+               <select id="lbDiffSelect" style="display:none;">
                  <option value="easy">Easy</option>
                  <option value="normal">Normal</option>
                  <option value="hard">Hard</option>
@@ -1428,6 +1570,133 @@
      * Helpers
      **********************/
     function fmt(n){ return Number(n||0).toLocaleString("de-DE"); }
+
+    /**********************
+     * Identity / Seasons
+     **********************/
+    function seasonStartIso(){
+      // Rolling 90-day "season" (≈ 3 months) so leaderboards stay fresh without hard resets
+      return new Date(Date.now() - 90*24*60*60*1000).toISOString();
+    }
+
+    /**********************
+     * Visual helpers (neutral tile backgrounds)
+     * - Background is NOT tied to the character (avoids confusion)
+     * - Still varied and candy-ish so tiles are readable
+     **********************/
+    const NEUTRAL_PALS = {
+      A: ["#ff4fb9", "#7ad8ff"],      // knallig pink -> cyan
+      B: ["#ffcf5a", "#8b5cf6"]       // knallig gelb -> violet
+    };
+
+    const SPECIAL_PALS = {
+      worm: ["#ffe082", "#ff7043"],
+      cit: ["#b2ff59", "#69f0ae"],
+      koala: ["#a5b4fc", "#7c3aed"],
+      mellow: ["#ffccbc", "#ff8a65"],
+      lovelie: ["#ff9adf", "#ff4fb9"],
+      myst: ["#d1c4e9", "#9575cd"],
+      supernuss: ["#ffd740", "#ff8f00"]
+    };
+
+    // Color helpers (small + cached) to derive complementary gradients per character
+    function hexToRgb(hex){
+      const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex||"");
+      if(!m) return null;
+      return { r: parseInt(m[1],16), g: parseInt(m[2],16), b: parseInt(m[3],16) };
+    }
+    function rgbToHsl(r,g,b){
+      r/=255; g/=255; b/=255;
+      const max=Math.max(r,g,b), min=Math.min(r,g,b);
+      let h,s,l=(max+min)/2;
+      if(max===min){ h=s=0; }
+      else{
+        const d=max-min;
+        s=l>0.5 ? d/(2-max-min) : d/(max+min);
+        switch(max){
+          case r: h=(g-b)/d+(g<b?6:0); break;
+          case g: h=(b-r)/d+2; break;
+          case b: h=(r-g)/d+4; break;
+        }
+        h/=6;
+      }
+      return {h,s,l};
+    }
+    function hslToHex(h,s,l){
+      const hue2rgb=(p,q,t)=>{
+        if(t<0) t+=1;
+        if(t>1) t-=1;
+        if(t<1/6) return p+(q-p)*6*t;
+        if(t<1/2) return q;
+        if(t<2/3) return p+(q-p)*(2/3 - t)*6;
+        return p;
+      };
+      let r,g,b;
+      if(s===0){ r=g=b=l; }
+      else{
+        const q=l<0.5 ? l*(1+s) : l+s-l*s;
+        const p=2*l-q;
+        r=hue2rgb(p,q,h+1/3);
+        g=hue2rgb(p,q,h);
+        b=hue2rgb(p,q,h-1/3);
+      }
+      const toHex=(x)=>{
+        const v=Math.round(x*255).toString(16).padStart(2,"0");
+        return v;
+      };
+      return "#"+toHex(r)+toHex(g)+toHex(b);
+    }
+    function complementHex(hex){
+      const rgb=hexToRgb(hex);
+      if(!rgb) return null;
+      const hsl=rgbToHsl(rgb.r,rgb.g,rgb.b);
+      const nh=((hsl.h*360 + 160) % 360)/360;
+      const ns=Math.min(1, hsl.s*0.9 + 0.05);
+      const nl=Math.min(1, hsl.l*0.9 + 0.08);
+      return hslToHex(nh, ns, nl);
+    }
+
+    function paletteForTile(tile){
+      const { baseKey, variant } = parseTypeId(tile?.type || "");
+      const base = getBase(baseKey);
+      if(base?.palettes){
+        const pal = base.palettes[variant] || base.palettes.A || Object.values(base.palettes)[0];
+        if(pal && pal.length>=2){
+          const c1 = complementHex(pal[0]);
+          const c2 = complementHex(pal[1]);
+          if(c1 && c2) return [c1, c2];
+        }
+      }
+      if(SPECIAL_PALS[baseKey]) return SPECIAL_PALS[baseKey];
+      const v = (variant || "A") === "B" ? "B" : "A";
+      return NEUTRAL_PALS[v];
+    }
+/**********************
+     * DOM safety: remove orphan tile elements (prevents rare "static tiles" you can't drag)
+     **********************/
+    function collectGridIds(){
+      const ids = new Set();
+      if(!isGridReady()) return ids;
+      for(let r=0;r<rows;r++){
+        const row = grid[r];
+        if(!row) continue;
+        for(let c=0;c<cols;c++){
+          const t = row[c];
+          if(t && t.id) ids.add(t.id);
+        }
+      }
+      return ids;
+    }
+    function pruneOrphanTileEls(){
+      const ids = collectGridIds();
+      for(const [id, el] of tileEls.entries()){
+        if(!ids.has(id)){
+          try{ el.remove(); }catch(e){}
+          tileEls.delete(id);
+        }
+      }
+    }
+
     function diffLabel(k){
       const key = (k||"").toLowerCase();
       if(key==="shock" || key==="schock" || key==="zuschock" || key==="zuckerschock") return "Zuckerschock";
@@ -1710,20 +1979,32 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
 
 
     let lastZillaType = null; // used to alternate KoalaZilla/MellowZilla
+    let bossFight = null; // { active:true, type:'mellowzilla'|'koalazilla', hp:number, spawnLevel:number, deadlineLevel:number }
+    let zillaPlanned = null;
+    let zillaAttackCounter = 0;
     let pointer = {down:false, id:null, startX:0, startY:0};
     let level = 1;
     let totalScore = 0;
     let levelScore = 0;
     let target = 4000;
     let moves = 30;
+    let mellowFreeMoves = 10;
+    let lastPlayerMove = null;
     let combo = 1;
 
     let lastSwap = null;
+
+    // Auto-post guard (prevents multiple auto-posts for the same game over)
+    let autoPostDone = false;
 
     // cached sizing
     let CELL = 54;
     let GAP = 8;
     let PAD = 14;
+
+    function isGridReady(){
+      return Array.isArray(grid) && rows>0 && cols>0 && grid.length >= rows;
+    }
 
     /**********************
      * UI refs
@@ -1769,6 +2050,54 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
       if(!id.includes(":")) return {baseKey:id, variant:"P"};
       const [baseKey, variant] = id.split(":");
       return {baseKey, variant};
+    }
+    const matchKey = (tile)=>{
+      const p = parseTypeId(tile?.type);
+      return `${p.baseKey}:${p.variant||"A"}`;
+    };
+
+    /**********************
+     * Combo unlock tracking (simple cookie-based log)
+     **********************/
+    const COMBOS = {
+      moonshuffle: { title:"Sleepy × Mond Shuffle", desc:"2× Sleepy + 1× Mond → Shuffle 4×4" },
+      therapy: { title:"Grumpy Therapy", desc:"3× Grumpy + 1× Happy → +3 Moves & Calm" },
+      sprinkle: { title:"Donut Sprinkle", desc:"3× Donut + 1× Sweety → Sprinkle Beam" },
+      sugar: { title:"Donut Sugar Rush", desc:"3× Donut + 1× Happy → Sugar Rush" },
+      buddies: { title:"Buddy Burst", desc:"Joyce/Smokey/Simba + Buddies → Wave" },
+      powercombo: { title:"Power Combo", desc:"Any powerup + powerup fusion" },
+      simba_mix: { title:"Simba Variant Mix", desc:"3× Simba A + 1× Simba B → clear Simbas" }
+    };
+    function loadComboCookie(){
+      try{
+        const raw = getCookie("luvvies_combos");
+        if(!raw) return new Set();
+        return new Set(JSON.parse(raw));
+      }catch(e){ return new Set(); }
+    }
+    let combosUnlocked = loadComboCookie();
+    function saveCombos(){
+      try{ setCookie("luvvies_combos", JSON.stringify([...combosUnlocked]), 3650); }catch(e){}
+    }
+    function renderCombos(){
+      const box = document.getElementById("comboList");
+      if(!box) return;
+      const keys = Object.keys(COMBOS);
+      const unlocked = keys.filter(k=>combosUnlocked.has(k));
+      const lockedCount = keys.length - unlocked.length;
+      const lines = [
+        unlocked.length ? `Freigeschaltet: ${unlocked.map(k=>COMBOS[k].title).join(", ")}` : "Freigeschaltet: —",
+        lockedCount > 0 ? `Versteckt: ${lockedCount} Kombos (??? probieren!)` : "Alle Kombos gefunden!"
+      ];
+      box.innerHTML = lines.map(l=>`<div class="tiny">${l}</div>`).join("");
+    }
+    function unlockCombo(key){
+      if(!COMBOS[key]) return;
+      if(combosUnlocked.has(key)) return;
+      combosUnlocked.add(key);
+      saveCombos();
+      toast("Neue Kombo!", COMBOS[key].title, 2600);
+      renderCombos();
     }
     function getBase(baseKey){ return BASES.find(b=>b.key===baseKey) || null; }
     function getSpecial(baseKey){ return SPECIALS[baseKey] || null; }
@@ -1912,7 +2241,8 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
 
       // No strict max cap, allow filling the screen
       const max = 400;
-      return clamp(Math.min(cellW, cellH) * zoom, 20, max);
+      const minCell = (window.innerWidth < 640) ? 32 : 40;
+      return clamp(Math.min(cellW, cellH) * zoom, minCell, max);
     }
 
     function setTileXY(el, r, c){
@@ -1934,14 +2264,26 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
       ui.board.style.width = w+"px";
       ui.board.style.height = h+"px";
 
-      for(const [id, el] of tileEls){
+      
+
+      // KOALA_LAYOUT_SYNC_FSBG: Fullscreen/Maximize BG exakt an Board-Größe anpassen
+      try{
+        if(ui && ui.fsBg){
+          ui.fsBg.style.width = w+"px";
+          ui.fsBg.style.height = h+"px";
+        }
+      }catch(e){}
+for(const [id, el] of tileEls){
         const tile = findTileById(id);
         if(!tile) continue;
         setTileXY(el, tile.r, tile.c);
       }
 
       syncLbHeight();
-    }
+    
+      // Remove any leftover tile DOM nodes that are no longer in the grid
+      pruneOrphanTileEls();
+}
 
     let ro=null;
     let resizeTimer;
@@ -1988,11 +2330,8 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
       const spec = getSpecial(baseKey);
       const meta = base || spec;
 
-      // palettes
-      let pal = ["#7ad8ff","#ff4fb9"];
-      if(base){
-        pal = (base.palettes?.[variant]) || (base.palettes?.A) || pal;
-      }
+      // palettes (neutral): Background is NOT tied to the character (less confusion, more readable)
+      const pal = paletteForTile(tile);
       el.style.setProperty("--p1", pal[0]);
       el.style.setProperty("--p2", pal[1]);
 
@@ -2000,7 +2339,7 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
       plate.className="plate";
 
       // Powerups + ??? + Lovelie: animated background
-      if(isPowerupKey(baseKey) || baseKey==="lovelie" || baseKey==="myst" || baseKey==="cit" || baseKey==="worm" || baseKey==="koala"){
+      if(isPowerupKey(baseKey) || baseKey==="lovelie" || baseKey==="myst" || baseKey==="cit" || baseKey==="worm" || baseKey==="koala" || baseKey==="mellowzilla" || baseKey==="koalazilla"){
         el.classList.add("powerAnim");
       }
 
@@ -2043,14 +2382,13 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
 }
 
       el.appendChild(plate);
-      if(tile.big || baseKey==="mellow"){
+      if(tile.big && (baseKey==="mellowlord" || baseKey==="mellowzilla" || baseKey==="koalazilla")){
         const hp = document.createElement("div");
         hp.className="hp";
         hp.textContent = tile.hp;
         el.appendChild(hp);
       }
-
-      setTileXY(el, tile.r, tile.c);
+setTileXY(el, tile.r, tile.c);
 
       if(spawnDrop){
         const fallDist = (tile.r + 3) * (CELL+GAP);
@@ -2089,11 +2427,8 @@ function refreshTileEl(tile){
   const spec = getSpecial(baseKey);
   const meta = base || spec;
 
-  // palettes
-  let pal = ["#7ad8ff","#ff4fb9"];
-  if(base){
-    pal = (base.palettes?.[variant]) || (base.palettes?.A) || pal;
-  }
+  // palettes (character/complement based)
+  const pal = paletteForTile(tile);
   el.style.setProperty("--p1", pal[0]);
   el.style.setProperty("--p2", pal[1]);
 
@@ -2220,14 +2555,21 @@ function updateMellowHp(tile){
     /**********************
      * Background (no bubbles) + subtle twinkles
      **********************/
-    function buildGlobalBg(){
+    let globalBgSize = {w:0, h:0};
+    let fsBgSize = {w:0, h:0};
+
+    function buildGlobalBg(force=false){
       syncBgHeight();
       const cont = document.getElementById("globalBg");
-      cont.innerHTML = "";
 
       const page = document.getElementById("page");
       const W = page.clientWidth;
       const H = Math.max(page.scrollHeight, window.innerHeight);
+      if(!force && cont.children.length){
+        if(Math.abs(W - globalBgSize.w) < 40 && Math.abs(H - globalBgSize.h) < 40) return;
+      }
+      globalBgSize = {w:W, h:H};
+      cont.innerHTML = "";
       const bgChars = [...BASES].sort(()=>Math.random()-0.5).slice(0,8);
 
       bgChars.forEach((b)=>{
@@ -2268,12 +2610,16 @@ function updateMellowHp(tile){
       });
     }
 
-    function buildFsBg(){
+    function buildFsBg(force=false){
       const fs = document.getElementById("fsBg");
-      fs.innerHTML = "";
-      if(!document.body.classList.contains("fs")) return;
+      if(!document.body.classList.contains("fs") && !document.body.classList.contains("maximized")) return;
       const W = fs.clientWidth || window.innerWidth;
       const H = fs.clientHeight || window.innerHeight;
+      if(!force && fs.children.length){
+        if(Math.abs(W - fsBgSize.w) < 40 && Math.abs(H - fsBgSize.h) < 40) return;
+      }
+      fsBgSize = {w:W, h:H};
+      fs.innerHTML = "";
       const pick = [...BASES].sort(()=>Math.random()-0.5).slice(0,7);
       pick.forEach((b)=>{
         const wrap = document.createElement("div");
@@ -2488,6 +2834,7 @@ function updateMellowHp(tile){
     let busyStart = 0; // Watchdog timestamp
 
     function onPointerDown(e){
+      e.preventDefault(); // avoid text/image dragging or board grabbing
       // Watchdog: If busy for too long (>2.5s) without active resolution, force unlock
       if(busy){
          if(!busyStart) busyStart = Date.now();
@@ -2542,16 +2889,25 @@ function updateMellowHp(tile){
 
     function onPointerMove(e){
       if(!currentDrag) return;
+      e.preventDefault();
       const dx = e.clientX - dragStart.startX;
       const dy = e.clientY - dragStart.startY;
 
       if(!currentDrag.moved && Math.hypot(dx,dy) > 6) currentDrag.moved = true;
 
       if(currentDrag.moved){
-         // Apply exact delta to initial CSS position
-         // This ensures 1:1 movement regardless of parent scaling/offsets
-         const newX = dragStart.initialLeft + dx;
-         const newY = dragStart.initialTop + dy;
+         // Lock drag to primary axis and clamp to half a cell so tiles never fully overlap
+         const primary = Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
+         const maxShift = (CELL + GAP) * 0.48;
+         let shiftX = 0, shiftY = 0;
+         if(primary === "x"){
+            shiftX = Math.max(-maxShift, Math.min(maxShift, dx));
+         } else {
+            shiftY = Math.max(-maxShift, Math.min(maxShift, dy));
+         }
+
+         const newX = dragStart.initialLeft + shiftX;
+         const newY = dragStart.initialTop + shiftY;
 
          currentDrag.el.style.setProperty('--x', newX+"px");
          currentDrag.el.style.setProperty('--y', newY+"px");
@@ -2712,6 +3068,7 @@ function updateMellowHp(tile){
 
     function spendMoves(n){
       moves = Math.max(0, moves - n);
+      combo = 0; // Reset combo on each paid/consumed move
       if(moves===0){
         setTimeout(()=>gameOver(), 350);
       }
@@ -2726,10 +3083,10 @@ function updateMellowHp(tile){
       const count=(k)=>keys.filter(x=>x===k).length;
 
       // 3+1 Logic (Ghost combo fix)
-      if(count("sleepy")===3 && count("mond")===1) return "moonshuffle";
-      if(count("grumpy")===3 && count("happy")===1) return "therapy";
-      if(count("donut")===3 && count("sweety")===1) return "sprinkle";
-      if(count("donut")===3 && count("happy")===1) return "sugar";
+      if(count("sleepy")===3 && count("mond")===1){ unlockCombo("moonshuffle"); return "moonshuffle"; }
+      if(count("grumpy")===3 && count("happy")===1){ unlockCombo("therapy"); return "therapy"; }
+      if(count("donut")===3 && count("sweety")===1){ unlockCombo("sprinkle"); return "sprinkle"; }
+      if(count("donut")===3 && count("happy")===1){ unlockCombo("sugar"); return "sugar"; }
 
       // Buddies: 3 of either + 1 of other
       if(count("smokey")===3 && count("joyce")===1) return "buddies";
@@ -2742,6 +3099,7 @@ function updateMellowHp(tile){
     }
 
     function findSpecialQuads(){
+      if(!isGridReady()) return [];
       const found=[];
       // Horizontal Quads
       for(let r=0;r<rows;r++){
@@ -2763,6 +3121,7 @@ function updateMellowHp(tile){
     }
 
     function findLineMatches(){
+      if(!isGridReady()) return {clear:new Set(), spawn:new Map(), hRuns:[], vRuns:[]};
       const clear = new Set();
       const hRuns = [];
       const vRuns = [];
@@ -2770,11 +3129,13 @@ function updateMellowHp(tile){
       for(let r=0;r<rows;r++){
         let c=0;
         while(c<cols){
-          const t = grid[r][c];
+          const row = grid[r];
+          if(!row){ c=cols; continue; }
+          const t = row[c];
           if(!isMatchable(t)){ c++; continue; }
-          const k = parseTypeId(t.type).baseKey;
+          const k = matchKey(t);
           let start=c;
-          while(c<cols && grid[r][c] && isMatchable(grid[r][c]) && parseTypeId(grid[r][c].type).baseKey===k) c++;
+          while(c<cols && row[c] && isMatchable(row[c]) && matchKey(row[c])===k) c++;
           const len = c-start;
           if(len>=3){
             const cells=[];
@@ -2790,11 +3151,13 @@ function updateMellowHp(tile){
       for(let c=0;c<cols;c++){
         let r=0;
         while(r<rows){
-          const t = grid[r][c];
+          const row = grid[r];
+          if(!row){ r++; continue; }
+          const t = row[c];
           if(!isMatchable(t)){ r++; continue; }
-          const k = parseTypeId(t.type).baseKey;
+          const k = matchKey(t);
           let start=r;
-          while(r<rows && grid[r][c] && isMatchable(grid[r][c]) && parseTypeId(grid[r][c].type).baseKey===k) r++;
+          while(r<rows && grid[r] && grid[r][c] && isMatchable(grid[r][c]) && matchKey(grid[r][c])===k) r++;
           const len = r-start;
           if(len>=3){
             const cells=[];
@@ -2884,6 +3247,7 @@ function updateMellowHp(tile){
       if(!a || !b) return;
       if(isBlocker(a) || isBlocker(b)) return;
       if(!isSwappable(a) || !isSwappable(b)) return;
+      combo = 0; // Reset combo on any player swap
       busy = true;
       lastSwap = { pref:{r:r2,c:c2}, alt:{r:r1,c:c1} };
 
@@ -2905,9 +3269,16 @@ function updateMellowHp(tile){
         const ok = hasAnyMatchOrSpecial();
 
         // Free Swapping: No revert if no match.
-        // Check if Mellow is involved (Free move)
-        if(aBk === "mellow" || bBk === "mellow"){
-           // 0 Cost
+      // Track last player move (for zilla targeting)
+      lastPlayerMove = { r: r2, c: c2 };
+
+      // Check if Mellow is involved (Free move up to 10x)
+      if(aBk === "mellow" || bBk === "mellow"){
+         if(mellowFreeMoves > 0){
+           mellowFreeMoves -= 1;
+         } else {
+           spendMoves(1);
+           }
         } else {
            spendMoves(1);
         }
@@ -2935,6 +3306,13 @@ function updateMellowHp(tile){
         const big = bigMellows.get(bigId);
         if(!big) return false;
         big.hp = Math.max(0, big.hp - dmg);
+
+        // KOALA_BOSSFIGHT_SYNC_HP: Boss HP in State spiegeln
+        try{
+          if(bossFight && bossFight.active && (big.type==='mellowzilla' || big.type==='koalazilla')){
+            bossFight.hp = big.hp;
+          }
+        }catch(e){}
         const anchorTile = grid[big.r][big.c];
         if(anchorTile){
           anchorTile.hp = big.hp;
@@ -2968,7 +3346,38 @@ function updateMellowHp(tile){
       }
     }
 
-    function clearCells(cells){
+    function jellyBumpAround(clearedCells){
+      const dirs = [
+        [1,0],[-1,0],[0,1],[0,-1],
+        [1,1],[1,-1],[-1,1],[-1,-1]
+      ];
+      const targets = new Set();
+      for(const p of clearedCells){
+        for(const [dr,dc] of dirs){
+          const rr = p.r + dr, cc = p.c + dc;
+          if(!inBounds(rr,cc)) continue;
+          const t = grid[rr][cc];
+          if(!t || isBlocker(t)) continue;
+          targets.add(posKey(rr,cc));
+        }
+      }
+      for(const key of targets){
+        const [r,c] = key.split(",").map(Number);
+        const t = grid[r][c];
+        if(!t) continue;
+        const el = tileEls.get(t.id);
+        if(!el) continue;
+        el.classList.remove("bump");
+        // reflow to restart animation
+        void el.offsetWidth;
+        el.classList.add("bump");
+        setTimeout(()=>el.classList.remove("bump"), 520);
+      }
+    }
+
+    function clearCells(cells, opts={}){
+      const protectPower = !!opts.protectPower;
+      const PROTECTED = new Set(["fledernuss","flederheld","supernuss"]);
       const uniq = new Set(cells.map(p=>posKey(p.r,p.c)));
       const cleared = [];
 
@@ -2984,6 +3393,11 @@ function updateMellowHp(tile){
         }
         if(isPlaceholder(t)) continue;
 
+        if(protectPower){
+          const bk = parseTypeId(t.type).baseKey;
+          if(PROTECTED.has(bk)) continue;
+        }
+
         const el = tileEls.get(t.id);
         if(el){
           el.classList.add("pop");
@@ -2996,6 +3410,7 @@ function updateMellowHp(tile){
       }
 
       damageMellowsAround(cleared);
+      jellyBumpAround(cleared);
 
       const add = Math.round(cleared.length * scorePerTile() * 1.10);
       totalScore += add;
@@ -3005,13 +3420,13 @@ function updateMellowHp(tile){
     function clearRow(r){
       const cells=[];
       for(let c=0;c<cols;c++) cells.push({r,c});
-      clearCells(cells);
+      clearCells(cells, {protectPower:true});
       totalScore += 200; levelScore += 200;
     }
     function clearCol(c){
       const cells=[];
       for(let r=0;r<rows;r++) cells.push({r,c});
-      clearCells(cells);
+      clearCells(cells, {protectPower:true});
       totalScore += 200; levelScore += 200;
     }
     function citBlast(r,c, radius=3){
@@ -3029,7 +3444,7 @@ function updateMellowHp(tile){
            }
         }
       }
-      clearCells(cells);
+      clearCells(cells, {protectPower:true});
       totalScore += 260; levelScore += 260;
     }
     function clearWholeBoard(){
@@ -3042,7 +3457,7 @@ function updateMellowHp(tile){
         if(bk==="myst") continue;
         cells.push({r,c});
       }
-      clearCells(cells);
+      clearCells(cells, {protectPower:true});
       totalScore += 800; levelScore += 800;
     }
     function wormWave6(r1,c1,r2,c2){
@@ -3056,7 +3471,7 @@ function updateMellowHp(tile){
       for(let r=0;r<rows;r++){
         for(let c=start;c<end;c++) cells.push({r,c});
       }
-      clearCells(cells);
+      clearCells(cells, {protectPower:true});
       totalScore += 500; levelScore += 500;
     }
     function koalaMagicOn(targetBaseKey){
@@ -3070,7 +3485,7 @@ function updateMellowHp(tile){
         const bk=parseTypeId(t.type).baseKey;
         if(bk===targetBaseKey) cells.push({r,c});
       }
-      clearCells(cells);
+      clearCells(cells, {protectPower:true});
     }
 
     function resolvePowerSwap(A,B,dir){
@@ -3116,7 +3531,7 @@ function updateMellowHp(tile){
             if(c<0 || c>=cols) continue;
             for(let r=0; r<rows; r++) cells.push({r,c});
         }
-        clearCells(cells);
+        clearCells(cells, {protectPower:true});
         return;
       }
 
@@ -3142,7 +3557,7 @@ function updateMellowHp(tile){
           }, 260);
          }catch(e){ console.error(e); busy=false; }
         }, 260);
-        clearCells([{r:A.r,c:A.c},{r:B.r,c:B.c}]);
+        clearCells([{r:A.r,c:A.c},{r:B.r,c:B.c}], {protectPower:true});
         return;
       }
 
@@ -3157,7 +3572,7 @@ function updateMellowHp(tile){
       if(aBk==="cit" && bBk==="cit"){
         toast("🍋🍋 DOUBLE CIT!", "Big Bang! 💥", 3200);
         citBlast(A.r,A.c,6); // Bigger radius
-        clearCells([{r:A.r,c:A.c},{r:B.r,c:B.c}]);
+        clearCells([{r:A.r,c:A.c},{r:B.r,c:B.c}], {protectPower:true});
         return;
       }
 
@@ -3184,7 +3599,7 @@ function updateMellowHp(tile){
          for(let c=cMid-1; c<=cMid+1; c++){
             if(c>=0 && c<cols) for(let r=0; r<rows; r++) cells.push({r,c});
          }
-         clearCells(cells);
+         clearCells(cells, {protectPower:true});
          return;
       }
 
@@ -3192,33 +3607,33 @@ function updateMellowHp(tile){
 
       if(aBk==="koala" && !getSpecial(bBk)){
         koalaMagicOn(bBk);
-        clearCells([{r:A.r,c:A.c}]);
+        clearCells([{r:A.r,c:A.c}], {protectPower:true});
         return;
       }
       if(bBk==="koala" && !getSpecial(aBk)){
         koalaMagicOn(aBk);
-        clearCells([{r:B.r,c:B.c}]);
+        clearCells([{r:B.r,c:B.c}], {protectPower:true});
         return;
       }
 
       if(aBk==="worm"){
         if(dir.dr !== 0) clearCol(A.c);
         else clearRow(A.r);
-        clearCells([{r:A.r,c:A.c}]);
+        clearCells([{r:A.r,c:A.c}], {protectPower:true});
       }
       if(bBk==="worm"){
         if(dir.dr !== 0) clearCol(B.c);
         else clearRow(B.r);
-        clearCells([{r:B.r,c:B.c}]);
+        clearCells([{r:B.r,c:B.c}], {protectPower:true});
       }
 
       if(aBk==="cit"){
         citBlast(A.r,A.c,3);
-        clearCells([{r:A.r,c:A.c}]);
+        clearCells([{r:A.r,c:A.c}], {protectPower:true});
       }
       if(bBk==="cit"){
         citBlast(B.r,B.c,3);
-        clearCells([{r:B.r,c:B.c}]);
+        clearCells([{r:B.r,c:B.c}], {protectPower:true});
       }
     }
 
@@ -3247,7 +3662,7 @@ function updateMellowHp(tile){
           toast("Lovelie Bonus!", "+10 Moves! 🎁", 3000);
           updateUI();
        }, 300);
-       clearCells([{r:A.r,c:A.c}, {r:B.r,c:B.c}]);
+       clearCells([{r:A.r,c:A.c}, {r:B.r,c:B.c}], {protectPower:true});
     }
 
     function checkerboardWipe(A, B){
@@ -3259,8 +3674,8 @@ function updateMellowHp(tile){
              if( (r+c)%2 === 0 ) cells.push({r,c});
           }
        }
-       clearCells(cells);
-       clearCells([{r:A.r,c:A.c}, {r:B.r,c:B.c}]);
+       clearCells(cells, {protectPower:true});
+       clearCells([{r:A.r,c:A.c}, {r:B.r,c:B.c}], {protectPower:true});
     }
 
     function superNussCombo(powerup, supernuss){
@@ -3277,7 +3692,7 @@ function updateMellowHp(tile){
              if(inBounds(r+d, c+d)) cells.push({r:r+d,c:c+d});
              if(inBounds(r+d, c-d)) cells.push({r:r+d,c:c-d});
           }
-          clearCells(cells);
+          clearCells(cells, {protectPower:true});
        }
        else if(pk==="cit"){
           toast("🍋🌰 GALAXY RING!", "Double Blast! 🪐", 3200);
@@ -3292,7 +3707,7 @@ function updateMellowHp(tile){
                 if(dist >= 4.5 && dist <= 5.5) cells.push({r:rr, c:cc});
              }
           }
-          clearCells(cells);
+          clearCells(cells, {protectPower:true});
        }
        else if(pk==="koala"){
            toast("🐨🌰 GOLDEN ARMY!", "Evolution & Detonation! 💥", 4000);
@@ -3310,10 +3725,10 @@ function updateMellowHp(tile){
            }
 
            // Clear them with delay to simulate explosion
-           clearCells(cells);
+           clearCells(cells, {protectPower:true});
        }
 
-       clearCells([{r:powerup.r,c:powerup.c}, {r:supernuss.r,c:supernuss.c}]);
+       clearCells([{r:powerup.r,c:powerup.c}, {r:supernuss.r,c:supernuss.c}], {protectPower:true});
     }
 
     function activateLovelieCombo(powerupTile, lovelieTile){
@@ -3339,7 +3754,7 @@ function updateMellowHp(tile){
           totalScore += 5000;
        }
 
-       clearCells([{r:powerupTile.r, c:powerupTile.c}, {r:lovelieTile.r, c:lovelieTile.c}]);
+       clearCells([{r:powerupTile.r, c:powerupTile.c}, {r:lovelieTile.r, c:lovelieTile.c}], {protectPower:true});
     }
 
     function resolveAll(initial=false, isPlayerSwap=false){
@@ -3360,6 +3775,13 @@ function updateMellowHp(tile){
           zilla.turn = (zilla.turn || 0) + 1;
           const phase = zilla.turn % 4;
           const zName = (zilla.type==="koalazilla") ? "KoalaZilla" : "MellowZilla";
+          const chooseTarget = ()=>{
+            const baseR = lastPlayerMove ? lastPlayerMove.r : Math.floor(Math.random()*(rows-1));
+            const baseC = lastPlayerMove ? lastPlayerMove.c : Math.floor(Math.random()*(cols-1));
+            const rr = clamp(baseR-1, 0, rows-3);
+            const cc = clamp(baseC-1, 0, cols-3);
+            return {r: rr, c: cc};
+          };
           // Cycle 4:
           // 1: Idle
           // 2: Warn Red (1st turn)
@@ -3373,12 +3795,17 @@ function updateMellowHp(tile){
                el.style.boxShadow = "0 0 20px red";
                toast(`${zName} wütend!`, "Attacke in "+(phase===2?"2 Zügen":"1 Zug")+"!", 2000);
              }
+             if(!zillaPlanned) zillaPlanned = chooseTarget();
+             if(phase===3 && zillaPlanned) showAttackPreview(zillaPlanned.r, zillaPlanned.c);
           } else if(phase === 0 && zilla.turn > 0){ // Attack
              toast(`${zName} Attacke!`, "3x3 Wipe! 💥", 2600);
+             const target = zillaPlanned || chooseTarget();
+             clearAttackPreview();
+             zillaPlanned = null;
 
-             // Wipe random 3x3
-             const rr = Math.floor(Math.random()*(rows-2));
-             const cc = Math.floor(Math.random()*(cols-2));
+             // Wipe targeted 3x3 (aims at last move)
+             const rr = target.r;
+             const cc = target.c;
              const cells = [];
              for(let r=rr; r<rr+3; r++){
                for(let c=cc; c<cc+3; c++) cells.push({r,c});
@@ -3388,10 +3815,18 @@ function updateMellowHp(tile){
              // Reset visual
              const el = tileEls.get(zilla.id);
              if(el){ el.style.border = "none"; el.style.boxShadow="none"; }
+             zillaAttackCounter++;
+             if(zillaAttackCounter % 3 === 0){
+               dropDown();
+               mergeMellows();
+               ensureMovesOrShuffle();
+             }
           } else {
              // Idle
              const el = tileEls.get(zilla.id);
              if(el){ el.style.border = "none"; el.style.boxShadow="none"; }
+             clearAttackPreview();
+             zillaPlanned = null;
           }
         }
       }
@@ -3402,22 +3837,15 @@ function updateMellowHp(tile){
         const mm = findLineMatches();
 
         if(mm.clear.size===0 && specials.length===0){
+          // Sicherstellen, dass das Board nach Level-Ups weiter spielbar bleibt
+          ensureMovesOrShuffle();
           busy=false;
           layoutBoard(); // Force sync visual positions to fix drag bugs
           updateUI();
-          ensureMovesOrShuffle();
           return;
         }
 
-        combo = clamp(combo+1, 1, 99);
-
-        // Failsafe: Stop infinite loops if combo gets too high
-        if(combo > 25){
-           busy = false;
-           updateUI();
-           ensureMovesOrShuffle();
-           return;
-        }
+        combo = clamp(combo+1, 1, 999);
 
         let acceptedSpecials = specials;
         // User requested: Special combos only on player swap to prevent loops
@@ -3437,10 +3865,10 @@ function updateMellowHp(tile){
            return;
         }
 
-        if(acceptedSpecials.length){
-          for(const sp of acceptedSpecials){
-            const center = sp.cells[Math.floor(sp.cells.length/2)];
-            const ctr = tileCenter(center.r, center.c);
+      if(acceptedSpecials.length){
+        for(const sp of acceptedSpecials){
+          const center = sp.cells[Math.floor(sp.cells.length/2)];
+          const ctr = tileCenter(center.r, center.c);
             burstFx(ctr.x, ctr.y, 14);
 
             if(sp.kind==="moonshuffle"){
@@ -3780,6 +4208,16 @@ function updateMellowHp(tile){
       if(Math.random() < diff.lovelieChance*0.45){
         maybeSpawnLovelie();
       }
+
+      // After gravity settles, auto-resolve if matches are still present (failsafe for stuck boards)
+      setTimeout(()=>{
+        if(busy) return;
+        const pending = findLineMatches();
+        const specials = findSpecialQuads();
+        if((pending?.clear?.size||0) > 0 || (specials?.length||0) > 0){
+          resolveAll(false, false);
+        }
+      }, 40);
     }
 
     function mergeMellows(){
@@ -3833,6 +4271,7 @@ function updateMellowHp(tile){
           setTileXY(el, r, c);
         }
       }
+      checkMellowlordFusion();
     }
 
     function findMellowZilla(){
@@ -3842,27 +4281,36 @@ function updateMellowHp(tile){
       return null;
     }
 
-    function spawnMellowZilla(){
-      if(level < 20) return;
-      if(level % 20 !== 0) return;
-
-      // Random alternate: KoalaZilla <-> MellowZilla (avoid same twice in a row)
-      let zType = (Math.random() < 0.5) ? "mellowzilla" : "koalazilla";
-      if(lastZillaType && zType === lastZillaType){
-        zType = (zType === "mellowzilla") ? "koalazilla" : "mellowzilla";
-      }
-      lastZillaType = zType;
-
-      // Clear 3x3 center
-      const cr = Math.floor(rows/2)-1;
-      const cc = Math.floor(cols/2)-1;
-
-      const bigId = makeId();
-      const zillaHp = 100;
-      const zilla = { id: bigId, r: cr, c: cc, type: `${zType}:P`, hp: zillaHp, big:true, zilla:true };
-
-      for(let r=cr; r<cr+3; r++){
+    function clearAttackPreview(){
+      const fx = document.getElementById("fxLayer");
+      if(!fx) return;
+      fx.querySelectorAll(".attackWarn").forEach(el=>el.remove());
+    }
+    function showAttackPreview(rr, cc){
+      const fx = document.getElementById("fxLayer");
+      if(!fx) return;
+      clearAttackPreview();
+      const size = CELL;
+      for(let r=rr; r<rr+3; r++){
         for(let c=cc; c<cc+3; c++){
+          if(!inBounds(r,c)) continue;
+          const warn = document.createElement("div");
+          warn.className = "attackWarn";
+          warn.style.left = (PAD + c*(CELL+GAP)) + "px";
+          warn.style.top  = (PAD + r*(CELL+GAP)) + "px";
+          warn.style.width = size + "px";
+          warn.style.height = size + "px";
+          fx.appendChild(warn);
+        }
+      }
+    }
+
+    function placeZillaAt(centerR, centerC, zType="mellowzilla", hp=100, setBoss=true){
+      const bigId = makeId();
+      const zilla = { id: bigId, r: centerR, c: centerC, type: `${zType}:P`, hp: hp, big:true, zilla:true };
+
+      for(let r=centerR; r<centerR+3; r++){
+        for(let c=centerC; c<centerC+3; c++){
            if(inBounds(r,c)){
              const t = grid[r][c];
              if(t){
@@ -3876,8 +4324,8 @@ function updateMellowHp(tile){
       }
 
       // Anchor
-      grid[cr][cc] = zilla;
-      bigMellows.set(bigId, {id:bigId, r:cr, c:cc, hp:zillaHp, type:zType});
+      grid[centerR][centerC] = zilla;
+      bigMellows.set(bigId, {id:bigId, r:centerR, c:centerC, hp:hp, type:zType});
 
       const el = createTileEl(zilla, false);
       el.classList.add("spawnGlow");
@@ -3887,14 +4335,31 @@ function updateMellowHp(tile){
 
       tileEls.set(zilla.id, el);
       ui.board.appendChild(el);
+      setTileXY(el, centerR, centerC);
 
-      if(zType==="mellowzilla"){
-        toast("MELLOW ZILLA!! 🦖", "Boss Fight!", 4000);
-      } else {
-        toast("KOALA ZILLA!! 🐨🦖", "Boss Fight!", 4000);
+      if(setBoss){
+        bossFight = { active:true, type:zType, hp:hp, spawnLevel: level, deadlineLevel: level + 5 };
+        zillaAttackCounter = 0;
+        zillaPlanned = null;
       }
+      toast(zType==="mellowzilla" ? "MELLOW ZILLA!! 🦖" : "KOALA ZILLA!! 🐨🦖", "Boss Fight!", 4000);
+      return zilla;
+    }
 
-      setTileXY(el, cr, cc);
+    function spawnMellowZilla(){
+      if(level < 20) return;
+      if(level % 20 !== 0) return;
+
+      // Random alternate: KoalaZilla <-> MellowZilla (avoid same twice in a row)
+      let zType = (Math.random() < 0.5) ? "mellowzilla" : "koalazilla";
+      if(lastZillaType && zType === lastZillaType){
+        zType = (zType === "mellowzilla") ? "koalazilla" : "mellowzilla";
+      }
+      lastZillaType = zType;
+
+      const cr = Math.floor(rows/2)-1;
+      const cc = Math.floor(cols/2)-1;
+      placeZillaAt(cr, cc, zType, 100, true);
     }
 
     function shiftMellowZilla(zilla){
@@ -3923,6 +4388,10 @@ function updateMellowHp(tile){
 
       // Boss Check for points
       if(big.type === "mellowzilla" || big.type === "koalazilla"){
+
+        // KOALA_BOSSFIGHT_CLEAR: Boss besiegt -> Timer stoppen
+        try{ if(bossFight && bossFight.active){ bossFight.active=false; bossFight=null; } }catch(e){}
+        clearAttackPreview();
         const bonus = 20000;
         totalScore += bonus;
         levelScore += bonus;
@@ -3946,7 +4415,49 @@ function updateMellowHp(tile){
       }
     }
 
+    function checkMellowlordFusion(){
+      const anchorMap = new Map();
+      for(const [id, m] of bigMellows){
+        if(m.type==="mellowlord") anchorMap.set(posKey(m.r,m.c), id);
+      }
+      const processed = new Set();
+      for(const key of anchorMap.keys()){
+        if(processed.has(key)) continue;
+        const [r,c] = key.split(",").map(Number);
+        const needed = [
+          posKey(r,c),
+          posKey(r,c+2),
+          posKey(r+2,c),
+          posKey(r+2,c+2)
+        ];
+        if(needed.every(k=>anchorMap.has(k))){
+          needed.forEach(k=>processed.add(k));
+          // remove old mellowlords
+          const ids = needed.map(k=>anchorMap.get(k));
+          ids.forEach(id=>{
+            const info = bigMellows.get(id);
+            if(!info) return;
+            for(let rr=info.r; rr<info.r+2; rr++){
+              for(let cc=info.c; cc<info.c+2; cc++){
+                const t=grid[rr][cc];
+                if(t && t.id===id){
+                  const el = tileEls.get(t.id);
+                  if(el){ el.remove(); tileEls.delete(t.id); }
+                }
+                grid[rr][cc]=null;
+              }
+            }
+            bigMellows.delete(id);
+          });
+          const centerR = r+1, centerC = c+1;
+          placeZillaAt(centerR, centerC, "mellowzilla", 80, true);
+          toast("MellowZilla entsteht!","4 Mellowlords fusionieren!", 3600);
+        }
+      }
+    }
+
     function hasMove(){
+      if(!isGridReady()) return false;
       for(let r=0;r<rows;r++){
         for(let c=0;c<cols;c++){
           const t=grid[r][c];
@@ -4009,37 +4520,47 @@ function updateMellowHp(tile){
       });
     }
 
-    function ensureMovesOrShuffle(){
-      if(busy) return;
-      if(hasMove()) return;
-      if(moves <= 0) return; // Prevent infinite loop if game over
-
-      busy = true; // STRICT BUSY LOCK during shuffle
-
-      toast("Keine Züge möglich 😵","Auto-Shuffle: −1 Move", 3600);
-      spendMoves(1);
-      combo = 1; // Reset combo
-
-      // Shuffle until valid move exists (or max tries)
+    function ensurePlayableBoard(maxShuffles=6, autoResolve=true){
+      if(!isGridReady()) return true; // defer shuffling until board exists
+      try{ if(typeof pruneOrphanTileEls === "function") pruneOrphanTileEls(); }catch(e){}
       let tries = 0;
-      do {
-        const zilla = findMellowZilla();
-        if(zilla){
-          shiftMellowZilla(zilla);
-        } else {
-          // Use full shuffle if center shuffle fails repeatedly?
-          // Let's alternate or stick to requested logic.
-          // User: "gemischt jedoch nur mittig"
-          shuffleArea4x4(Math.floor(rows/2), Math.floor(cols/2));
+      while(tries < maxShuffles){
+        if(hasAnyMatchOrSpecial()){
+          if(autoResolve && !busy) resolveAll(false, false);
+          return true; // immediate clearable match/special
         }
+        if(hasMove()) return true;              // at least one possible swap-to-match
+        shuffleAll();
         tries++;
-      } while(!hasMove() && tries < 20);
-
-      setTimeout(()=>resolveAll(false, false), 180);
+      }
+      return false;
     }
 
+    function ensureMovesOrShuffle(){
+      if(ensurePlayableBoard()) return;
+      // Fallback: still stuck? force one last shuffle and try resolving
+      shuffleAll();
+      layoutBoard();
+      setTimeout(()=>resolveAll(false, false), 60);
+    }
+
+    // Idle watchdog: if matches exist while not busy, auto-resolve to prevent stuck boards
+    setInterval(()=>{
+      if(busy) return;
+      if(hasAnyMatchOrSpecial()){
+        resolveAll(false, false);
+      }
+    }, 520);
+
     function hint(){
-      clearHints();
+      
+      // KOALA_HINT_COST_MOVE: Hint kostet 1 Move
+      if(typeof moves !== 'undefined'){
+        if(moves<=0){ try{ toast('Keine Moves mehr!','',1800); }catch(e){} return; }
+        try{ spendMoves(1); }catch(e){}
+        try{ updateUI(); }catch(e){}
+      }
+clearHints();
       for(let r=0;r<rows;r++){
         for(let c=0;c<cols;c++){
           const t=grid[r][c];
@@ -4068,8 +4589,11 @@ function updateMellowHp(tile){
           }
         }
       }
-      toast("Keine direkten Moves 😵","Shuffle kommt gleich…", 3000);
-      ensureMovesOrShuffle();
+      toast("Keine direkten Matches 😵","Du kannst trotzdem frei swappen (Setup-Move).", 3200);
+      // Recovery: resync layout to avoid rare input deadlocks / stray tiles
+      try{ busy=false; }catch(e){}
+      try{ layoutBoard(); pruneOrphanTileEls(); updateUI(); }catch(e){}
+      clearHints();
     }
 
     async function toggleFullscreen(){
@@ -4088,6 +4612,7 @@ function updateMellowHp(tile){
         buildFsBg();
       }else{
         document.body.classList.remove("fs");
+        document.body.classList.remove("maximized");
         document.getElementById("fsBg").innerHTML="";
       }
       layoutBoard();
@@ -4110,11 +4635,32 @@ function updateMellowHp(tile){
       ui.hudCombo.textContent = "Combo x"+combo;
       ui.hudBar.style.width = pct+"%";
       ui.hudPct.textContent = pct+"%";
+    
+      // Maximize HUD mirror
+      const ml = document.getElementById("maxLvl");
+      const ms = document.getElementById("maxScore");
+      const mm = document.getElementById("maxMoves");
+      const mc = document.getElementById("maxCombo");
+      if(ml) ml.textContent = level;
+      if(ms) ms.textContent = fmt(totalScore);
+      if(mm) mm.textContent = moves;
+      if(mc) mc.textContent = "x"+combo;
     }
 
     function checkLevelUp(){
       if(levelScore >= target){
         level++;
+
+        // KOALA_BOSS_DEADLINE_CHECK: Option 2 -> Wenn Boss noch lebt und Deadline überschritten -> Game Over
+        try{
+          if(bossFight && bossFight.active && bossFight.hp > 0 && level > bossFight.deadlineLevel){
+            toast('Boss entkommen 😱', 'Du hattest bis Level '+bossFight.deadlineLevel+' Zeit!', 4200);
+            moves = 0;
+            updateUI();
+            setTimeout(()=>gameOver(), 400);
+            return;
+          }
+        }catch(e){}
         levelScore = 0;
         maybeUnlockVariant();
         refreshActivePool(); // Recalculate allowed colors
@@ -4140,6 +4686,16 @@ function updateMellowHp(tile){
 
       // Auto-fill lbName if changed
       document.getElementById("lbName").value = document.getElementById("goName").value;
+
+      // Auto-post (optional)
+      try{
+        const auto = document.getElementById("lbAuto")?.checked;
+        const nm = (document.getElementById("lbName").value || "").trim();
+        if(auto && nm && !autoPostDone){
+          autoPostDone = true;
+          setTimeout(()=>postScore(), 180);
+        }
+      }catch(e){}
     }
 
     // Game Over Buttons
@@ -4158,10 +4714,12 @@ function updateMellowHp(tile){
 
     function newGame(fromDiffChange=false){
       busy=false;
+      autoPostDone=false;
       level=1;
       totalScore=0;
       levelScore=0;
       combo=1;
+      mellowFreeMoves = 10;
       resetUnlocked();
       target = calcTarget(level);
       moves = calcMoves(level);
@@ -4211,6 +4769,12 @@ function updateMellowHp(tile){
       const createCard = (b) => {
         const card=document.createElement("div");
         card.className="luvCard";
+        // Give each Luvvie card a subtle unique background (helps recognition in the list)
+        const base = getBase(b.key);
+        const pal = (base && base.palettes && (base.palettes.A || base.palettes.B)) ? (base.palettes.A || base.palettes.B) : ["#ffffff","#f2f3ff"];
+        card.classList.add("hasPal");
+        card.style.setProperty("--c1", pal[0]);
+        card.style.setProperty("--c2", pal[1]);
         const imgHtml = b.img ?
           `<img src="${b.img}" alt="${b.name}">` : `<div style="width:78px;height:78px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#ff4fb9,#7ad8ff);color:#fff;font-weight:1000;font-size:32px;box-shadow:0 12px 20px rgba(0,0,0,.12);">?</div>`;
         card.innerHTML = `
@@ -4272,64 +4836,182 @@ function updateMellowHp(tile){
     function getUuid(){
       let u = getCookie("luvvies_uuid");
       if(!u){
-        u = crypto.randomUUID();
+        try{ u = crypto.randomUUID(); }
+        catch(e){ u = String(Date.now()) + "-" + Math.random().toString(16).slice(2); }
         setCookie("luvvies_uuid", u, 36500); // 100 years
       }
       return u;
     }
 
+    // Current season = calendar quarter (resets every ~3 months)
+    function currentSeasonStart(){
+      // Returns { isoTs, dateStr, label }
+      const now = new Date();
+      const y = now.getUTCFullYear();
+      const q = Math.floor(now.getUTCMonth() / 3);   // 0..3
+      const m = q * 3;                               // 0,3,6,9
+      const d = new Date(Date.UTC(y, m, 1, 0, 0, 0)); // quarter start
+      const isoTs = d.toISOString();                 // for created_at filters
+      const dateStr = isoTs.slice(0,10);             // YYYY-MM-DD for season_start (optional)
+      const label = `Q${q+1} ${y}`;
+      return { isoTs, dateStr, label };
+    }
+
     async function postScore(){
       if(!sb){ toast("Leaderboard offline","(Supabase nicht erreichbar)", 3200); return; }
-      let name = (document.getElementById("lbName").value || document.getElementById("greetName").value || "Anonymous").trim().slice(0,24);
+
+      let name = (document.getElementById("lbName").value || document.getElementById("goName").value || document.getElementById("greetName").value || "Anonymous").trim().slice(0,24);
       name = cleanName(name);
 
-      // Save name to cookie
+      // Save name + keep stable UUID (identity)
       setCookie("luvvies_name", name, 36500);
-
-      // Check for name change -> New UUID
-      let uuid = getUuid();
-      const last = localStorage.getItem("luvvies_last_name");
-      if(last && last !== name){
-         uuid = crypto.randomUUID();
-         setCookie("luvvies_uuid", uuid, 36500);
-      }
+      const uuid = getUuid();
       localStorage.setItem("luvvies_last_name", name);
 
+      // Season: current calendar quarter (≈ 3 months)
+      const season = currentSeasonStart();
+      const seasonStartIso = season.isoTs;
+
+      const payload = {
+        player_name: name,
+        score: totalScore,
+        level: level,
+        difficulty: diff.key,
+        version:"luvvies-crush",
+        user_id: uuid
+      };
+
       try{
-        const payload = {
-          player_name: name,
-          score: totalScore,
-          level: level,
-          difficulty: diff.key,
-          version:"luvvies-crush",
-          user_id: uuid // Send UUID to backend
-        };
-        const { error } = await sb.from(SCORE_TABLE).insert(payload);
-        if(error) throw error;
-        toast("Score gepostet ✅", name+" • "+fmt(totalScore), 3200);
+        // Find existing best for this UUID + difficulty inside current season window
+        let best = null;
+        try{
+          const { data, error } = await sb
+            .from(SCORE_TABLE)
+            .select("id,score,created_at")
+            .eq("user_id", uuid)
+            .eq("difficulty", diff.key)
+            .gte("created_at", seasonStartIso)
+            .order("score", { ascending:false })
+            .limit(1);
+
+          if(error) throw error;
+          best = (data && data[0]) ? data[0] : null;
+        }catch(selErr){
+          // Fallback if table has no "id" column: select without id
+          const msg = String(selErr?.message || selErr);
+          if(msg.toLowerCase().includes("column") && msg.toLowerCase().includes("id")){
+            const { data, error } = await sb
+              .from(SCORE_TABLE)
+              .select("score,created_at")
+              .eq("user_id", uuid)
+              .eq("difficulty", diff.key)
+              .gte("created_at", seasonStartIso)
+              .order("score", { ascending:false })
+              .limit(1);
+            if(error) throw error;
+            best = (data && data[0]) ? data[0] : null;
+          } else {
+            throw selErr;
+          }
+        }
+
+        // If not better, don't spam inserts
+        if(best && Number(payload.score) <= Number(best.score||0)){
+          toast("Schon gespeichert ✅", `Bestscore (${diffLabel(diff.key)}): ${fmt(best.score)}`, 3200);
+          await refreshLeaderboard();
+          return;
+        }
+
+        // Update if possible; otherwise insert
+        if(best && best.id){
+          const { error } = await sb.from(SCORE_TABLE).update(payload).eq("id", best.id);
+          if(error) throw error;
+          toast("Bestscore aktualisiert ✅", name+" • "+fmt(totalScore), 3200);
+        } else if(best && !best.id){
+          // Without an id, update the newest season rows for this uuid+diff (keeps single identity, even if duplicates exist)
+          const { error } = await sb
+            .from(SCORE_TABLE)
+            .update(payload)
+            .eq("user_id", uuid)
+            .eq("difficulty", diff.key)
+            .gte("created_at", seasonStartIso);
+          if(error) throw error;
+          toast("Bestscore aktualisiert ✅", name+" • "+fmt(totalScore), 3200);
+        } else {
+          const { error } = await sb.from(SCORE_TABLE).insert(payload);
+          if(error) throw error;
+          toast("Score gepostet ✅", name+" • "+fmt(totalScore), 3200);
+        }
+
         await refreshLeaderboard();
       }catch(e){
-        // Handle unique constraint error gracefully if setup
-        if(String(e.message||e).includes("unique")){
-           toast("Bereits gepostet!", "Du hast diesen Score schon gesendet.", 3000);
-        } else {
-           toast("Post fehlgeschlagen ❌", String(e.message||e), 3400);
-        }
+        toast("Post fehlgeschlagen ❌", String(e.message||e), 3400);
+      }
+    }
+
+    function demoLeaderboardRows(diffKey){
+      const now = new Date().toISOString();
+      return [
+        { player_name:"CandyQueen", score:184200, level:14, difficulty:diffKey, created_at:now, user_id:"demo-1" },
+        { player_name:"KoalaChamp", score:152880, level:13, difficulty:diffKey, created_at:now, user_id:"demo-2" },
+        { player_name:"LuvMaster", score:120440, level:12, difficulty:diffKey, created_at:now, user_id:"demo-3" },
+        { player_name:"BubbleBuddy", score:84400, level:10, difficulty:diffKey, created_at:now, user_id:"demo-4" },
+        { player_name:"Sourworm", score:64200, level:9, difficulty:diffKey, created_at:now, user_id:"demo-5" }
+      ];
+    }
+
+    function renderLeaderboardRows(rows, note){
+      const list = document.getElementById("lbList");
+      list.innerHTML = "";
+      // Ensure we always have visible podium rows
+      const padded = [...rows];
+      const demo = demoLeaderboardRows(rows[0]?.difficulty || diff.key);
+      while(padded.length < 3 && demo.length){
+        padded.push(demo[padded.length % demo.length]);
+      }
+
+      padded.forEach((x,i)=>{
+        const item = document.createElement("div");
+        item.className="lbItem";
+        item.style.animationDelay = (i * 0.05) + "s";
+        if(i===0) item.classList.add("rank1");
+        if(i===1) item.classList.add("rank2");
+        if(i===2) item.classList.add("rank3");
+
+        const rankNum = i+1;
+        const d = new Date(x.created_at || Date.now());
+        const stamp = `${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")}.${d.getFullYear()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+        item.innerHTML = `
+          <div class="left">
+            <b>${rankNum}. ${escapeHtml(x.player_name||"Anonymous")}</b>
+            <small>Lvl ${x.level||1} • ${diffLabel(x.difficulty||"easy")} • ${stamp}</small>
+          </div>
+          <div class="score">${fmt(x.score||0)}</div>
+        `;
+        list.appendChild(item);
+      });
+      if(note){
+        const info = document.createElement("div");
+        info.className = "tiny";
+        info.style.marginTop = "6px";
+        info.textContent = note;
+        list.appendChild(info);
       }
     }
 
     async function refreshLeaderboard(){
       const list = document.getElementById("lbList");
       const sel = document.getElementById("lbDiffSelect");
-      // Use selected diff if available, else current game diff
-      let dKey = sel ? sel.value : diff.key;
+      // Prefer leaderboard tabs (lbDiff radios), fallback to hidden select, fallback to current game diff
+      let dKey = document.querySelector('input[name="lbDiff"]:checked')?.value || (sel ? sel.value : diff.key);
+
+      const season = currentSeasonStart();
 
       const title = document.getElementById("lbTitle");
-      // if(title) title.textContent = "Leaderboard"; // Static title now
+      if(title) title.textContent = "Leaderboard • " + season.label;
 
-      list.innerHTML = "";
       if(!sb){
-        list.innerHTML = `<div class="tiny">Leaderboard aktuell nicht verfügbar.</div>`;
+        renderLeaderboardRows(demoLeaderboardRows(dKey), "Leaderboard aktuell nicht verfügbar – zeige Demo-Einträge.");
         return;
       }
       try{
@@ -4338,6 +5020,7 @@ function updateMellowHp(tile){
           .from(SCORE_TABLE)
           .select("player_name,score,level,difficulty,created_at,user_id")
           .eq('difficulty', dKey)
+          .gte('created_at', season.isoTs)
           .order("score", { ascending:false })
           .limit(80);
         if(error) throw error;
@@ -4346,38 +5029,22 @@ function updateMellowHp(tile){
         const unique = [];
         const seen = new Set();
         for(const row of (data||[])){
-           const key = row.user_id || (row.player_name||"").toLowerCase();
+           const key = row.user_id || row.player_uuid || (row.player_name||"").toLowerCase();
            if(seen.has(key)) continue;
            seen.add(key);
            unique.push(row);
            if(unique.length >= 25) break;
         }
 
-        unique.forEach((x, i)=>{
-          const item = document.createElement("div");
-          item.className="lbItem";
-          item.style.animationDelay = (i * 0.05) + "s";
-          if(i===0) item.classList.add("rank1");
-          if(i===1) item.classList.add("rank2");
-          if(i===2) item.classList.add("rank3");
-
-          const d = new Date(x.created_at);
-          const stamp = `${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")}.${d.getFullYear()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
-          // Use diffLabel to force correct name
-          item.innerHTML = `
-            <div class="left">
-              <b>${i+1}. ${escapeHtml(x.player_name||"Anonymous")}</b>
-              <small>Lvl ${x.level} • ${diffLabel(x.difficulty)} • ${stamp}</small>
-            </div>
-            <div class="score">${fmt(x.score)}</div>
-          `;
-          list.appendChild(item);
-        });
-        if(!data || data.length===0){
-          list.innerHTML = `<div class="tiny">Noch keine Scores. Sei die/der Erste 😈✨</div>`;
+        if(!data || data.length===0 || unique.length===0){
+          renderLeaderboardRows(demoLeaderboardRows(dKey), "Noch keine Scores – Demo-Einträge aktiviert. Poste deinen ersten Run!");
+        } else {
+          renderLeaderboardRows(unique, "");
         }
       }catch(e){
-        list.innerHTML = `<div class="tiny">Leaderboard Fehler.</div>`;
+        const msg = String(e?.message || e || "Unbekannter Fehler");
+        console.error("Leaderboard error:", e);
+        renderLeaderboardRows(demoLeaderboardRows(dKey), "Leaderboard Fehler: "+escapeHtml(msg)+" (zeige Demo)");
       }
       syncLbHeight();
     }
@@ -4399,15 +5066,24 @@ function updateMellowHp(tile){
      * Intro/Greet events
      **********************/
     function showGreetingIfNeeded(){
-      const k = "luvvies_greet_seen";
-      const seen = getCookie(k);
-      const today = todayKey();
-      if(seen !== today){
+      // Show greeting about every 3 hours per device/UUID (instead of once per day)
+      // This reduces "daily popups" while still keeping the welcome screen alive.
+      try{ getUuid(); }catch(e){}
+      const k = "luvvies_greet_ts";
+      const last = Number(localStorage.getItem(k) || getCookie(k) || 0);
+      const now = Date.now();
+      const interval = 3 * 60 * 60 * 1000; // 3h
+      if(!last || (now - last) > interval){
         document.getElementById("greetBack").style.display="flex";
       }
     }
-    function closeGreeting(setToday=true){
-      if(setToday) setCookie("luvvies_greet_seen", todayKey(), 14);
+    function closeGreeting(updateTs=true){
+      if(updateTs){
+        const k = "luvvies_greet_ts";
+        const now = Date.now();
+        localStorage.setItem(k, String(now));
+        setCookie(k, String(now), 36500); // keep long-term
+      }
       document.getElementById("greetBack").style.display="none";
     }
 
@@ -4429,6 +5105,9 @@ function updateMellowHp(tile){
     // Old listeners removed (btnNew, btnHint etc replaced by menu versions)
 
     // Main Menu Trigger
+    const btnHintTop = document.getElementById("btnHintTop");
+    if(btnHintTop) btnHintTop.addEventListener("click", hint);
+
     document.getElementById("btnMenu").addEventListener("click", ()=>{
        document.getElementById("settingsBack").style.display = "flex";
     });
@@ -4445,10 +5124,13 @@ function updateMellowHp(tile){
        document.getElementById("settingsBack").style.display = "none";
        hint();
     });
-    document.getElementById("menuFs").addEventListener("click", ()=>{
+    const mhq = document.getElementById("menuHintQuick");
+    if(mhq) mhq.addEventListener("click", ()=>{
        document.getElementById("settingsBack").style.display = "none";
-       toggleFullscreen();
+       hint();
     });
+
+    // Fullscreen button removed (handled by top bar Maximize)
     document.getElementById("menuIntro").addEventListener("click", ()=>{
        document.getElementById("settingsBack").style.display = "none";
        document.getElementById("introBack").style.display = "flex";
@@ -4482,6 +5164,26 @@ function updateMellowHp(tile){
     const lbSel = document.getElementById("lbDiffSelect");
     if(lbSel) lbSel.addEventListener("change", refreshLeaderboard);
 
+    // Leaderboard tabs (buttons like the top difficulty pills)
+    function setLbDiff(key, doRefresh=true){
+      const lbSel2 = document.getElementById("lbDiffSelect");
+      if(lbSel2) lbSel2.value = key;
+
+      const radios = document.querySelectorAll('input[name="lbDiff"]');
+      radios.forEach(r => r.checked = (r.value === key));
+
+      if(doRefresh) refreshLeaderboard();
+    }
+
+    const lbTabs = document.getElementById("lbTabs");
+    if(lbTabs){
+      lbTabs.addEventListener("change", ()=>{
+        const v = document.querySelector('input[name="lbDiff"]:checked')?.value || (document.getElementById("lbDiffSelect")?.value) || diff.key;
+        setLbDiff(v, true);
+      });
+    }
+
+
     // Dark Mode
     const btnTheme = document.getElementById("btnTheme");
     function syncTheme(){
@@ -4498,16 +5200,110 @@ function updateMellowHp(tile){
       syncTheme();
     });
 
-    // Maximize Button
-    const btnMax = document.getElementById("btnMax");
-    if(btnMax){
-       btnMax.addEventListener("click", ()=>{
-          document.body.classList.toggle("maximized");
-          layoutBoard();
-       });
+    // Maximize Button (fullscreen + draggable HUD)
+      const btnMax = document.getElementById("btnMax");
+      if(btnMax){
+         btnMax.addEventListener("click", async ()=>{
+            const shouldMax = !document.body.classList.contains("maximized");
+            const root = document.getElementById("playArea") || document.documentElement;
+            if(shouldMax){
+              document.body.classList.add("maximized");
+              layoutBoard();
+              updateUI();
+              try{
+                if(!document.fullscreenElement){
+                  await root.requestFullscreen();
+                }
+              }catch(e){}
+            } else {
+              document.body.classList.remove("maximized");
+              layoutBoard();
+              updateUI();
+              try{
+                if(document.fullscreenElement){
+                  await document.exitFullscreen();
+                }
+              }catch(e){}
+            }
+         });
+      }
+
+    
+    // Maximize HUD controls
+    const btnUnmax = document.getElementById("btnUnmax");
+    if(btnUnmax) btnUnmax.addEventListener("click", async ()=>{
+       document.body.classList.remove("maximized");
+       layoutBoard();
+       updateUI();
+       try{
+         if(document.fullscreenElement){
+           await document.exitFullscreen();
+         }
+       }catch(e){}
+    });
+    const maxHint = document.getElementById("maxHint");
+    if(maxHint) maxHint.addEventListener("click", hint);
+
+    // KOALA_DRAG_HUD: HUD (fsHud / maxHud) verschiebbar machen (damit es nicht im Weg ist)
+    function makeHudDraggable(el, key){
+      if(!el) return;
+      const handle = el; // ganze Leiste draggable
+      handle.style.cursor = "move";
+
+      // Restore position
+      try{
+        const saved = localStorage.getItem(key);
+        if(saved){
+          const p = JSON.parse(saved);
+          if(p && p.left && p.top){
+            el.style.position = "fixed";
+            el.style.left = p.left;
+            el.style.top = p.top;
+            el.style.transform = "none";
+          }
+        }
+      }catch(e){}
+
+      let dragging=false, sx=0, sy=0, ox=0, oy=0;
+      handle.addEventListener("pointerdown", (e)=>{
+        if(e.button!==0) return;
+
+        // Nicht draggen wenn Buttons / Inputs geklickt werden
+        const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : "";
+        if(tag==="button" || tag==="input" || tag==="select" || tag==="textarea") return;
+
+        dragging=true;
+        try{ handle.setPointerCapture(e.pointerId); }catch(_e){}
+        const r = el.getBoundingClientRect();
+        sx=e.clientX; sy=e.clientY;
+        ox=r.left; oy=r.top;
+
+        el.style.position="fixed";
+        el.style.left = r.left+"px";
+        el.style.top  = r.top+"px";
+        el.style.transform="none";
+      });
+      handle.addEventListener("pointermove", (e)=>{
+        if(!dragging) return;
+        const dx=e.clientX-sx, dy=e.clientY-sy;
+        el.style.left = (ox+dx)+"px";
+        el.style.top  = (oy+dy)+"px";
+      });
+      handle.addEventListener("pointerup", (e)=>{
+        if(!dragging) return;
+        dragging=false;
+        try{ handle.releasePointerCapture(e.pointerId); }catch(_e){}
+        try{
+          localStorage.setItem(key, JSON.stringify({left: el.style.left, top: el.style.top}));
+        }catch(_e){}
+      });
     }
 
-    // FX Slider (Dimmer Overlay)
+    // aktivieren (script läuft nach DOM)
+    try{ makeHudDraggable(document.getElementById("fsHud"), "luvHudPos_fs"); }catch(e){}
+    try{ makeHudDraggable(document.getElementById("maxHud"), "luvHudPos_max"); }catch(e){}
+
+// FX Slider (Dimmer Overlay)
     function updateFx(v){
       // v: 0-100. Opacity: 0 -> 0.7
       const op = (v / 100) * 0.7;
@@ -4535,6 +5331,8 @@ function updateMellowHp(tile){
       // Sync leaderboard filter
       const lbSel = document.getElementById("lbDiffSelect");
       if(lbSel) lbSel.value = v;
+      try{ if(typeof setLbDiff==="function") setLbDiff(v, false); }catch(e){}
+      try{ refreshLeaderboard(); }catch(e){}
 
       newGame(true);
       buildGlobalBg();
