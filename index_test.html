@@ -831,8 +831,8 @@
 
     .lbItem{
       display:flex; justify-content:space-between; align-items:center; gap:10px;
-      background: rgba(255,255,255,.82);
-      border:1px solid rgba(17,13,26,.08);
+      background: linear-gradient(135deg, rgba(255,255,255,.95), rgba(245,245,255,.85));
+      border:1px solid rgba(17,13,26,.06);
       border-radius:16px;
       padding:10px 10px;
       box-shadow: 0 10px 24px rgba(20,10,60,.07);
@@ -845,7 +845,10 @@
     }
     .lbItem .left b{display:block}
     .lbItem .left small{opacity:.7;font-weight:900}
-    .lbItem .score{font-weight:1000}
+    .lbItem .score{
+      font-weight:1000;
+      color:#4a2c6f;
+    }
 
     /* Ranks */
     .lbItem.rank1{
@@ -862,6 +865,14 @@
       background:linear-gradient(90deg, rgba(205,127,50,.25), rgba(255,255,255,.10));
       box-shadow:0 0 12px rgba(205,127,50,.55);
       animation:bounceMedal 1.6s ease-in-out infinite;
+    }
+    /* Non-podium entries: cooler lilac gradient */
+    .lbItem:not(.rank1):not(.rank2):not(.rank3){
+      background: linear-gradient(135deg, rgba(234, 231, 255, 0.92), rgba(220, 240, 255, 0.92));
+      border:1px solid rgba(111, 80, 200, 0.18);
+      box-shadow:
+        0 14px 30px rgba(20,10,60,.10),
+        0 0 0 1px rgba(255,255,255,.35) inset;
     }
     @keyframes shine{
       0%{filter:brightness(1)}
@@ -2728,6 +2739,7 @@ function updateMellowHp(tile){
     let busyStart = 0; // Watchdog timestamp
 
     function onPointerDown(e){
+      e.preventDefault(); // avoid text/image dragging or board grabbing
       // Watchdog: If busy for too long (>2.5s) without active resolution, force unlock
       if(busy){
          if(!busyStart) busyStart = Date.now();
@@ -2782,16 +2794,25 @@ function updateMellowHp(tile){
 
     function onPointerMove(e){
       if(!currentDrag) return;
+      e.preventDefault();
       const dx = e.clientX - dragStart.startX;
       const dy = e.clientY - dragStart.startY;
 
       if(!currentDrag.moved && Math.hypot(dx,dy) > 6) currentDrag.moved = true;
 
       if(currentDrag.moved){
-         // Apply exact delta to initial CSS position
-         // This ensures 1:1 movement regardless of parent scaling/offsets
-         const newX = dragStart.initialLeft + dx;
-         const newY = dragStart.initialTop + dy;
+         // Lock drag to primary axis and clamp to half a cell so tiles never fully overlap
+         const primary = Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
+         const maxShift = (CELL + GAP) * 0.48;
+         let shiftX = 0, shiftY = 0;
+         if(primary === "x"){
+            shiftX = Math.max(-maxShift, Math.min(maxShift, dx));
+         } else {
+            shiftY = Math.max(-maxShift, Math.min(maxShift, dy));
+         }
+
+         const newX = dragStart.initialLeft + shiftX;
+         const newY = dragStart.initialTop + shiftY;
 
          currentDrag.el.style.setProperty('--x', newX+"px");
          currentDrag.el.style.setProperty('--y', newY+"px");
@@ -3687,15 +3708,7 @@ function updateMellowHp(tile){
           return;
         }
 
-        combo = clamp(combo+1, 1, 99);
-
-        // Failsafe: Stop infinite loops if combo gets too high
-        if(combo > 25){
-           busy = false;
-           updateUI();
-           ensureMovesOrShuffle();
-           return;
-        }
+        combo = clamp(combo+1, 1, 999);
 
         let acceptedSpecials = specials;
         // User requested: Special combos only on player swap to prevent loops
@@ -4732,7 +4745,14 @@ clearHints();
     function renderLeaderboardRows(rows, note){
       const list = document.getElementById("lbList");
       list.innerHTML = "";
-      rows.forEach((x,i)=>{
+      // Ensure we always have visible podium rows
+      const padded = [...rows];
+      const demo = demoLeaderboardRows(rows[0]?.difficulty || diff.key);
+      while(padded.length < 3 && demo.length){
+        padded.push(demo[padded.length % demo.length]);
+      }
+
+      padded.forEach((x,i)=>{
         const item = document.createElement("div");
         item.className="lbItem";
         item.style.animationDelay = (i * 0.05) + "s";
@@ -4740,11 +4760,12 @@ clearHints();
         if(i===1) item.classList.add("rank2");
         if(i===2) item.classList.add("rank3");
 
+        const rankNum = (typeof x.rank === "number" && !isNaN(x.rank)) ? x.rank : (i+1);
         const d = new Date(x.created_at || Date.now());
         const stamp = `${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")}.${d.getFullYear()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
         item.innerHTML = `
           <div class="left">
-            <b>${i+1}. ${escapeHtml(x.player_name||"Anonymous")}</b>
+            <b>${rankNum}. ${escapeHtml(x.player_name||"Anonymous")}</b>
             <small>Lvl ${x.level||1} • ${diffLabel(x.difficulty||"easy")} • ${stamp}</small>
           </div>
           <div class="score">${fmt(x.score||0)}</div>
