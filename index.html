@@ -1676,9 +1676,12 @@
      **********************/
     function collectGridIds(){
       const ids = new Set();
+      if(!isGridReady()) return ids;
       for(let r=0;r<rows;r++){
+        const row = grid[r];
+        if(!row) continue;
         for(let c=0;c<cols;c++){
-          const t = grid[r][c];
+          const t = row[c];
           if(t && t.id) ids.add(t.id);
         }
       }
@@ -1998,6 +2001,10 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
     let CELL = 54;
     let GAP = 8;
     let PAD = 14;
+
+    function isGridReady(){
+      return Array.isArray(grid) && grid.length && rows>0 && cols>0;
+    }
 
     /**********************
      * UI refs
@@ -3092,6 +3099,7 @@ function updateMellowHp(tile){
     }
 
     function findSpecialQuads(){
+      if(!isGridReady()) return [];
       const found=[];
       // Horizontal Quads
       for(let r=0;r<rows;r++){
@@ -3113,6 +3121,7 @@ function updateMellowHp(tile){
     }
 
     function findLineMatches(){
+      if(!isGridReady()) return {clear:new Set(), spawn:new Map(), hRuns:[], vRuns:[]};
       const clear = new Set();
       const hRuns = [];
       const vRuns = [];
@@ -3120,11 +3129,13 @@ function updateMellowHp(tile){
       for(let r=0;r<rows;r++){
         let c=0;
         while(c<cols){
-          const t = grid[r][c];
+          const row = grid[r];
+          if(!row){ c=cols; continue; }
+          const t = row[c];
           if(!isMatchable(t)){ c++; continue; }
           const k = matchKey(t);
           let start=c;
-          while(c<cols && grid[r][c] && isMatchable(grid[r][c]) && matchKey(grid[r][c])===k) c++;
+          while(c<cols && row[c] && isMatchable(row[c]) && matchKey(row[c])===k) c++;
           const len = c-start;
           if(len>=3){
             const cells=[];
@@ -3140,11 +3151,13 @@ function updateMellowHp(tile){
       for(let c=0;c<cols;c++){
         let r=0;
         while(r<rows){
-          const t = grid[r][c];
+          const row = grid[r];
+          if(!row){ r++; continue; }
+          const t = row[c];
           if(!isMatchable(t)){ r++; continue; }
           const k = matchKey(t);
           let start=r;
-          while(r<rows && grid[r][c] && isMatchable(grid[r][c]) && matchKey(grid[r][c])===k) r++;
+          while(r<rows && grid[r] && grid[r][c] && isMatchable(grid[r][c]) && matchKey(grid[r][c])===k) r++;
           const len = r-start;
           if(len>=3){
             const cells=[];
