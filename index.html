@@ -500,23 +500,79 @@
     .plate{
       width:100%; height:100%;
       border-radius: 16px;
-      /* Neutral glassy look to make luvvies pop */
-      background:
-        radial-gradient(circle at 30% 20%, rgba(255,255,255,.9), rgba(255,255,255,0.4)),
-        linear-gradient(135deg, rgba(255,255,255,.5), rgba(240,240,250,.3));
-      border: 1px solid rgba(255,255,255,.60);
-      /* Use the palette color for a subtle border/glow instead of full fill */
+
+      /* Palette-driven candy plate (makes each Luvvy easier to recognize) */
+      background: linear-gradient(145deg, var(--p1), var(--p2));
+      border: 1px solid rgba(255,255,255,.58);
       box-shadow:
-        0 0 0 1px var(--p1) inset,
-        0 14px 24px rgba(20,10,60,.10),
-        0 4px 8px rgba(0,0,0,.06),
-        0 -6px 14px rgba(255,255,255,.6) inset;
+        0 0 0 1px rgba(255,255,255,.32) inset,
+        0 0 0 2px var(--p1) inset,
+        0 16px 26px rgba(20,10,60,.12),
+        0 6px 10px rgba(0,0,0,.08),
+        0 -10px 18px rgba(255,255,255,.35) inset;
       position:relative;
       overflow:hidden;
 
       transform: translateY(var(--oy, 0px)) scale(1);
       opacity: var(--op, 1);
-      transition: transform 260ms cubic-bezier(.2,.9,.2,1), opacity 260ms ease;
+      transition: transform 260ms cubic-bezier(.2,.9,.2,1), opacity 260ms ease, filter 200ms ease;
+    }
+
+    .plate::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        radial-gradient(circle at 28% 18%, rgba(255,255,255,.88), rgba(255,255,255,0) 58%),
+        linear-gradient(135deg, rgba(255,255,255,.30), rgba(240,240,255,.10));
+      opacity:.85;
+      pointer-events:none;
+    }
+
+    /* Subtle candy sparkle */
+    .plate::after{
+      content:"";
+      position:absolute;
+      inset:-40%;
+      background:
+        radial-gradient(circle at 60% 30%, rgba(255,255,255,.16), rgba(255,255,255,0) 56%),
+        radial-gradient(circle at 20% 70%, rgba(255,255,255,.10), rgba(255,255,255,0) 62%);
+      transform: rotate(12deg);
+      opacity:.45;
+      pointer-events:none;
+    }
+
+    /* Variant B: clear visual difference (helps prevent "combo feels broken") */
+    .tile[data-variant="B"] .plate{
+      filter: saturate(1.18) contrast(1.06);
+    }
+    .tile[data-variant="B"] .plate::after{
+      background:
+        repeating-linear-gradient(45deg, rgba(255,255,255,0) 0 10px, rgba(255,255,255,.22) 10px 14px),
+        radial-gradient(circle at 60% 30%, rgba(255,255,255,.20), rgba(255,255,255,0) 58%);
+      opacity:.55;
+    }
+
+    .variantBadge{
+      position:absolute;
+      top:6px;
+      left:6px;
+      width:18px;
+      height:18px;
+      border-radius:999px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:900;
+      font-size:11px;
+      letter-spacing:.02em;
+      color:#fff;
+      background: rgba(0,0,0,.28);
+      border: 1px solid rgba(255,255,255,.72);
+      box-shadow: 0 10px 16px rgba(0,0,0,.16);
+      pointer-events:none;
+      z-index:3;
+      text-shadow: 0 1px 2px rgba(0,0,0,.22);
     }
     /* Enhance image contrast */
     .tile img {
@@ -1444,7 +1500,8 @@
       simba:    "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/Simba.png",
       mellowlord: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/MellowLord.png",
       mellowzilla: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/MellowZilla.png",
-      fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/FlederNuss.png",
+            koalazilla:  "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/KoalaZilla.png",
+fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/FlederNuss.png",
       flederheld: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/FlederHeld.png",
       supernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/SuperNuss.png"
     };
@@ -1651,6 +1708,8 @@
     const bigMellows = new Map();
     // id -> {id, r, c, hp, type}
 
+
+    let lastZillaType = null; // used to alternate KoalaZilla/MellowZilla
     let pointer = {down:false, id:null, startX:0, startY:0};
     let level = 1;
     let totalScore = 0;
@@ -1722,7 +1781,7 @@
       if(!t) return false;
       const bk = parseTypeId(t.type).baseKey;
       // Small mellow is NO LONGER a blocker (so it falls/swaps)
-      if(bk==="mellowlord" || bk==="mellowzilla") return true;
+      if(bk==="mellowlord" || bk==="mellowzilla" || bk==="koalazilla") return true;
       if(isPlaceholder(t)) return true;
       return false;
     }
@@ -1923,6 +1982,8 @@
       el.dataset.id = tile.id;
 
       const {baseKey, variant} = parseTypeId(tile.type);
+      el.dataset.base = baseKey;
+      el.dataset.variant = variant;
       const base = getBase(baseKey);
       const spec = getSpecial(baseKey);
       const meta = base || spec;
@@ -1949,19 +2010,40 @@
       }
 
       if(baseKey === "myst"){
-        const qm = document.createElement("div");
-        qm.className="qmark";
-        qm.textContent = "?";
-        plate.appendChild(qm);
-      }else{
-        const img = document.createElement("img");
-        img.src = meta?.img || "";
-        img.alt = meta?.name || baseKey;
-        plate.appendChild(img);
-      }
+  const qm = document.createElement("div");
+  qm.className="qmark";
+  qm.textContent = "?";
+  plate.appendChild(qm);
+}else{
+  const img = document.createElement("img");
+
+  // Resolve image source (bases, specials, bosses)
+  let src = meta?.img || "";
+  if(baseKey==="mellowlord") src = IMG.mellowlord;
+  if(baseKey==="mellowzilla") src = IMG.mellowzilla;
+  if(baseKey==="koalazilla") src = IMG.koalazilla || IMG.koala;
+
+  img.src = src;
+  img.alt = meta?.name || baseKey;
+
+  // Fallbacks (avoid broken icons)
+  img.addEventListener("error", ()=>{
+    if(baseKey==="koalazilla" && img.src !== IMG.koala) img.src = IMG.koala;
+  }, {once:true});
+
+  plate.appendChild(img);
+
+  // Variant badge so A/B are clearly visible (prevents "combo feels broken")
+  if(base && variant==="B"){
+    const vb = document.createElement("div");
+    vb.className = "variantBadge";
+    vb.textContent = "B";
+    plate.appendChild(vb);
+  }
+}
 
       el.appendChild(plate);
-      if(baseKey==="mellow"){
+      if(tile.big || baseKey==="mellow"){
         const hp = document.createElement("div");
         hp.className="hp";
         hp.textContent = tile.hp;
@@ -1990,11 +2072,55 @@
       }
 
       el.addEventListener("pointerdown", onPointerDown);
-      el.addEventListener("pointerup", onPointerUp);
-      return el;
-    }
+        el.addEventListener("pointerup", onPointerUp);
+  return el;
+}
 
-    function updateMellowHp(tile){
+// Keep visuals in sync when a tile changes type without recreating the element
+function refreshTileEl(tile){
+  const el = tileEls.get(tile.id);
+  if(!el) return;
+
+  const {baseKey, variant} = parseTypeId(tile.type);
+  el.dataset.base = baseKey;
+  el.dataset.variant = variant;
+
+  const base = getBase(baseKey);
+  const spec = getSpecial(baseKey);
+  const meta = base || spec;
+
+  // palettes
+  let pal = ["#7ad8ff","#ff4fb9"];
+  if(base){
+    pal = (base.palettes?.[variant]) || (base.palettes?.A) || pal;
+  }
+  el.style.setProperty("--p1", pal[0]);
+  el.style.setProperty("--p2", pal[1]);
+
+  // image
+  const plate = el.querySelector(".plate");
+  const img = el.querySelector("img");
+  if(img){
+    let src = meta?.img || "";
+    if(baseKey==="mellowlord") src = IMG.mellowlord;
+    if(baseKey==="mellowzilla") src = IMG.mellowzilla;
+    if(baseKey==="koalazilla") src = IMG.koalazilla || IMG.koala;
+    img.src = src;
+    img.alt = meta?.name || baseKey;
+  }
+
+  // variant badge
+  const oldBadge = el.querySelector(".variantBadge");
+  if(oldBadge) oldBadge.remove();
+  if(plate && base && variant==="B"){
+    const vb = document.createElement("div");
+    vb.className="variantBadge";
+    vb.textContent="B";
+    plate.appendChild(vb);
+  }
+}
+
+function updateMellowHp(tile){
       const el = tileEls.get(tile.id);
       if(!el) return;
       const hp = el.querySelector(".hp");
@@ -3233,6 +3359,7 @@
         if(zilla){
           zilla.turn = (zilla.turn || 0) + 1;
           const phase = zilla.turn % 4;
+          const zName = (zilla.type==="koalazilla") ? "KoalaZilla" : "MellowZilla";
           // Cycle 4:
           // 1: Idle
           // 2: Warn Red (1st turn)
@@ -3244,10 +3371,10 @@
              if(el){
                el.style.border = "5px solid #ff0000";
                el.style.boxShadow = "0 0 20px red";
-               toast("MellowZilla wütend!", "Attacke in "+(phase===2?"2 Zügen":"1 Zug")+"!", 2000);
+               toast(`${zName} wütend!`, "Attacke in "+(phase===2?"2 Zügen":"1 Zug")+"!", 2000);
              }
           } else if(phase === 0 && zilla.turn > 0){ // Attack
-             toast("MellowZilla Attacke!", "3x3 Wipe! 💥", 2600);
+             toast(`${zName} Attacke!`, "3x3 Wipe! 💥", 2600);
 
              // Wipe random 3x3
              const rr = Math.floor(Math.random()*(rows-2));
@@ -3337,11 +3464,7 @@
                   const p=parseTypeId(t.type);
                   if(p.baseKey==="grumpy"){
                     t.type = typeId("happy", p.variant);
-                    const el=tileEls.get(t.id);
-                    if(el){
-                      const img=el.querySelector("img");
-                      if(img) img.src = IMG.happy;
-                    }
+                    refreshTileEl(t);
                   }
                 }
               }
@@ -3714,7 +3837,7 @@
 
     function findMellowZilla(){
       for(const [id, m] of bigMellows){
-        if(m.type === "mellowzilla") return m;
+        if(m.type === "mellowzilla" || m.type === "koalazilla") return m;
       }
       return null;
     }
@@ -3723,12 +3846,20 @@
       if(level < 20) return;
       if(level % 20 !== 0) return;
 
+      // Random alternate: KoalaZilla <-> MellowZilla (avoid same twice in a row)
+      let zType = (Math.random() < 0.5) ? "mellowzilla" : "koalazilla";
+      if(lastZillaType && zType === lastZillaType){
+        zType = (zType === "mellowzilla") ? "koalazilla" : "mellowzilla";
+      }
+      lastZillaType = zType;
+
       // Clear 3x3 center
       const cr = Math.floor(rows/2)-1;
       const cc = Math.floor(cols/2)-1;
 
       const bigId = makeId();
-      const zilla = { id: bigId, r: cr, c: cc, type: "mellowzilla:P", hp: 45, big:true, zilla:true };
+      const zillaHp = 100;
+      const zilla = { id: bigId, r: cr, c: cc, type: `${zType}:P`, hp: zillaHp, big:true, zilla:true };
 
       for(let r=cr; r<cr+3; r++){
         for(let c=cc; c<cc+3; c++){
@@ -3746,7 +3877,7 @@
 
       // Anchor
       grid[cr][cc] = zilla;
-      bigMellows.set(bigId, {id:bigId, r:cr, c:cc, hp:100, type:"mellowzilla"});
+      bigMellows.set(bigId, {id:bigId, r:cr, c:cc, hp:zillaHp, type:zType});
 
       const el = createTileEl(zilla, false);
       el.classList.add("spawnGlow");
@@ -3757,7 +3888,12 @@
       tileEls.set(zilla.id, el);
       ui.board.appendChild(el);
 
-      toast("MELLOW ZILLA!! 🦖", "Boss Fight!", 4000);
+      if(zType==="mellowzilla"){
+        toast("MELLOW ZILLA!! 🦖", "Boss Fight!", 4000);
+      } else {
+        toast("KOALA ZILLA!! 🐨🦖", "Boss Fight!", 4000);
+      }
+
       setTileXY(el, cr, cc);
     }
 
@@ -3786,28 +3922,26 @@
       }
 
       // Boss Check for points
-      if(big.type === "mellowzilla"){
-         // 20,000 points as requested
-         const bonus = 20000;
-         totalScore += bonus;
-         levelScore += bonus;
-         toast("MELLOW ZILLA BESIEGT! 🏆", "+20.000 PUNKTE!", 4000);
+      if(big.type === "mellowzilla" || big.type === "koalazilla"){
+        const bonus = 20000;
+        totalScore += bonus;
+        levelScore += bonus;
+        if(big.type === "mellowzilla"){
+          toast("MELLOW ZILLA BESIEGT! 🏆", "+20.000 PUNKTE!", 4000);
+        } else {
+          toast("KOALA ZILLA BESIEGT! 🏆", "+20.000 PUNKTE!", 4000);
+        }
       } else {
-         toast("Mellow gelöst! ✨","Nice!", 2600);
+        toast("Mellow gelöst! ✨","Nice!", 2600);
       }
 
-      for(let rr=big.r; rr<=big.r+1; rr++){ // This loop is for 2x2. Boss is 3x3 if MellowZilla.
-        // Wait, MellowZilla is 3x3. Mellowlord is 2x2.
-        // We need to adjust loop based on size.
-        const size = (big.type==="mellowzilla") ? 3 : 2;
-        for(let rLoop=big.r; rLoop<big.r+size; rLoop++){
-          for(let cLoop=big.c; cLoop<big.c+size; cLoop++){
-             if(inBounds(rLoop,cLoop)){
-                const t = grid[rLoop][cLoop];
-                if(t && isPlaceholder(t) && t.partOf===bigId) grid[rLoop][cLoop]=null;
-                if(t && t.id===bigId) grid[rLoop][cLoop]=null;
-             }
-          }
+      const size = (big.type==="mellowzilla" || big.type==="koalazilla") ? 3 : 2;
+      for(let rLoop=big.r; rLoop<big.r+size; rLoop++){
+        for(let cLoop=big.c; cLoop<big.c+size; cLoop++){
+          if(!inBounds(rLoop,cLoop)) continue;
+          const t = grid[rLoop][cLoop];
+          if(t && isPlaceholder(t) && t.partOf===bigId) grid[rLoop][cLoop]=null;
+          if(t && t.id===bigId) grid[rLoop][cLoop]=null;
         }
       }
     }
