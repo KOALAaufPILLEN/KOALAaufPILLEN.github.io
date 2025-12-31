@@ -831,8 +831,8 @@
 
     .lbItem{
       display:flex; justify-content:space-between; align-items:center; gap:10px;
-      background: rgba(255,255,255,.82);
-      border:1px solid rgba(17,13,26,.08);
+      background: linear-gradient(135deg, rgba(255,255,255,.95), rgba(245,245,255,.85));
+      border:1px solid rgba(17,13,26,.06);
       border-radius:16px;
       padding:10px 10px;
       box-shadow: 0 10px 24px rgba(20,10,60,.07);
@@ -845,7 +845,10 @@
     }
     .lbItem .left b{display:block}
     .lbItem .left small{opacity:.7;font-weight:900}
-    .lbItem .score{font-weight:1000}
+    .lbItem .score{
+      font-weight:1000;
+      color:#4a2c6f;
+    }
 
     /* Ranks */
     .lbItem.rank1{
@@ -862,6 +865,14 @@
       background:linear-gradient(90deg, rgba(205,127,50,.25), rgba(255,255,255,.10));
       box-shadow:0 0 12px rgba(205,127,50,.55);
       animation:bounceMedal 1.6s ease-in-out infinite;
+    }
+    /* Non-podium entries: cooler lilac gradient */
+    .lbItem:not(.rank1):not(.rank2):not(.rank3){
+      background: linear-gradient(135deg, rgba(234, 231, 255, 0.92), rgba(220, 240, 255, 0.92));
+      border:1px solid rgba(111, 80, 200, 0.18);
+      box-shadow:
+        0 14px 30px rgba(20,10,60,.10),
+        0 0 0 1px rgba(255,255,255,.35) inset;
     }
     @keyframes shine{
       0%{filter:brightness(1)}
