@@ -2359,9 +2359,24 @@
      **********************/
     let dragStart = {x:0, y:0};
     let currentDrag = null;
+    let busyStart = 0; // Watchdog timestamp
 
     function onPointerDown(e){
-      if(busy) return;
+      // Watchdog: If busy for too long (>2.5s) without active resolution, force unlock
+      if(busy){
+         if(!busyStart) busyStart = Date.now();
+         if(Date.now() - busyStart > 2500){
+             console.warn("Busy state stuck, auto-recovering...");
+             busy = false;
+             busyStart = 0;
+             document.querySelectorAll('.tile.dragging').forEach(el=>el.classList.remove('dragging'));
+             toast("Auto-Fix 🛠️", "Input block gelöst.", 1500);
+         } else {
+             return;
+         }
+      }
+      busyStart = Date.now();
+
       const tEl = e.currentTarget;
       const id = tEl.dataset.id;
       const tile = findTileById(id);
@@ -2984,17 +2999,22 @@
         toast("🐨🍋 KOALA × Citrussy!", "DOUBLE BOARD CLEAN ×2 💥💥", 3800);
         clearWholeBoard();
         setTimeout(()=>{
+         try{
           dropDown();
           mergeMellows();
           setTimeout(()=>{
+           try{
             clearWholeBoard();
             const bonus = Math.round(2200 * diff.scoreMult);
             totalScore += bonus;
             levelScore += bonus;
             setTimeout(()=>{
-              dropDown(); mergeMellows(); resolveAll(false, true);
+              try{ dropDown(); mergeMellows(); resolveAll(false, true); }
+              catch(e){ console.error(e); busy=false; }
             }, 240);
+           }catch(e){ console.error(e); busy=false; }
           }, 260);
+         }catch(e){ console.error(e); busy=false; }
         }, 260);
         clearCells([{r:A.r,c:A.c},{r:B.r,c:B.c}]);
         return;
