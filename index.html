@@ -2003,7 +2003,7 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
     let PAD = 14;
 
     function isGridReady(){
-      return Array.isArray(grid) && grid.length && rows>0 && cols>0;
+      return Array.isArray(grid) && rows>0 && cols>0 && grid.length >= rows;
     }
 
     /**********************
@@ -4457,6 +4457,7 @@ function updateMellowHp(tile){
     }
 
     function hasMove(){
+      if(!isGridReady()) return false;
       for(let r=0;r<rows;r++){
         for(let c=0;c<cols;c++){
           const t=grid[r][c];
@@ -4520,6 +4521,7 @@ function updateMellowHp(tile){
     }
 
     function ensurePlayableBoard(maxShuffles=6, autoResolve=true){
+      if(!isGridReady()) return true; // defer shuffling until board exists
       try{ if(typeof pruneOrphanTileEls === "function") pruneOrphanTileEls(); }catch(e){}
       let tries = 0;
       while(tries < maxShuffles){
