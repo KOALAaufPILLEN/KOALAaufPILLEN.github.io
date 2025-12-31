@@ -676,11 +676,12 @@
       100%{ transform: translateY(8px) scale(.30); opacity:0; }
     }
     /* Jelly bump when combos resolve */
-    .tile.bump .plate{ animation: jellyBump 460ms cubic-bezier(.2,.9,.2,1) both; }
+    .tile.bump .plate{ animation: jellyBump 540ms cubic-bezier(.18,.95,.2,1.05) both; }
     @keyframes jellyBump{
       0%{ transform: translateY(0) scale(1); }
-      30%{ transform: translateY(-4px) scale(1.06, 0.94); }
-      60%{ transform: translateY(3px) scale(0.96, 1.08); }
+      20%{ transform: translateY(-9px) scale(1.10, 0.90); }
+      45%{ transform: translateY(6px) scale(0.92, 1.10); }
+      70%{ transform: translateY(-4px) scale(1.05, 0.96); }
       100%{ transform: translateY(0) scale(1); }
     }
 
@@ -3678,11 +3679,11 @@ function updateMellowHp(tile){
         const mm = findLineMatches();
 
         if(mm.clear.size===0 && specials.length===0){
+          // Sicherstellen, dass das Board nach Level-Ups weiter spielbar bleibt
+          ensureMovesOrShuffle();
           busy=false;
           layoutBoard(); // Force sync visual positions to fix drag bugs
           updateUI();
-          // No forced shuffle here: swaps without immediate matches are allowed (tile-swapper style).
-          // Player can freely rearrange to create the next match.
           return;
         }
 
@@ -4057,6 +4058,16 @@ function updateMellowHp(tile){
       if(Math.random() < diff.lovelieChance*0.45){
         maybeSpawnLovelie();
       }
+
+      // After gravity settles, auto-resolve if matches are still present (failsafe for stuck boards)
+      setTimeout(()=>{
+        if(busy) return;
+        const pending = findLineMatches();
+        const specials = findSpecialQuads();
+        if((pending?.clear?.size||0) > 0 || (specials?.length||0) > 0){
+          resolveAll(false, false);
+        }
+      }, 40);
     }
 
     function mergeMellows(){
@@ -4292,11 +4303,24 @@ function updateMellowHp(tile){
       });
     }
 
-    function ensureMovesOrShuffle(){
-      // KOALA: Free-Swap Mode -> kein Auto-Shuffle bei 'keine Züge'
-      // Diese Funktion bleibt als Safety-Hook (z.B. gegen orphan tiles), aber verändert das Board nicht.
+    function ensurePlayableBoard(maxShuffles=6){
       try{ if(typeof pruneOrphanTileEls === "function") pruneOrphanTileEls(); }catch(e){}
-      return;
+      let tries = 0;
+      while(tries < maxShuffles){
+        if(hasAnyMatchOrSpecial()) return true; // immediate clearable match/special
+        if(hasMove()) return true;              // at least one possible swap-to-match
+        shuffleAll();
+        tries++;
+      }
+      return false;
+    }
+
+    function ensureMovesOrShuffle(){
+      if(ensurePlayableBoard()) return;
+      // Fallback: still stuck? force one last shuffle and try resolving
+      shuffleAll();
+      layoutBoard();
+      setTimeout(()=>resolveAll(false, false), 60);
     }
 
     function hint(){
