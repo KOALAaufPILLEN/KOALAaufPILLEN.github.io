@@ -668,21 +668,30 @@
     .powerAnim .plate{
       background: linear-gradient(135deg, #ff4fb9, #ffcf5a, #7ad8ff, #8b5cf6, #ff4fb9) !important;
       background-size: 320% 100% !important;
-      animation: mystHue 3.8s ease-in-out infinite;
+      animation: mystHue 3.8s ease-in-out infinite, powerPulse 1.8s ease-in-out infinite;
+      box-shadow: 0 0 22px rgba(255,79,185,.45), 0 0 32px rgba(122,216,255,.35);
     }
     @keyframes mystHue{
       0%{background-position:0% 50%}
       50%{background-position:100% 50%}
       100%{background-position:0% 50%}
     }
-    .powerAnim .plate{
-      box-shadow: 0 0 22px rgba(255,79,185,.45), 0 0 32px rgba(122,216,255,.35);
-      animation: mystHue 3.8s ease-in-out infinite, powerPulse 1.8s ease-in-out infinite;
-    }
     @keyframes powerPulse{
       0%{ transform: scale(1); filter:saturate(1); }
-      50%{ transform: scale(1.04); filter:saturate(1.15); }
+      50%{ transform: scale(1.05); filter:saturate(1.2); }
       100%{ transform: scale(1); filter:saturate(1); }
+    }
+    /* Boss tint */
+    .tile[data-base="mellowzilla"] .plate,
+    .tile[data-base="koalazilla"] .plate{
+      filter: hue-rotate(-12deg) saturate(1.2);
+      box-shadow: 0 0 30px rgba(255,80,80,.45), 0 0 40px rgba(255,120,120,.35);
+    }
+    .tile[data-base="mellowzilla"] img,
+    .tile[data-base="koalazilla"] img{
+      inset: 0;
+      width:100%;
+      height:100%;
     }
 
     /* Puff reveal (??? -> random) */
@@ -1383,7 +1392,7 @@
          <div class="cta" style="margin:16px 0; justify-content:center; gap:10px;">
             <button class="Btn secondary" id="menuNew">Neues Spiel</button>
             <button class="Btn ghost" id="menuIntro">Anleitung</button>
-            <button class="Btn" id="menuFs">Vollbild</button>
+            <!-- Fullscreen handled via top bar -->
             <button class="Btn" id="menuHint">Hint</button>
          </div>
 
@@ -1509,6 +1518,7 @@
         <div class="panel" id="luvPanel">
           <h3>Deine Luvvies <span class="tiny">(anklicken für Steckbrief)</span></h3>
           <div class="luvGrid" id="luvMenu"></div>
+          <div id="comboList" class="tiny" style="margin-top:6px;"></div>
         </div>
 
         <div class="panel" id="rightPanel">
@@ -2038,6 +2048,50 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
       const p = parseTypeId(tile?.type);
       return `${p.baseKey}:${p.variant||"A"}`;
     };
+
+    /**********************
+     * Combo unlock tracking (simple cookie-based log)
+     **********************/
+    const COMBOS = {
+      moonshuffle: { title:"Sleepy × Mond Shuffle", desc:"2× Sleepy + 1× Mond → Shuffle 4×4" },
+      therapy: { title:"Grumpy Therapy", desc:"3× Grumpy + 1× Happy → +3 Moves & Calm" },
+      sprinkle: { title:"Donut Sprinkle", desc:"3× Donut + 1× Sweety → Sprinkle Beam" },
+      sugar: { title:"Donut Sugar Rush", desc:"3× Donut + 1× Happy → Sugar Rush" },
+      buddies: { title:"Buddy Burst", desc:"Joyce/Smokey/Simba + Buddies → Wave" },
+      powercombo: { title:"Power Combo", desc:"Any powerup + powerup fusion" },
+      simba_mix: { title:"Simba Variant Mix", desc:"3× Simba A + 1× Simba B → clear Simbas" }
+    };
+    function loadComboCookie(){
+      try{
+        const raw = getCookie("luvvies_combos");
+        if(!raw) return new Set();
+        return new Set(JSON.parse(raw));
+      }catch(e){ return new Set(); }
+    }
+    let combosUnlocked = loadComboCookie();
+    function saveCombos(){
+      try{ setCookie("luvvies_combos", JSON.stringify([...combosUnlocked]), 3650); }catch(e){}
+    }
+    function renderCombos(){
+      const box = document.getElementById("comboList");
+      if(!box) return;
+      const keys = Object.keys(COMBOS);
+      const unlocked = keys.filter(k=>combosUnlocked.has(k));
+      const lockedCount = keys.length - unlocked.length;
+      const lines = [
+        unlocked.length ? `Freigeschaltet: ${unlocked.map(k=>COMBOS[k].title).join(", ")}` : "Freigeschaltet: —",
+        lockedCount > 0 ? `Versteckt: ${lockedCount} Kombos (??? probieren!)` : "Alle Kombos gefunden!"
+      ];
+      box.innerHTML = lines.map(l=>`<div class="tiny">${l}</div>`).join("");
+    }
+    function unlockCombo(key){
+      if(!COMBOS[key]) return;
+      if(combosUnlocked.has(key)) return;
+      combosUnlocked.add(key);
+      saveCombos();
+      toast("Neue Kombo!", COMBOS[key].title, 2600);
+      renderCombos();
+    }
     function getBase(baseKey){ return BASES.find(b=>b.key===baseKey) || null; }
     function getSpecial(baseKey){ return SPECIALS[baseKey] || null; }
     function inBounds(r,c){ return r>=0 && c>=0 && r<rows && c<cols; }
@@ -3022,10 +3076,10 @@ function updateMellowHp(tile){
       const count=(k)=>keys.filter(x=>x===k).length;
 
       // 3+1 Logic (Ghost combo fix)
-      if(count("sleepy")===3 && count("mond")===1) return "moonshuffle";
-      if(count("grumpy")===3 && count("happy")===1) return "therapy";
-      if(count("donut")===3 && count("sweety")===1) return "sprinkle";
-      if(count("donut")===3 && count("happy")===1) return "sugar";
+      if(count("sleepy")===3 && count("mond")===1){ unlockCombo("moonshuffle"); return "moonshuffle"; }
+      if(count("grumpy")===3 && count("happy")===1){ unlockCombo("therapy"); return "therapy"; }
+      if(count("donut")===3 && count("sweety")===1){ unlockCombo("sprinkle"); return "sprinkle"; }
+      if(count("donut")===3 && count("happy")===1){ unlockCombo("sugar"); return "sugar"; }
 
       // Buddies: 3 of either + 1 of other
       if(count("smokey")===3 && count("joyce")===1) return "buddies";
@@ -3798,10 +3852,10 @@ function updateMellowHp(tile){
            return;
         }
 
-        if(acceptedSpecials.length){
-          for(const sp of acceptedSpecials){
-            const center = sp.cells[Math.floor(sp.cells.length/2)];
-            const ctr = tileCenter(center.r, center.c);
+      if(acceptedSpecials.length){
+        for(const sp of acceptedSpecials){
+          const center = sp.cells[Math.floor(sp.cells.length/2)];
+          const ctr = tileCenter(center.r, center.c);
             burstFx(ctr.x, ctr.y, 14);
 
             if(sp.kind==="moonshuffle"){
@@ -4908,7 +4962,7 @@ clearHints();
         if(i===1) item.classList.add("rank2");
         if(i===2) item.classList.add("rank3");
 
-        const rankNum = (typeof x.rank === "number" && !isNaN(x.rank)) ? x.rank : (i+1);
+        const rankNum = i+1;
         const d = new Date(x.created_at || Date.now());
         const stamp = `${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")}.${d.getFullYear()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
         item.innerHTML = `
@@ -5060,10 +5114,7 @@ clearHints();
        hint();
     });
 
-    document.getElementById("menuFs").addEventListener("click", ()=>{
-       document.getElementById("settingsBack").style.display = "none";
-       toggleFullscreen();
-    });
+    // Fullscreen button removed (handled by top bar Maximize)
     document.getElementById("menuIntro").addEventListener("click", ()=>{
        document.getElementById("settingsBack").style.display = "none";
        document.getElementById("introBack").style.display = "flex";
@@ -5134,16 +5185,18 @@ clearHints();
     });
 
     // Maximize Button
-    const btnMax = document.getElementById("btnMax");
-    if(btnMax){
-       btnMax.addEventListener("click", ()=>{
-          document.body.classList.toggle("maximized");
-          layoutBoard();
-                 // KOALA_MAX_BUILDFS: Hintergrund neu aufbauen (Maximize nutzt fsBg)
-          try{ buildFsBg(); }catch(e){}
-          try{ updateUI(); }catch(e){}
-       });
-}
+      const btnMax = document.getElementById("btnMax");
+      if(btnMax){
+         btnMax.addEventListener("click", async ()=>{
+            try{
+              if(!document.fullscreenElement){
+                await document.documentElement.requestFullscreen();
+              } else {
+                await document.exitFullscreen();
+              }
+            }catch(e){}
+         });
+      }
 
     
     // Maximize HUD controls
