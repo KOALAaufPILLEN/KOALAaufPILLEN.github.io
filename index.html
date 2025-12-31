@@ -616,6 +616,22 @@
       pointer-events:none;
     }
 
+    /* Zilla attack warning */
+    .attackWarn{
+      position:absolute;
+      background: rgba(255,0,0,.18);
+      border: 2px dashed rgba(255,0,0,.65);
+      border-radius: 10px;
+      pointer-events:none;
+      animation: attackPulse 0.8s ease-in-out infinite;
+      box-shadow: 0 0 18px rgba(255,0,0,.35);
+    }
+    @keyframes attackPulse{
+      0%{ opacity:.6; transform: scale(1); }
+      50%{ opacity:1; transform: scale(1.03); }
+      100%{ opacity:.6; transform: scale(1); }
+    }
+
     /* Luvvies auf der Karte größer */
     .tile img{
       position:absolute;
@@ -658,6 +674,15 @@
       0%{background-position:0% 50%}
       50%{background-position:100% 50%}
       100%{background-position:0% 50%}
+    }
+    .powerAnim .plate{
+      box-shadow: 0 0 22px rgba(255,79,185,.45), 0 0 32px rgba(122,216,255,.35);
+      animation: mystHue 3.8s ease-in-out infinite, powerPulse 1.8s ease-in-out infinite;
+    }
+    @keyframes powerPulse{
+      0%{ transform: scale(1); filter:saturate(1); }
+      50%{ transform: scale(1.04); filter:saturate(1.15); }
+      100%{ transform: scale(1); filter:saturate(1); }
     }
 
     /* Puff reveal (??? -> random) */
@@ -1942,12 +1967,16 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
 
     let lastZillaType = null; // used to alternate KoalaZilla/MellowZilla
     let bossFight = null; // { active:true, type:'mellowzilla'|'koalazilla', hp:number, spawnLevel:number, deadlineLevel:number }
+    let zillaPlanned = null;
+    let zillaAttackCounter = 0;
     let pointer = {down:false, id:null, startX:0, startY:0};
     let level = 1;
     let totalScore = 0;
     let levelScore = 0;
     let target = 4000;
     let moves = 30;
+    let mellowFreeMoves = 10;
+    let lastPlayerMove = null;
     let combo = 1;
 
     let lastSwap = null;
@@ -2005,6 +2034,10 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
       const [baseKey, variant] = id.split(":");
       return {baseKey, variant};
     }
+    const matchKey = (tile)=>{
+      const p = parseTypeId(tile?.type);
+      return `${p.baseKey}:${p.variant||"A"}`;
+    };
     function getBase(baseKey){ return BASES.find(b=>b.key===baseKey) || null; }
     function getSpecial(baseKey){ return SPECIALS[baseKey] || null; }
     function inBounds(r,c){ return r>=0 && c>=0 && r<rows && c<cols; }
@@ -2147,7 +2180,8 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
 
       // No strict max cap, allow filling the screen
       const max = 400;
-      return clamp(Math.min(cellW, cellH) * zoom, 20, max);
+      const minCell = (window.innerWidth < 640) ? 32 : 40;
+      return clamp(Math.min(cellW, cellH) * zoom, minCell, max);
     }
 
     function setTileXY(el, r, c){
@@ -2244,7 +2278,7 @@ for(const [id, el] of tileEls){
       plate.className="plate";
 
       // Powerups + ??? + Lovelie: animated background
-      if(isPowerupKey(baseKey) || baseKey==="lovelie" || baseKey==="myst" || baseKey==="cit" || baseKey==="worm" || baseKey==="koala"){
+      if(isPowerupKey(baseKey) || baseKey==="lovelie" || baseKey==="myst" || baseKey==="cit" || baseKey==="worm" || baseKey==="koala" || baseKey==="mellowzilla" || baseKey==="koalazilla"){
         el.classList.add("powerAnim");
       }
 
@@ -2973,6 +3007,7 @@ function updateMellowHp(tile){
 
     function spendMoves(n){
       moves = Math.max(0, moves - n);
+      combo = 0; // Reset combo on each paid/consumed move
       if(moves===0){
         setTimeout(()=>gameOver(), 350);
       }
@@ -3033,9 +3068,9 @@ function updateMellowHp(tile){
         while(c<cols){
           const t = grid[r][c];
           if(!isMatchable(t)){ c++; continue; }
-          const k = parseTypeId(t.type).baseKey;
+          const k = matchKey(t);
           let start=c;
-          while(c<cols && grid[r][c] && isMatchable(grid[r][c]) && parseTypeId(grid[r][c].type).baseKey===k) c++;
+          while(c<cols && grid[r][c] && isMatchable(grid[r][c]) && matchKey(grid[r][c])===k) c++;
           const len = c-start;
           if(len>=3){
             const cells=[];
@@ -3053,9 +3088,9 @@ function updateMellowHp(tile){
         while(r<rows){
           const t = grid[r][c];
           if(!isMatchable(t)){ r++; continue; }
-          const k = parseTypeId(t.type).baseKey;
+          const k = matchKey(t);
           let start=r;
-          while(r<rows && grid[r][c] && isMatchable(grid[r][c]) && parseTypeId(grid[r][c].type).baseKey===k) r++;
+          while(r<rows && grid[r][c] && isMatchable(grid[r][c]) && matchKey(grid[r][c])===k) r++;
           const len = r-start;
           if(len>=3){
             const cells=[];
@@ -3145,6 +3180,7 @@ function updateMellowHp(tile){
       if(!a || !b) return;
       if(isBlocker(a) || isBlocker(b)) return;
       if(!isSwappable(a) || !isSwappable(b)) return;
+      combo = 0; // Reset combo on any player swap
       busy = true;
       lastSwap = { pref:{r:r2,c:c2}, alt:{r:r1,c:c1} };
 
@@ -3166,9 +3202,16 @@ function updateMellowHp(tile){
         const ok = hasAnyMatchOrSpecial();
 
         // Free Swapping: No revert if no match.
-        // Check if Mellow is involved (Free move)
-        if(aBk === "mellow" || bBk === "mellow"){
-           // 0 Cost
+      // Track last player move (for zilla targeting)
+      lastPlayerMove = { r: r2, c: c2 };
+
+      // Check if Mellow is involved (Free move up to 10x)
+      if(aBk === "mellow" || bBk === "mellow"){
+         if(mellowFreeMoves > 0){
+           mellowFreeMoves -= 1;
+         } else {
+           spendMoves(1);
+           }
         } else {
            spendMoves(1);
         }
@@ -3265,7 +3308,9 @@ function updateMellowHp(tile){
       }
     }
 
-    function clearCells(cells){
+    function clearCells(cells, opts={}){
+      const protectPower = !!opts.protectPower;
+      const PROTECTED = new Set(["fledernuss","flederheld","supernuss"]);
       const uniq = new Set(cells.map(p=>posKey(p.r,p.c)));
       const cleared = [];
 
@@ -3280,6 +3325,11 @@ function updateMellowHp(tile){
           continue;
         }
         if(isPlaceholder(t)) continue;
+
+        if(protectPower){
+          const bk = parseTypeId(t.type).baseKey;
+          if(PROTECTED.has(bk)) continue;
+        }
 
         const el = tileEls.get(t.id);
         if(el){
@@ -3303,13 +3353,13 @@ function updateMellowHp(tile){
     function clearRow(r){
       const cells=[];
       for(let c=0;c<cols;c++) cells.push({r,c});
-      clearCells(cells);
+      clearCells(cells, {protectPower:true});
       totalScore += 200; levelScore += 200;
     }
     function clearCol(c){
       const cells=[];
       for(let r=0;r<rows;r++) cells.push({r,c});
-      clearCells(cells);
+      clearCells(cells, {protectPower:true});
       totalScore += 200; levelScore += 200;
     }
     function citBlast(r,c, radius=3){
@@ -3327,7 +3377,7 @@ function updateMellowHp(tile){
            }
         }
       }
-      clearCells(cells);
+      clearCells(cells, {protectPower:true});
       totalScore += 260; levelScore += 260;
     }
     function clearWholeBoard(){
@@ -3340,7 +3390,7 @@ function updateMellowHp(tile){
         if(bk==="myst") continue;
         cells.push({r,c});
       }
-      clearCells(cells);
+      clearCells(cells, {protectPower:true});
       totalScore += 800; levelScore += 800;
     }
     function wormWave6(r1,c1,r2,c2){
@@ -3354,7 +3404,7 @@ function updateMellowHp(tile){
       for(let r=0;r<rows;r++){
         for(let c=start;c<end;c++) cells.push({r,c});
       }
-      clearCells(cells);
+      clearCells(cells, {protectPower:true});
       totalScore += 500; levelScore += 500;
     }
     function koalaMagicOn(targetBaseKey){
@@ -3368,7 +3418,7 @@ function updateMellowHp(tile){
         const bk=parseTypeId(t.type).baseKey;
         if(bk===targetBaseKey) cells.push({r,c});
       }
-      clearCells(cells);
+      clearCells(cells, {protectPower:true});
     }
 
     function resolvePowerSwap(A,B,dir){
@@ -3414,7 +3464,7 @@ function updateMellowHp(tile){
             if(c<0 || c>=cols) continue;
             for(let r=0; r<rows; r++) cells.push({r,c});
         }
-        clearCells(cells);
+        clearCells(cells, {protectPower:true});
         return;
       }
 
@@ -3440,7 +3490,7 @@ function updateMellowHp(tile){
           }, 260);
          }catch(e){ console.error(e); busy=false; }
         }, 260);
-        clearCells([{r:A.r,c:A.c},{r:B.r,c:B.c}]);
+        clearCells([{r:A.r,c:A.c},{r:B.r,c:B.c}], {protectPower:true});
         return;
       }
 
@@ -3455,7 +3505,7 @@ function updateMellowHp(tile){
       if(aBk==="cit" && bBk==="cit"){
         toast("🍋🍋 DOUBLE CIT!", "Big Bang! 💥", 3200);
         citBlast(A.r,A.c,6); // Bigger radius
-        clearCells([{r:A.r,c:A.c},{r:B.r,c:B.c}]);
+        clearCells([{r:A.r,c:A.c},{r:B.r,c:B.c}], {protectPower:true});
         return;
       }
 
@@ -3482,7 +3532,7 @@ function updateMellowHp(tile){
          for(let c=cMid-1; c<=cMid+1; c++){
             if(c>=0 && c<cols) for(let r=0; r<rows; r++) cells.push({r,c});
          }
-         clearCells(cells);
+         clearCells(cells, {protectPower:true});
          return;
       }
 
@@ -3490,33 +3540,33 @@ function updateMellowHp(tile){
 
       if(aBk==="koala" && !getSpecial(bBk)){
         koalaMagicOn(bBk);
-        clearCells([{r:A.r,c:A.c}]);
+        clearCells([{r:A.r,c:A.c}], {protectPower:true});
         return;
       }
       if(bBk==="koala" && !getSpecial(aBk)){
         koalaMagicOn(aBk);
-        clearCells([{r:B.r,c:B.c}]);
+        clearCells([{r:B.r,c:B.c}], {protectPower:true});
         return;
       }
 
       if(aBk==="worm"){
         if(dir.dr !== 0) clearCol(A.c);
         else clearRow(A.r);
-        clearCells([{r:A.r,c:A.c}]);
+        clearCells([{r:A.r,c:A.c}], {protectPower:true});
       }
       if(bBk==="worm"){
         if(dir.dr !== 0) clearCol(B.c);
         else clearRow(B.r);
-        clearCells([{r:B.r,c:B.c}]);
+        clearCells([{r:B.r,c:B.c}], {protectPower:true});
       }
 
       if(aBk==="cit"){
         citBlast(A.r,A.c,3);
-        clearCells([{r:A.r,c:A.c}]);
+        clearCells([{r:A.r,c:A.c}], {protectPower:true});
       }
       if(bBk==="cit"){
         citBlast(B.r,B.c,3);
-        clearCells([{r:B.r,c:B.c}]);
+        clearCells([{r:B.r,c:B.c}], {protectPower:true});
       }
     }
 
@@ -3545,7 +3595,7 @@ function updateMellowHp(tile){
           toast("Lovelie Bonus!", "+10 Moves! 🎁", 3000);
           updateUI();
        }, 300);
-       clearCells([{r:A.r,c:A.c}, {r:B.r,c:B.c}]);
+       clearCells([{r:A.r,c:A.c}, {r:B.r,c:B.c}], {protectPower:true});
     }
 
     function checkerboardWipe(A, B){
@@ -3557,8 +3607,8 @@ function updateMellowHp(tile){
              if( (r+c)%2 === 0 ) cells.push({r,c});
           }
        }
-       clearCells(cells);
-       clearCells([{r:A.r,c:A.c}, {r:B.r,c:B.c}]);
+       clearCells(cells, {protectPower:true});
+       clearCells([{r:A.r,c:A.c}, {r:B.r,c:B.c}], {protectPower:true});
     }
 
     function superNussCombo(powerup, supernuss){
@@ -3575,7 +3625,7 @@ function updateMellowHp(tile){
              if(inBounds(r+d, c+d)) cells.push({r:r+d,c:c+d});
              if(inBounds(r+d, c-d)) cells.push({r:r+d,c:c-d});
           }
-          clearCells(cells);
+          clearCells(cells, {protectPower:true});
        }
        else if(pk==="cit"){
           toast("🍋🌰 GALAXY RING!", "Double Blast! 🪐", 3200);
@@ -3590,7 +3640,7 @@ function updateMellowHp(tile){
                 if(dist >= 4.5 && dist <= 5.5) cells.push({r:rr, c:cc});
              }
           }
-          clearCells(cells);
+          clearCells(cells, {protectPower:true});
        }
        else if(pk==="koala"){
            toast("🐨🌰 GOLDEN ARMY!", "Evolution & Detonation! 💥", 4000);
@@ -3608,10 +3658,10 @@ function updateMellowHp(tile){
            }
 
            // Clear them with delay to simulate explosion
-           clearCells(cells);
+           clearCells(cells, {protectPower:true});
        }
 
-       clearCells([{r:powerup.r,c:powerup.c}, {r:supernuss.r,c:supernuss.c}]);
+       clearCells([{r:powerup.r,c:powerup.c}, {r:supernuss.r,c:supernuss.c}], {protectPower:true});
     }
 
     function activateLovelieCombo(powerupTile, lovelieTile){
@@ -3637,7 +3687,7 @@ function updateMellowHp(tile){
           totalScore += 5000;
        }
 
-       clearCells([{r:powerupTile.r, c:powerupTile.c}, {r:lovelieTile.r, c:lovelieTile.c}]);
+       clearCells([{r:powerupTile.r, c:powerupTile.c}, {r:lovelieTile.r, c:lovelieTile.c}], {protectPower:true});
     }
 
     function resolveAll(initial=false, isPlayerSwap=false){
@@ -3658,6 +3708,13 @@ function updateMellowHp(tile){
           zilla.turn = (zilla.turn || 0) + 1;
           const phase = zilla.turn % 4;
           const zName = (zilla.type==="koalazilla") ? "KoalaZilla" : "MellowZilla";
+          const chooseTarget = ()=>{
+            const baseR = lastPlayerMove ? lastPlayerMove.r : Math.floor(Math.random()*(rows-1));
+            const baseC = lastPlayerMove ? lastPlayerMove.c : Math.floor(Math.random()*(cols-1));
+            const rr = clamp(baseR-1, 0, rows-3);
+            const cc = clamp(baseC-1, 0, cols-3);
+            return {r: rr, c: cc};
+          };
           // Cycle 4:
           // 1: Idle
           // 2: Warn Red (1st turn)
@@ -3671,12 +3728,17 @@ function updateMellowHp(tile){
                el.style.boxShadow = "0 0 20px red";
                toast(`${zName} wütend!`, "Attacke in "+(phase===2?"2 Zügen":"1 Zug")+"!", 2000);
              }
+             if(!zillaPlanned) zillaPlanned = chooseTarget();
+             if(phase===3 && zillaPlanned) showAttackPreview(zillaPlanned.r, zillaPlanned.c);
           } else if(phase === 0 && zilla.turn > 0){ // Attack
              toast(`${zName} Attacke!`, "3x3 Wipe! 💥", 2600);
+             const target = zillaPlanned || chooseTarget();
+             clearAttackPreview();
+             zillaPlanned = null;
 
-             // Wipe random 3x3
-             const rr = Math.floor(Math.random()*(rows-2));
-             const cc = Math.floor(Math.random()*(cols-2));
+             // Wipe targeted 3x3 (aims at last move)
+             const rr = target.r;
+             const cc = target.c;
              const cells = [];
              for(let r=rr; r<rr+3; r++){
                for(let c=cc; c<cc+3; c++) cells.push({r,c});
@@ -3686,10 +3748,18 @@ function updateMellowHp(tile){
              // Reset visual
              const el = tileEls.get(zilla.id);
              if(el){ el.style.border = "none"; el.style.boxShadow="none"; }
+             zillaAttackCounter++;
+             if(zillaAttackCounter % 3 === 0){
+               dropDown();
+               mergeMellows();
+               ensureMovesOrShuffle();
+             }
           } else {
              // Idle
              const el = tileEls.get(zilla.id);
              if(el){ el.style.border = "none"; el.style.boxShadow="none"; }
+             clearAttackPreview();
+             zillaPlanned = null;
           }
         }
       }
@@ -4134,6 +4204,7 @@ function updateMellowHp(tile){
           setTileXY(el, r, c);
         }
       }
+      checkMellowlordFusion();
     }
 
     function findMellowZilla(){
@@ -4143,30 +4214,36 @@ function updateMellowHp(tile){
       return null;
     }
 
-    function spawnMellowZilla(){
-      if(level < 20) return;
-      if(level % 20 !== 0) return;
-
-      // Random alternate: KoalaZilla <-> MellowZilla (avoid same twice in a row)
-      let zType = (Math.random() < 0.5) ? "mellowzilla" : "koalazilla";
-      if(lastZillaType && zType === lastZillaType){
-        zType = (zType === "mellowzilla") ? "koalazilla" : "mellowzilla";
-      }
-      lastZillaType = zType;
-
-      // KOALA_BOSS_DEADLINE: Option 2 -> Boss muss innerhalb von 5 Leveln besiegt werden (sonst Game Over)
-      bossFight = { active:true, type:zType, hp:100, spawnLevel: level, deadlineLevel: level + 5 };
-
-      // Clear 3x3 center
-      const cr = Math.floor(rows/2)-1;
-      const cc = Math.floor(cols/2)-1;
-
-      const bigId = makeId();
-      const zillaHp = 100;
-      const zilla = { id: bigId, r: cr, c: cc, type: `${zType}:P`, hp: zillaHp, big:true, zilla:true };
-
-      for(let r=cr; r<cr+3; r++){
+    function clearAttackPreview(){
+      const fx = document.getElementById("fxLayer");
+      if(!fx) return;
+      fx.querySelectorAll(".attackWarn").forEach(el=>el.remove());
+    }
+    function showAttackPreview(rr, cc){
+      const fx = document.getElementById("fxLayer");
+      if(!fx) return;
+      clearAttackPreview();
+      const size = CELL;
+      for(let r=rr; r<rr+3; r++){
         for(let c=cc; c<cc+3; c++){
+          if(!inBounds(r,c)) continue;
+          const warn = document.createElement("div");
+          warn.className = "attackWarn";
+          warn.style.left = (PAD + c*(CELL+GAP)) + "px";
+          warn.style.top  = (PAD + r*(CELL+GAP)) + "px";
+          warn.style.width = size + "px";
+          warn.style.height = size + "px";
+          fx.appendChild(warn);
+        }
+      }
+    }
+
+    function placeZillaAt(centerR, centerC, zType="mellowzilla", hp=100, setBoss=true){
+      const bigId = makeId();
+      const zilla = { id: bigId, r: centerR, c: centerC, type: `${zType}:P`, hp: hp, big:true, zilla:true };
+
+      for(let r=centerR; r<centerR+3; r++){
+        for(let c=centerC; c<centerC+3; c++){
            if(inBounds(r,c)){
              const t = grid[r][c];
              if(t){
@@ -4180,8 +4257,8 @@ function updateMellowHp(tile){
       }
 
       // Anchor
-      grid[cr][cc] = zilla;
-      bigMellows.set(bigId, {id:bigId, r:cr, c:cc, hp:zillaHp, type:zType});
+      grid[centerR][centerC] = zilla;
+      bigMellows.set(bigId, {id:bigId, r:centerR, c:centerC, hp:hp, type:zType});
 
       const el = createTileEl(zilla, false);
       el.classList.add("spawnGlow");
@@ -4191,14 +4268,31 @@ function updateMellowHp(tile){
 
       tileEls.set(zilla.id, el);
       ui.board.appendChild(el);
+      setTileXY(el, centerR, centerC);
 
-      if(zType==="mellowzilla"){
-        toast("MELLOW ZILLA!! 🦖", "Boss Fight!", 4000);
-      } else {
-        toast("KOALA ZILLA!! 🐨🦖", "Boss Fight!", 4000);
+      if(setBoss){
+        bossFight = { active:true, type:zType, hp:hp, spawnLevel: level, deadlineLevel: level + 5 };
+        zillaAttackCounter = 0;
+        zillaPlanned = null;
       }
+      toast(zType==="mellowzilla" ? "MELLOW ZILLA!! 🦖" : "KOALA ZILLA!! 🐨🦖", "Boss Fight!", 4000);
+      return zilla;
+    }
 
-      setTileXY(el, cr, cc);
+    function spawnMellowZilla(){
+      if(level < 20) return;
+      if(level % 20 !== 0) return;
+
+      // Random alternate: KoalaZilla <-> MellowZilla (avoid same twice in a row)
+      let zType = (Math.random() < 0.5) ? "mellowzilla" : "koalazilla";
+      if(lastZillaType && zType === lastZillaType){
+        zType = (zType === "mellowzilla") ? "koalazilla" : "mellowzilla";
+      }
+      lastZillaType = zType;
+
+      const cr = Math.floor(rows/2)-1;
+      const cc = Math.floor(cols/2)-1;
+      placeZillaAt(cr, cc, zType, 100, true);
     }
 
     function shiftMellowZilla(zilla){
@@ -4230,6 +4324,7 @@ function updateMellowHp(tile){
 
         // KOALA_BOSSFIGHT_CLEAR: Boss besiegt -> Timer stoppen
         try{ if(bossFight && bossFight.active){ bossFight.active=false; bossFight=null; } }catch(e){}
+        clearAttackPreview();
         const bonus = 20000;
         totalScore += bonus;
         levelScore += bonus;
@@ -4249,6 +4344,47 @@ function updateMellowHp(tile){
           const t = grid[rLoop][cLoop];
           if(t && isPlaceholder(t) && t.partOf===bigId) grid[rLoop][cLoop]=null;
           if(t && t.id===bigId) grid[rLoop][cLoop]=null;
+        }
+      }
+    }
+
+    function checkMellowlordFusion(){
+      const anchorMap = new Map();
+      for(const [id, m] of bigMellows){
+        if(m.type==="mellowlord") anchorMap.set(posKey(m.r,m.c), id);
+      }
+      const processed = new Set();
+      for(const key of anchorMap.keys()){
+        if(processed.has(key)) continue;
+        const [r,c] = key.split(",").map(Number);
+        const needed = [
+          posKey(r,c),
+          posKey(r,c+2),
+          posKey(r+2,c),
+          posKey(r+2,c+2)
+        ];
+        if(needed.every(k=>anchorMap.has(k))){
+          needed.forEach(k=>processed.add(k));
+          // remove old mellowlords
+          const ids = needed.map(k=>anchorMap.get(k));
+          ids.forEach(id=>{
+            const info = bigMellows.get(id);
+            if(!info) return;
+            for(let rr=info.r; rr<info.r+2; rr++){
+              for(let cc=info.c; cc<info.c+2; cc++){
+                const t=grid[rr][cc];
+                if(t && t.id===id){
+                  const el = tileEls.get(t.id);
+                  if(el){ el.remove(); tileEls.delete(t.id); }
+                }
+                grid[rr][cc]=null;
+              }
+            }
+            bigMellows.delete(id);
+          });
+          const centerR = r+1, centerC = c+1;
+          placeZillaAt(centerR, centerC, "mellowzilla", 80, true);
+          toast("MellowZilla entsteht!","4 Mellowlords fusionieren!", 3600);
         }
       }
     }
@@ -4513,6 +4649,7 @@ clearHints();
       totalScore=0;
       levelScore=0;
       combo=1;
+      mellowFreeMoves = 10;
       resetUnlocked();
       target = calcTarget(level);
       moves = calcMoves(level);
