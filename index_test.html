@@ -4316,11 +4316,14 @@ function updateMellowHp(tile){
       });
     }
 
-    function ensurePlayableBoard(maxShuffles=6){
+    function ensurePlayableBoard(maxShuffles=6, autoResolve=true){
       try{ if(typeof pruneOrphanTileEls === "function") pruneOrphanTileEls(); }catch(e){}
       let tries = 0;
       while(tries < maxShuffles){
-        if(hasAnyMatchOrSpecial()) return true; // immediate clearable match/special
+        if(hasAnyMatchOrSpecial()){
+          if(autoResolve && !busy) resolveAll(false, false);
+          return true; // immediate clearable match/special
+        }
         if(hasMove()) return true;              // at least one possible swap-to-match
         shuffleAll();
         tries++;
@@ -4335,6 +4338,14 @@ function updateMellowHp(tile){
       layoutBoard();
       setTimeout(()=>resolveAll(false, false), 60);
     }
+
+    // Idle watchdog: if matches exist while not busy, auto-resolve to prevent stuck boards
+    setInterval(()=>{
+      if(busy) return;
+      if(hasAnyMatchOrSpecial()){
+        resolveAll(false, false);
+      }
+    }, 520);
 
     function hint(){
       
