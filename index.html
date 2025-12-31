@@ -4612,6 +4612,7 @@ clearHints();
         buildFsBg();
       }else{
         document.body.classList.remove("fs");
+        document.body.classList.remove("maximized");
         document.getElementById("fsBg").innerHTML="";
       }
       layoutBoard();
@@ -5199,27 +5200,46 @@ clearHints();
       syncTheme();
     });
 
-    // Maximize Button
+    // Maximize Button (fullscreen + draggable HUD)
       const btnMax = document.getElementById("btnMax");
       if(btnMax){
          btnMax.addEventListener("click", async ()=>{
-            try{
-              if(!document.fullscreenElement){
-                await document.documentElement.requestFullscreen();
-              } else {
-                await document.exitFullscreen();
-              }
-            }catch(e){}
+            const shouldMax = !document.body.classList.contains("maximized");
+            const root = document.getElementById("playArea") || document.documentElement;
+            if(shouldMax){
+              document.body.classList.add("maximized");
+              layoutBoard();
+              updateUI();
+              try{
+                if(!document.fullscreenElement){
+                  await root.requestFullscreen();
+                }
+              }catch(e){}
+            } else {
+              document.body.classList.remove("maximized");
+              layoutBoard();
+              updateUI();
+              try{
+                if(document.fullscreenElement){
+                  await document.exitFullscreen();
+                }
+              }catch(e){}
+            }
          });
       }
 
     
     // Maximize HUD controls
     const btnUnmax = document.getElementById("btnUnmax");
-    if(btnUnmax) btnUnmax.addEventListener("click", ()=>{
+    if(btnUnmax) btnUnmax.addEventListener("click", async ()=>{
        document.body.classList.remove("maximized");
        layoutBoard();
        updateUI();
+       try{
+         if(document.fullscreenElement){
+           await document.exitFullscreen();
+         }
+       }catch(e){}
     });
     const maxHint = document.getElementById("maxHint");
     if(maxHint) maxHint.addEventListener("click", hint);
