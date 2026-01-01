@@ -1446,11 +1446,6 @@
 
         <div style="flex:1; min-width:10px;"></div>
 
-        <div style="display:flex; flex-direction:column; align-items:center; margin:0 10px;">
-           <span class="tiny" style="line-height:1;">Zoom</span>
-           <input type="range" id="zoomSlider" min="0.6" max="1.2" step="0.2" value="1.0" style="width:80px">
-        </div>
-
         <div class="actions">
           <button class="Btn ghost" id="btnMax" title="Maximize Board">⛶</button>
           <button class="Btn ghost" id="btnTheme" style="padding:0 12px;min-width:46px;">🌙</button>
@@ -2216,22 +2211,21 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
      **********************/
     function computeCell(){
       const wrap = document.getElementById("boardWrap");
-      // Use client dimensions directly to adapt to any container size
+      const rect = wrap.getBoundingClientRect();
       const wrapW = wrap.clientWidth;
-      const wrapH = wrap.clientHeight || window.innerHeight;
 
       const isFs = document.body.classList.contains("fs");
       const isMax = document.body.classList.contains("maximized");
 
       // Margins/Padding
-      // In FS or Max, keep modest padding so tiles remain crisp and centered
       const pad = currentPad();
       const padW = (isFs||isMax) ? 12 : 20;
       // Vertical padding: allow HUD room but maximize board real estate
       const padH = (isFs) ? 110 : (isMax ? 80 : 40);
 
-      // If Maximized/FS, use Window Height as constraint to avoid scrolling
-      const availH = (isFs || isMax) ? window.innerHeight : wrapH;
+      // Remaining height: viewport minus current top + small footer reserve
+      const footerReserve = isFs ? 16 : 32; // taskbar/margin
+      const availH = Math.max(260, window.innerHeight - Math.max(0, rect.top) - footerReserve);
 
       const usableW = Math.max(320, wrapW - padW);
       const usableH = Math.max(320, availH - padH);
@@ -2239,13 +2233,11 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
       const cellW = Math.floor((usableW - (cols-1)*GAP - pad*2) / cols);
       const cellH = Math.floor((usableH - (rows-1)*GAP - pad*2) / rows);
 
-      const zoom = window.gameZoomFactor || 1.0;
-
-      // No strict max cap, allow filling the screen
-      const max = 140;
+      // Only scale downward; never upscale past the preferred base size
+      const preferred = 72;
       const minCell = (window.innerWidth < 640) ? 46 : 54;
-      const target = Math.min(cellW, cellH) * zoom;
-      return clamp(Math.round(target), minCell, max);
+      const target = Math.min(Math.min(cellW, cellH), preferred);
+      return clamp(Math.round(target), minCell, preferred);
     }
 
     function setTileXY(el, r, c){
@@ -5141,28 +5133,6 @@ clearHints();
        document.getElementById("settingsBack").style.display = "none";
        document.getElementById("introBack").style.display = "flex";
     });
-
-    // Zoom Slider & Persistence
-    const zoomSlider = document.getElementById("zoomSlider");
-    if(zoomSlider){
-      // Load saved zoom
-      const savedZoom = getCookie("luvvies_zoom");
-      if(savedZoom){
-         const z = parseFloat(savedZoom);
-         if(!isNaN(z) && z>=0.6 && z<=1.2){
-           zoomSlider.value = z;
-           window.gameZoomFactor = z;
-           layoutBoard();
-         }
-      }
-
-      zoomSlider.addEventListener("input", (e)=>{
-         const z = parseFloat(e.target.value);
-         window.gameZoomFactor = z;
-         layoutBoard();
-         setCookie("luvvies_zoom", z, 30); // 30 days
-      });
-    }
 
     document.getElementById("btnPost").addEventListener("click", postScore);
     document.getElementById("btnRefresh").addEventListener("click", refreshLeaderboard);
