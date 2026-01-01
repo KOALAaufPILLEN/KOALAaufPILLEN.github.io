@@ -134,6 +134,7 @@
       filter: drop-shadow(0 18px 40px rgba(0,0,0,.10));
       opacity:.72;
       animation: floaty 18s ease-in-out infinite;
+      will-change: transform, opacity;
       z-index:0;
       pointer-events:none;
     }
@@ -493,6 +494,7 @@
       transform: translate(var(--x), var(--y));
       transition: transform 190ms cubic-bezier(.2,.9,.2,1.0);
       will-change: transform;
+      contain: layout size;
       z-index:15;
     }
     .tile.bigMellow{
@@ -1329,7 +1331,7 @@
 
     <div class="modalBack" id="greetBack">
       <div class="modal greet">
-        <img id="greetLogo" alt="Logo" />
+        <img id="greetLogo" alt="Logo" decoding="async" />
         <h2>Willkommen bei Luvvies Crush 🍭</h2>
         <div class="sub">
           Match • Powerups • Mellow-Blocks • Lovelie-Bonus ✨<br>
@@ -1472,7 +1474,7 @@
 
     <div id="app">
       <div class="topRow">
-        <img id="mainLogo" alt="Luvvies Crush" style="height:46px;width:auto;margin-right:12px;filter:drop-shadow(0 4px 6px rgba(0,0,0,.1));display:block;" />
+        <img id="mainLogo" alt="Luvvies Crush" style="height:46px;width:auto;margin-right:12px;filter:drop-shadow(0 4px 6px rgba(0,0,0,.1));display:block;" decoding="async" />
 
         <div class="diffWrap">
           <div class="diffPills" id="diffPills">
@@ -2402,6 +2404,7 @@ for(const [id, el] of tileEls){
 
   img.src = src;
   img.alt = meta?.name || baseKey;
+  img.decoding = "async";
 
   // Fallbacks (avoid broken icons)
   img.addEventListener("error", ()=>{
@@ -2480,6 +2483,7 @@ function refreshTileEl(tile){
     if(baseKey==="koalazilla") src = IMG.koalazilla || IMG.koala;
     img.src = src;
     img.alt = meta?.name || baseKey;
+    img.decoding = "async";
   }
 
   // variant badge
@@ -2615,6 +2619,8 @@ function updateMellowHp(tile){
         wrap.className="bgLuv";
         const img = document.createElement("img");
         img.src=b.img; img.alt=b.name;
+        img.loading = "lazy";
+        img.decoding = "async";
 
         const leftZone = Math.random() < 0.5;
         const x = leftZone
@@ -2666,6 +2672,8 @@ function updateMellowHp(tile){
         wrap.style.width = "min(260px, 42vw)";
         const img = document.createElement("img");
         img.src=b.img; img.alt=b.name;
+        img.loading = "lazy";
+        img.decoding = "async";
 
         const leftZone = Math.random() < 0.5;
         const x = leftZone ? Math.random()*(W*0.28) : (W-280) - Math.random()*(W*0.28);
@@ -4814,7 +4822,7 @@ clearHints();
         card.style.setProperty("--c1", pal[0]);
         card.style.setProperty("--c2", pal[1]);
         const imgHtml = b.img ?
-          `<img src="${b.img}" alt="${b.name}">` : `<div style="width:78px;height:78px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#ff4fb9,#7ad8ff);color:#fff;font-weight:1000;font-size:32px;box-shadow:0 12px 20px rgba(0,0,0,.12);">?</div>`;
+          `<img src="${b.img}" alt="${b.name}" loading="lazy" decoding="async">` : `<div style="width:78px;height:78px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#ff4fb9,#7ad8ff);color:#fff;font-weight:1000;font-size:32px;box-shadow:0 12px 20px rgba(0,0,0,.12);">?</div>`;
         card.innerHTML = `
           ${imgHtml}
           <div>
