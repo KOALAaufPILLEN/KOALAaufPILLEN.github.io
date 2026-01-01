@@ -669,13 +669,16 @@
       100%{ transform: translateY(0) scale(1); }
     }
 
-    /* Landing bounce */
-    .land .plate{ animation: landPlate 560ms cubic-bezier(.2,.9,.2,1) both; }
+    /* Landing bounce - Jelly Style */
+    .land .plate{ animation: landPlate 600ms linear both; }
     @keyframes landPlate{
-      0%{ transform: translateY(0) scale(1); }
-      28%{ transform: translateY(4px) scale(1.06, .98); }
-      58%{ transform: translateY(-4px) scale(.99,1.04); }
-      100%{ transform: translateY(0) scale(1); }
+      0% { transform: scale(1, 1) translateY(0); }
+      30% { transform: scale(1.25, 0.75) translateY(10px); }
+      40% { transform: scale(0.75, 1.25) translateY(-5px); }
+      50% { transform: scale(1.15, 0.85) translateY(4px); }
+      65% { transform: scale(0.95, 1.05) translateY(-2px); }
+      75% { transform: scale(1.05, 0.95) translateY(1px); }
+      100% { transform: scale(1, 1) translateY(0); }
     }
 
     /* Spawn glow */
@@ -1759,8 +1762,11 @@
       cry:      "Images/Luvvies/Cry.png",
       koala:    "Images/Luvvies/KOALA.png",
       citrussy: "Images/Luvvies/CItrussie.png",
-      worm:     "Images/Luvvies/SourWurm-1.png", // Default
+
+      // Random Worms
+      worm: "Images/Luvvies/SourWurm-1.png", // Fallback
       sourwurm: ["Images/Luvvies/SourWurm-1.png", "Images/Luvvies/Sourwurm-2.png", "Images/Luvvies/Sourwurm-3.png"],
+
       grumpy:   "Images/Luvvies/Grumpycookie.png",
       happy:    "Images/Luvvies/HappyCookie.png",
       mond:     "Images/Luvvies/Mondlie.png",
@@ -1771,17 +1777,23 @@
       lovelie:  "Images/Luvvies/lovvelie.png",
       simba:    "Images/Luvvies/Simba.png",
       mellowlord: "Images/Luvvies/MellowLord.png",
+
+      // Boss Animations (Frame 1-4)
       mellowzilla: ["Images/Luvvies/Mellowzilla-1.png", "Images/Luvvies/MellowZilla-2.png", "Images/Luvvies/Mellowzilla-3.png", "Images/Luvvies/Mellowzilla-4.png"],
       koalazilla:  ["Images/Luvvies/KoalaZilla-1.png", "Images/Luvvies/KoalaZilla-2.png", "Images/Luvvies/KoalaZilla-3.png", "Images/Luvvies/KoalaZilla-4.png"],
+
       fledernuss: "Images/Luvvies/FlederNuss.png",
       flederheld: "Images/Luvvies/FlederHeld.png",
       supernuss: "Images/Luvvies/SuperNuss.png",
+      giraffie: "Images/Luvvies/Giraffie.png",
       
-      // Variants & Buttons
+      // Jelly Buttons (Variants)
       variantsA: ["Images/Button/Variant-A1.png", "Images/Button/Variant-A2.png", "Images/Button/Variant-A3.png", "Images/Button/Variant-A4.png"],
       variantsB: ["Images/Button/variant-B1.png", "Images/Button/variant-B2.png", "Images/Button/variant-B3.png", "Images/Button/variant-B4.png"],
+
+      // Special Buttons
       powerBtn: "Images/Button/PowerUpButton.png",
-      mystBtn: "Images/Button/Powerup.png",
+      mystBtn: "Images/Button/Powerup.png", // Use as the tile itself for Mystery
       
       // Animations
       comboGif: "Images/Animation/Animation-combo.gif",
@@ -2224,6 +2236,41 @@
       }
     }
 
+    function showComboAnim(score, r, c){
+       const wrap = document.createElement("div");
+       wrap.className = "comboOverlay";
+
+       // Force reload of GIF to play it from start
+       const gifUrl = IMG.comboGif + "?t=" + Date.now();
+       wrap.style.backgroundImage = `url('${gifUrl}')`;
+
+       const {x,y} = tileCenter(r,c);
+       wrap.style.left = x+"px";
+       wrap.style.top = y+"px";
+
+       const txt = document.createElement("div");
+       txt.className = "comboScore";
+       txt.textContent = fmt(score);
+       wrap.appendChild(txt);
+
+       ui.fx.appendChild(wrap);
+       setTimeout(()=>wrap.remove(), 1200);
+    }
+
+    function showDeathAnim(r, c){
+       const wrap = document.createElement("div");
+       wrap.className = "deathOverlay";
+       const gifUrl = IMG.deathGif + "?t=" + Date.now();
+       wrap.style.backgroundImage = `url('${gifUrl}')`;
+
+       const {x,y} = tileCenter(r,c);
+       wrap.style.left = x+"px";
+       wrap.style.top = y+"px";
+
+       ui.fx.appendChild(wrap);
+       setTimeout(()=>wrap.remove(), 1200);
+    }
+
     /**********************
      * Responsive sizing
      **********************/
@@ -2376,8 +2423,10 @@ for(const [id, el] of tileEls){
   // Resolve image source (bases, specials, bosses)
   let src = meta?.img || "";
   if(baseKey==="mellowlord") src = IMG.mellowlord;
-  if(baseKey==="mellowzilla") src = IMG.mellowzilla;
-  if(baseKey==="koalazilla") src = IMG.koalazilla || IMG.koala;
+
+  if(baseKey==="worm") src = IMG.sourwurm[tile.wormIdx||0] || IMG.sourwurm[0];
+  if(baseKey==="mellowzilla") src = IMG.mellowzilla[tile.animFrame||0] || IMG.mellowzilla[0];
+  if(baseKey==="koalazilla") src = IMG.koalazilla[tile.animFrame||0] || IMG.koalazilla[0] || IMG.koala;
 
   img.src = src;
   img.alt = meta?.name || baseKey;
@@ -2455,8 +2504,11 @@ function refreshTileEl(tile){
   if(img){
     let src = meta?.img || "";
     if(baseKey==="mellowlord") src = IMG.mellowlord;
-    if(baseKey==="mellowzilla") src = IMG.mellowzilla;
-    if(baseKey==="koalazilla") src = IMG.koalazilla || IMG.koala;
+
+    if(baseKey==="worm") src = IMG.sourwurm[tile.wormIdx||0] || IMG.sourwurm[0];
+    if(baseKey==="mellowzilla") src = IMG.mellowzilla[tile.animFrame||0] || IMG.mellowzilla[0];
+    if(baseKey==="koalazilla") src = IMG.koalazilla[tile.animFrame||0] || IMG.koalazilla[0] || IMG.koala;
+
     img.src = src;
     img.alt = meta?.name || baseKey;
   }
@@ -2553,7 +2605,10 @@ function updateMellowHp(tile){
 
     function makeTile(r,c,type){
       const id = makeId();
-      return { id, r, c, type, hp:0, big:false };
+      const t = { id, r, c, type, hp:0, big:false, animFrame:0 };
+      const {baseKey} = parseTypeId(type);
+      if(baseKey === "worm") t.wormIdx = Math.floor(Math.random()*3);
+      return t;
     }
 
     function wouldCreateMatch(r,c,type){
@@ -3790,7 +3845,22 @@ function updateMellowHp(tile){
         const zilla = findMellowZilla();
         if(zilla){
           zilla.turn = (zilla.turn || 0) + 1;
-          const phase = zilla.turn % 4;
+          const phase = zilla.turn % 4; // 1,2,3,0
+
+          // Update visual frame (0,1,2,3 where 3 is attack)
+          // phase 1-> frame 0
+          // phase 2-> frame 1
+          // phase 3-> frame 2
+          // phase 0-> frame 3 (Attack)
+
+          let frame = 0;
+          if(phase === 2) frame = 1;
+          if(phase === 3) frame = 2;
+          if(phase === 0) frame = 3;
+
+          zilla.animFrame = frame;
+          refreshTileEl(zilla);
+
           const zName = (zilla.type==="koalazilla") ? "KoalaZilla" : "MellowZilla";
           const chooseTarget = ()=>{
             const baseR = lastPlayerMove ? lastPlayerMove.r : Math.floor(Math.random()*(rows-1));
@@ -3799,28 +3869,22 @@ function updateMellowHp(tile){
             const cc = clamp(baseC-1, 0, cols-3);
             return {r: rr, c: cc};
           };
-          // Cycle 4:
-          // 1: Idle
-          // 2: Warn Red (1st turn)
-          // 3: Warn Red (2nd turn)
-          // 0: Attack
 
-          if(phase === 2 || phase === 3){ // Warn (Red)
+          if(phase === 2 || phase === 3){ // Warn
              const el = tileEls.get(zilla.id);
              if(el){
-               el.style.border = "5px solid #ff0000";
-               el.style.boxShadow = "0 0 20px red";
-               toast(`${zName} wütend!`, "Attacke in "+(phase===2?"2 Zügen":"1 Zug")+"!", 2000);
+               el.style.boxShadow = "0 0 20px red"; // Subtle red glow
              }
              if(!zillaPlanned) zillaPlanned = chooseTarget();
              if(phase===3 && zillaPlanned) showAttackPreview(zillaPlanned.r, zillaPlanned.c);
+             toast(`${zName} lädt auf...`, "Attacke bald!", 1500);
           } else if(phase === 0 && zilla.turn > 0){ // Attack
-             toast(`${zName} Attacke!`, "3x3 Wipe! 💥", 2600);
+             toast(`${zName} ATTACKE!`, "3x3 Wipe! 💥", 2600);
              const target = zillaPlanned || chooseTarget();
              clearAttackPreview();
              zillaPlanned = null;
 
-             // Wipe targeted 3x3 (aims at last move)
+             // Wipe
              const rr = target.r;
              const cc = target.c;
              const cells = [];
@@ -3831,7 +3895,8 @@ function updateMellowHp(tile){
 
              // Reset visual
              const el = tileEls.get(zilla.id);
-             if(el){ el.style.border = "none"; el.style.boxShadow="none"; }
+             if(el) el.style.boxShadow="none";
+
              zillaAttackCounter++;
              if(zillaAttackCounter % 3 === 0){
                dropDown();
@@ -3839,9 +3904,9 @@ function updateMellowHp(tile){
                ensureMovesOrShuffle();
              }
           } else {
-             // Idle
+             // Idle (phase 1)
              const el = tileEls.get(zilla.id);
-             if(el){ el.style.border = "none"; el.style.boxShadow="none"; }
+             if(el) el.style.boxShadow="none";
              clearAttackPreview();
              zillaPlanned = null;
           }
@@ -4023,6 +4088,14 @@ function updateMellowHp(tile){
         const scoreAdd = toClear.size * scorePerTile() * (1 + (combo-1)*0.12);
         totalScore += Math.round(scoreAdd);
         levelScore += Math.round(scoreAdd);
+
+        if(combo > 1 && toClear.size > 0){
+           const firstKey = toClear.values().next().value;
+           if(firstKey){
+              const [cr, cc] = firstKey.split(",").map(Number);
+              showComboAnim(Math.round(scoreAdd), cr, cc);
+           }
+        }
 
         const clearedCells = [];
 
@@ -4398,13 +4471,17 @@ function updateMellowHp(tile){
       if(anchor && anchor.id){
         const el = tileEls.get(anchor.id);
         if(el){
+          // Show Death Animation
+          if(big.type.includes("mellowzilla") || big.type.includes("koalazilla") || big.type.includes("mellowlord")){
+             showDeathAnim(big.r + (big.type.includes("zilla") ? 1.5 : 1), big.c + (big.type.includes("zilla") ? 1.5 : 1));
+          }
           el.classList.add("pop");
           setTimeout(()=>{ el.remove(); tileEls.delete(anchor.id); }, 420);
         }
       }
 
       // Boss Check for points
-      if(big.type === "mellowzilla" || big.type === "koalazilla"){
+      if(big.type.includes("mellowzilla") || big.type.includes("koalazilla")){
 
         // KOALA_BOSSFIGHT_CLEAR: Boss besiegt -> Timer stoppen
         try{ if(bossFight && bossFight.active){ bossFight.active=false; bossFight=null; } }catch(e){}
