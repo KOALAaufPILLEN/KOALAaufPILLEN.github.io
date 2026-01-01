@@ -1435,6 +1435,15 @@
             <button class="Btn" id="menuHint">Hint</button>
          </div>
 
+         <div class="panel" style="margin-bottom:12px;text-align:center;">
+            <b>Account & Sync</b>
+            <div id="authStatus" class="tiny" style="margin:4px 0 8px;opacity:.8;">Nicht eingeloggt</div>
+            <div style="display:flex;justify-content:center;gap:10px;">
+              <button class="Btn secondary" id="btnLogin" style="display:none;font-size:14px;height:40px;">Login Google</button>
+              <button class="Btn ghost" id="btnLogout" style="display:none;font-size:14px;height:40px;">Logout</button>
+            </div>
+         </div>
+
          <div class="panel">
             <h3>Deine Luvvies</h3>
             <div class="luvGrid" id="menuLuvGrid"></div>
@@ -1748,13 +1757,87 @@
     const SCORE_TABLE = "luvvies_crush_scores";
 
     let sb = null;
+    let currentUser = null;
+
     try{
       if(window.supabase?.createClient){
         sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY_PUBLISHABLE, {
-          auth: { persistSession:false, autoRefreshToken:false }
+          auth: { persistSession:true, autoRefreshToken:true }
         });
       }
     }catch(e){ sb = null; }
+
+    /**********************
+     * Auth Logic
+     **********************/
+    async function checkAuth(){
+      if(!sb) return;
+      const { data } = await sb.auth.getSession();
+      updateAuthUI(data?.session?.user || null);
+
+      sb.auth.onAuthStateChange((_event, session) => {
+        updateAuthUI(session?.user || null);
+      });
+    }
+
+    function updateAuthUI(user){
+      currentUser = user;
+      const st = document.getElementById("authStatus");
+      const bIn = document.getElementById("btnLogin");
+      const bOut = document.getElementById("btnLogout");
+
+      const nameFields = [
+        document.getElementById("lbName"),
+        document.getElementById("goName"),
+        document.getElementById("greetName")
+      ];
+
+      if(user){
+        // Logged in
+        if(st) st.textContent = "Eingeloggt als " + (user.user_metadata?.full_name || user.email);
+        if(bIn) bIn.style.display="none";
+        if(bOut) bOut.style.display="inline-flex";
+
+        // Lock name fields
+        const fixedName = cleanName(user.user_metadata?.full_name || "User");
+        nameFields.forEach(el => {
+           if(el){
+             el.value = fixedName;
+             el.disabled = true;
+             el.title = "Name durch Login fixiert";
+             el.style.opacity = "0.7";
+           }
+        });
+      } else {
+        // Logged out
+        if(st) st.textContent = "Nicht eingeloggt (Gast)";
+        if(bIn) bIn.style.display="inline-flex";
+        if(bOut) bOut.style.display="none";
+
+        // Unlock fields
+        const saved = getCookie("luvvies_name");
+        nameFields.forEach(el => {
+           if(el){
+             el.disabled = false;
+             el.title = "";
+             el.style.opacity = "1";
+             if(saved) el.value = saved;
+           }
+        });
+      }
+    }
+
+    async function doLogin(){
+      if(!sb) return;
+      await sb.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.href }
+      });
+    }
+    async function doLogout(){
+      if(!sb) return;
+      await sb.auth.signOut();
+    }
 
     /**********************
      * Cookies (1x/day greeting)
@@ -4898,13 +4981,32 @@ clearHints();
     async function postScore(){
       if(!sb){ toast("Leaderboard offline","(Supabase nicht erreichbar)", 3200); return; }
 
+      // Anti-Cheat Check (Sentinel)
+      // Max score per level heuristic: ~30k per level is extremely generous.
+      const cheatLimit = (level * 50000) + 200000;
+      if(totalScore > cheatLimit){
+        toast("Fehler", "Score Verifizierung fehlgeschlagen.", 3000);
+        console.warn("Anti-Cheat: Score rejected", totalScore, level);
+        return;
+      }
+
       let name = (document.getElementById("lbName").value || document.getElementById("goName").value || document.getElementById("greetName").value || "Anonymous").trim().slice(0,24);
+
+      let userId = getUuid();
+
+      // Auth Override
+      if(currentUser){
+        userId = currentUser.id;
+        // Enforce name from metadata
+        if(currentUser.user_metadata?.full_name){
+           name = currentUser.user_metadata.full_name;
+        }
+      }
+
       name = cleanName(name);
 
-      // Save name + keep stable UUID (identity)
-      setCookie("luvvies_name", name, 36500);
-      const uuid = getUuid();
-      localStorage.setItem("luvvies_last_name", name);
+      // Save name (if local) + keep stable UUID
+      if(!currentUser) setCookie("luvvies_name", name, 36500);
 
       // Season: current calendar quarter (≈ 3 months)
       const season = currentSeasonStart();
@@ -4916,7 +5018,7 @@ clearHints();
         level: level,
         difficulty: diff.key,
         version:"luvvies-crush",
-        user_id: uuid
+        user_id: userId
       };
 
       try{
@@ -5463,6 +5565,15 @@ clearHints();
     resetUnlocked();
     newGame(true);
     showGreetingIfNeeded();
+
+    // Init Auth
+    if(sb){
+      checkAuth();
+      const btnL = document.getElementById("btnLogin");
+      if(btnL) btnL.addEventListener("click", doLogin);
+      const btnO = document.getElementById("btnLogout");
+      if(btnO) btnO.addEventListener("click", doLogout);
+    }
   </script>
 </body>
 </html>
