@@ -495,13 +495,24 @@
     .plate{
       width:100%; height:100%;
       border-radius: 16px;
+      --bg-img: url('Images/Button/Variant-A1.png');
+      --t1: rgba(255,255,255,.38);
+      --t2: rgba(255,255,255,.32);
+      --plate-filter: saturate(.94) brightness(1.05);
 
-      /* Variant Jelly Background (Tinted) */
-      background-color: var(--p1);
-      background-image: var(--bg-img);
-      background-size: cover;
-      background-position: center;
-      background-blend-mode: hard-light; /* Tints the grayscale jelly */
+      background-image:
+        var(--bg-img),
+        radial-gradient(circle at 26% 26%, var(--t1), transparent 70%),
+        radial-gradient(circle at 76% 74%, var(--t2), transparent 72%),
+        linear-gradient(140deg, var(--t1), var(--t2));
+      background-size:
+        cover,
+        170% 170%,
+        170% 170%,
+        240% 240%;
+      background-repeat:no-repeat;
+      background-position:center;
+      background-blend-mode: soft-light, screen, soft-light, normal;
       
       border: 1px solid rgba(255,255,255,.4);
       box-shadow:
@@ -514,12 +525,16 @@
       transform: translateY(var(--oy, 0px)) scale(1);
       opacity: var(--op, 1);
       transition: transform 260ms cubic-bezier(.2,.9,.2,1), opacity 260ms ease, filter 200ms ease;
+      filter: var(--plate-filter) drop-shadow(0 8px 16px rgba(0,0,0,.14));
     }
 
-    /* Variant B specific styling */
+    /* Variant specific tinting */
+    .tile[data-variant="A"] .plate{
+      --plate-filter: saturate(.9) brightness(1.05) contrast(1.02);
+    }
     .tile[data-variant="B"] .plate{
       border: 2px solid rgba(255,255,255,.8);
-      filter: saturate(1.2) contrast(1.1);
+      --plate-filter: saturate(1.05) brightness(1.08) contrast(1.04);
     }
 
     .variantBadge{
@@ -594,9 +609,9 @@
     /* Luvvies auf der Karte größer */
     .tile img{
       position:absolute;
-      inset: 6%;
-      width:88%;
-      height:88%;
+      inset: 10%;
+      width:80%;
+      height:80%;
       object-fit:contain;
       filter: drop-shadow(0 10px 12px rgba(0,0,0,.10));
       user-select:none;
@@ -604,9 +619,9 @@
       pointer-events:none;
     }
     .tile.bigMellow img{
-      inset: 8%;
-      width:84%;
-      height:84%;
+      inset: 9%;
+      width:82%;
+      height:82%;
     }
 
     /* Question mark powerup visual */
@@ -619,12 +634,16 @@
       background-image: url('Images/Button/PowerUpButton.png') !important;
       background-color: transparent !important;
       background-blend-mode: normal !important;
+      background-size: cover !important;
+      background-position: center !important;
+      background-repeat: no-repeat !important;
       box-shadow: 0 0 22px rgba(255,79,185,.45), 0 0 32px rgba(122,216,255,.35);
       animation: powerPulse 1.8s ease-in-out infinite;
     }
     /* Mystery Tile specific */
     .tile[data-base="myst"] .plate {
        background-image: url('Images/Button/Powerup.png') !important;
+       background-size: cover !important;
     }
     @keyframes powerPulse{
       0%{ transform: scale(1); filter:saturate(1); }
@@ -1025,12 +1044,15 @@
       justify-content: center;
     }
     .comboScore {
-      font-size: 32px;
+      font-size: clamp(18px, 3.6vw, 28px);
       font-weight: 900;
       color: #9d4edd;
       text-shadow: 0 0 10px #e0aaff, 2px 2px 0px #fff;
       animation: popScore 0.8s ease-out forwards;
-      margin-top: -20px; /* Center it nicely over the burst */
+      margin-top: -10px; /* Center it nicely over the burst */
+      max-width: 120px;
+      text-align:center;
+      line-height: 1.05;
     }
     @keyframes popScore {
       0% { transform: scale(0.5); opacity: 0; }
@@ -1074,6 +1096,18 @@
       0%{opacity:0; transform:translate(-50%,-50%) scale(.35)}
       15%{opacity:1}
       100%{opacity:0; transform:translate(-50%,-50%) scale(4.2)}
+    }
+
+    /* Boss/Mellowlord death animation overlay */
+    .deathFx{
+      position:absolute;
+      width: 160px;
+      height: 160px;
+      transform: translate(-50%, -50%);
+      pointer-events:none;
+      background: url('Images/Animation/Deathanimation.gif') center/contain no-repeat;
+      mix-blend-mode: screen;
+      z-index: 999;
     }
 
     /* Fullscreen */
@@ -1657,6 +1691,24 @@
       const nl=Math.min(1, hsl.l*0.9 + 0.08);
       return hslToHex(nh, ns, nl);
     }
+    function pastelizeHex(hex, alpha=0.48){
+      const rgb = hexToRgb(hex);
+      if(!rgb) return `rgba(255,255,255,${alpha})`;
+      const lift = (v)=>Math.round(v + (255 - v)*0.28);
+      return `rgba(${lift(rgb.r)}, ${lift(rgb.g)}, ${lift(rgb.b)}, ${alpha})`;
+    }
+    function pastelPair(pal){
+      if(!pal || pal.length<2) return ["rgba(255,255,255,.5)","rgba(255,255,255,.4)"];
+      return [pastelizeHex(pal[0], 0.55), pastelizeHex(pal[1], 0.55)];
+    }
+    function stableIndex(str, mod){
+      if(!mod) return 0;
+      let h=0;
+      for(let i=0;i<(str||"").length;i++){
+        h = (h*31 + (str.charCodeAt(i)||0)) | 0;
+      }
+      return Math.abs(h) % mod;
+    }
 
     function paletteForTile(tile){
       const { baseKey, variant } = parseTypeId(tile?.type || "");
@@ -2072,6 +2124,54 @@
       const p = parseTypeId(tile?.type);
       return `${p.baseKey}:${p.variant||"A"}`;
     };
+    function textureForTile(tile){
+      const set = (parseTypeId(tile?.type||"").variant === "B") ? IMG.variantsB : IMG.variantsA;
+      if(!set || !set.length) return "Images/Button/Variant-A1.png";
+      return set[stableIndex(tile?.id || JSON.stringify(tile||{}), set.length)] || set[0];
+    }
+    function ensureSkinFrame(tile){
+      const bk = parseTypeId(tile?.type||"").baseKey;
+      if(bk==="worm"){
+        if(typeof tile.skinFrame !== "number"){
+          const len = (IMG.sourwurm?.length) || 1;
+          tile.skinFrame = Math.floor(Math.random()*len);
+        }
+      } else if((bk==="mellowzilla" || bk==="koalazilla") && typeof tile.skinFrame !== "number"){
+        tile.skinFrame = 0;
+      }
+    }
+    function resolveTileImgSrc(baseKey, tile, meta){
+      ensureSkinFrame(tile);
+      if(baseKey==="mellowlord") return IMG.mellowlord;
+      if(baseKey==="mellowzilla"){
+        const frames = IMG.mellowzilla || [];
+        if(frames.length) return frames[Math.abs(tile.skinFrame||0) % frames.length];
+      }
+      if(baseKey==="koalazilla"){
+        const frames = IMG.koalazilla || [];
+        if(frames.length) return frames[Math.abs(tile.skinFrame||0) % frames.length];
+      }
+      if(baseKey==="worm"){
+        const frames = IMG.sourwurm || [];
+        if(frames.length) return frames[Math.abs(tile.skinFrame||0) % frames.length];
+        return IMG.worm;
+      }
+      return meta?.img || "";
+    }
+    function applyPlateVisuals(el, tile){
+      const pal = paletteForTile(tile);
+      el.style.setProperty("--p1", pal[0]);
+      el.style.setProperty("--p2", pal[1]);
+      const [t1,t2] = pastelPair(pal);
+      const plate = el.querySelector(".plate");
+      if(plate){
+        plate.style.setProperty("--t1", t1);
+        plate.style.setProperty("--t2", t2);
+        plate.style.setProperty("--bg-img", `url('${textureForTile(tile)}')`);
+        const variant = parseTypeId(tile?.type||"").variant;
+        plate.style.setProperty("--plate-filter", variant==="B" ? "saturate(1.05) brightness(1.08) contrast(1.04)" : "saturate(.9) brightness(1.05) contrast(1.02)");
+      }
+    }
 
     /**********************
      * Combo unlock tracking (simple cookie-based log)
@@ -2223,6 +2323,30 @@
         makeStar(x + Math.cos(ang)*dist, y + Math.sin(ang)*dist, Math.random()<0.4);
       }
     }
+    function deathFx(x,y, scale=1){
+      const d = document.createElement("div");
+      d.className = "deathFx";
+      d.style.left = x+"px";
+      d.style.top = y+"px";
+      d.style.width = (160*scale)+"px";
+      d.style.height = (160*scale)+"px";
+      d.style.backgroundImage = `url('${IMG.deathGif}')`;
+      ui.fx.appendChild(d);
+      setTimeout(()=>d.remove(), 1000);
+    }
+    function showComboFx(x,y, scoreVal){
+      const fx = document.createElement("div");
+      fx.className = "comboFx";
+      fx.style.left = x+"px";
+      fx.style.top = y+"px";
+      fx.style.backgroundImage = `url('${IMG.comboGif}')`;
+      const label = document.createElement("div");
+      label.className = "comboScore";
+      label.textContent = "+" + fmt(Math.round(scoreVal||0));
+      fx.appendChild(label);
+      ui.fx.appendChild(fx);
+      setTimeout(()=>fx.remove(), 950);
+    }
 
     /**********************
      * Responsive sizing
@@ -2290,7 +2414,7 @@
           ui.fsBg.style.height = h+"px";
         }
       }catch(e){}
-for(const [id, el] of tileEls){
+      for(const [id, el] of tileEls){
         const tile = findTileById(id);
         if(!tile) continue;
         setTileXY(el, tile.r, tile.c);
@@ -2347,11 +2471,6 @@ for(const [id, el] of tileEls){
       const spec = getSpecial(baseKey);
       const meta = base || spec;
 
-      // palettes (neutral): Background is NOT tied to the character (less confusion, more readable)
-      const pal = paletteForTile(tile);
-      el.style.setProperty("--p1", pal[0]);
-      el.style.setProperty("--p2", pal[1]);
-
       const plate = document.createElement("div");
       plate.className="plate";
 
@@ -2365,40 +2484,33 @@ for(const [id, el] of tileEls){
         el.classList.add("bigMellow");
       }
 
-      if(baseKey === "myst"){
-  const qm = document.createElement("div");
-  qm.className="qmark";
-  qm.textContent = "?";
-  plate.appendChild(qm);
-}else{
-  const img = document.createElement("img");
+      if(baseKey !== "myst"){
+        const img = document.createElement("img");
 
-  // Resolve image source (bases, specials, bosses)
-  let src = meta?.img || "";
-  if(baseKey==="mellowlord") src = IMG.mellowlord;
-  if(baseKey==="mellowzilla") src = IMG.mellowzilla;
-  if(baseKey==="koalazilla") src = IMG.koalazilla || IMG.koala;
+        // Resolve image source (bases, specials, bosses)
+        const src = resolveTileImgSrc(baseKey, tile, meta);
 
-  img.src = src;
-  img.alt = meta?.name || baseKey;
+        img.src = src;
+        img.alt = meta?.name || baseKey;
 
-  // Fallbacks (avoid broken icons)
-  img.addEventListener("error", ()=>{
-    if(baseKey==="koalazilla" && img.src !== IMG.koala) img.src = IMG.koala;
-  }, {once:true});
+        // Fallbacks (avoid broken icons)
+        img.addEventListener("error", ()=>{
+          if(baseKey==="koalazilla" && img.src !== IMG.koala) img.src = IMG.koala;
+        }, {once:true});
 
-  plate.appendChild(img);
+        plate.appendChild(img);
 
-  // Variant badge so A/B are clearly visible (prevents "combo feels broken")
-  if(base && variant==="B"){
-    const vb = document.createElement("div");
-    vb.className = "variantBadge";
-    vb.textContent = "B";
-    plate.appendChild(vb);
-  }
-}
+        // Variant badge so A/B are clearly visible (prevents "combo feels broken")
+        if(base && variant==="B"){
+          const vb = document.createElement("div");
+          vb.className = "variantBadge";
+          vb.textContent = "B";
+          plate.appendChild(vb);
+        }
+      }
 
       el.appendChild(plate);
+      applyPlateVisuals(el, tile);
       if(tile.big && (baseKey==="mellowlord" || baseKey==="mellowzilla" || baseKey==="koalazilla")){
         const hp = document.createElement("div");
         hp.className="hp";
@@ -2445,20 +2557,30 @@ function refreshTileEl(tile){
   const meta = base || spec;
 
   // palettes (character/complement based)
-  const pal = paletteForTile(tile);
-  el.style.setProperty("--p1", pal[0]);
-  el.style.setProperty("--p2", pal[1]);
+  applyPlateVisuals(el, tile);
 
   // image
   const plate = el.querySelector(".plate");
-  const img = el.querySelector("img");
-  if(img){
-    let src = meta?.img || "";
-    if(baseKey==="mellowlord") src = IMG.mellowlord;
-    if(baseKey==="mellowzilla") src = IMG.mellowzilla;
-    if(baseKey==="koalazilla") src = IMG.koalazilla || IMG.koala;
-    img.src = src;
-    img.alt = meta?.name || baseKey;
+  let img = plate ? plate.querySelector("img") : null;
+  if(baseKey==="myst"){
+    if(img) img.remove();
+  } else {
+    let created = false;
+    if(!img && plate){
+      img = document.createElement("img");
+      plate.insertBefore(img, plate.firstChild);
+      created = true;
+    }
+    if(img){
+      const src = resolveTileImgSrc(baseKey, tile, meta);
+      img.src = src;
+      img.alt = meta?.name || baseKey;
+      if(created){
+        img.addEventListener("error", ()=>{
+          if(baseKey==="koalazilla" && img.src !== IMG.koala) img.src = IMG.koala;
+        }, {once:true});
+      }
+    }
   }
 
   // variant badge
@@ -2547,13 +2669,24 @@ function updateMellowHp(tile){
       return typeId(pick.key, v);
     }
 
+    function initialSkinFrame(type){
+      const bk = parseTypeId(type||"").baseKey;
+      if(bk==="worm"){
+        const len = (IMG.sourwurm?.length) || 1;
+        return Math.floor(Math.random()*len);
+      }
+      if(bk==="mellowzilla" || bk==="koalazilla") return 0;
+      return 0;
+    }
+
     function makeId(){
       return (crypto?.randomUUID?.() || (Math.random().toString(16).slice(2)+Date.now().toString(16)));
     }
 
     function makeTile(r,c,type){
       const id = makeId();
-      return { id, r, c, type, hp:0, big:false };
+      const tile = { id, r, c, type, hp:0, big:false, skinFrame: initialSkinFrame(type) };
+      return tile;
     }
 
     function wouldCreateMatch(r,c,type){
@@ -3791,6 +3924,7 @@ function updateMellowHp(tile){
         if(zilla){
           zilla.turn = (zilla.turn || 0) + 1;
           const phase = zilla.turn % 4;
+          updateZillaFrame(zilla, phase);
           const zName = (zilla.type==="koalazilla") ? "KoalaZilla" : "MellowZilla";
           const chooseTarget = ()=>{
             const baseR = lastPlayerMove ? lastPlayerMove.r : Math.floor(Math.random()*(rows-1));
@@ -4045,6 +4179,12 @@ function updateMellowHp(tile){
           clearedCells.push({r,c});
         }
 
+        if(toClear.size && combo>1){
+          const sample = clearedCells[0] || (()=>{ const [sr,sc]=(Array.from(toClear)[0]||"0,0").split(",").map(Number); return {r:sr, c:sc}; })();
+          const ctr = tileCenter(sample.r, sample.c);
+          showComboFx(ctr.x, ctr.y, scoreAdd);
+        }
+
         damageMellowsAround(clearedCells);
 
         // Fledernuss Evolution Logic
@@ -4265,7 +4405,7 @@ function updateMellowHp(tile){
           });
           const bigId = makeId();
           // MellowLord uses special type
-          const bigTile = { id: bigId, r, c, type: "mellowlord:P", hp: bigHp, big:true };
+          const bigTile = { id: bigId, r, c, type: "mellowlord:P", hp: bigHp, big:true, skinFrame:0 };
           bigMellows.set(bigId, {id:bigId, r, c, hp:bigHp, type:"mellowlord"});
 
           grid[r][c] = bigTile;
@@ -4321,10 +4461,17 @@ function updateMellowHp(tile){
         }
       }
     }
+    function updateZillaFrame(zilla, phase){
+      const anchor = (grid[zilla.r]||[])[zilla.c];
+      if(!anchor || !anchor.id) return;
+      const idx = (phase===0) ? 3 : clamp(phase-1, 0, 3);
+      anchor.skinFrame = idx;
+      refreshTileEl(anchor);
+    }
 
     function placeZillaAt(centerR, centerC, zType="mellowzilla", hp=100, setBoss=true){
       const bigId = makeId();
-      const zilla = { id: bigId, r: centerR, c: centerC, type: `${zType}:P`, hp: hp, big:true, zilla:true };
+      const zilla = { id: bigId, r: centerR, c: centerC, type: `${zType}:P`, hp: hp, big:true, zilla:true, skinFrame:0, turn:0 };
 
       for(let r=centerR; r<centerR+3; r++){
         for(let c=centerC; c<centerC+3; c++){
@@ -4422,6 +4569,10 @@ function updateMellowHp(tile){
       }
 
       const size = (big.type==="mellowzilla" || big.type==="koalazilla") ? 3 : 2;
+      const anchorCenter = tileCenter(big.r, big.c);
+      const offset = ((size-1) * (CELL+GAP)) / 2;
+      deathFx(anchorCenter.x + offset, anchorCenter.y + offset, size===3 ? 1.6 : 1.2);
+
       for(let rLoop=big.r; rLoop<big.r+size; rLoop++){
         for(let cLoop=big.c; cLoop<big.c+size; cLoop++){
           if(!inBounds(rLoop,cLoop)) continue;
