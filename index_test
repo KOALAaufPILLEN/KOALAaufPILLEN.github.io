@@ -862,16 +862,6 @@
       background: rgba(255,255,255,.35);
       border-radius: 999px;
     }
-    body.dark .lbList{
-      background: rgba(20,18,32,.55);
-    }
-    body.dark .lbList::-webkit-scrollbar-thumb{
-      background: rgba(210,190,255,.35);
-      border: 3px solid rgba(32,28,46,.9);
-    }
-    body.dark .lbList::-webkit-scrollbar-track{
-      background: rgba(32,28,46,.9);
-    }
 
     .lbItem{
       display:flex; justify-content:space-between; align-items:center; gap:10px;
@@ -880,9 +870,12 @@
       border-radius:16px;
       padding:10px 10px;
       box-shadow: 0 10px 24px rgba(20,10,60,.07);
-      opacity:1;
-      transform:none;
-      animation:none;
+      opacity:0;
+      animation: lbSlideIn 0.4s cubic-bezier(.2,.9,.2,1) forwards;
+    }
+    @keyframes lbSlideIn{
+      from{ opacity:0; transform: translateY(12px) scale(.96); }
+      to{ opacity:1; transform: translateY(0) scale(1); }
     }
     .lbItem .left b{display:block}
     .lbItem .left small{opacity:.7;font-weight:900}
@@ -890,54 +883,22 @@
       font-weight:1000;
       color:#4a2c6f;
     }
-    body.dark .lbItem{
-      background: linear-gradient(135deg, rgba(40,35,60,.92), rgba(32,28,50,.88));
-      border:1px solid rgba(255,255,255,.08);
-      box-shadow: 0 10px 24px rgba(0,0,0,.35);
-    }
-    body.dark .lbItem .score{
-      color:#e6ddff;
-    }
 
     /* Ranks */
     .lbItem.rank1{
-      background:linear-gradient(90deg, rgba(255,215,0,.20), rgba(255,255,255,.12));
-      box-shadow:0 0 12px rgba(255,215,0,.45);
+      background:linear-gradient(90deg, rgba(255,215,0,.28), rgba(255,255,255,.14));
+      box-shadow:0 0 18px rgba(255,215,0,.65);
+      animation:shine 1.9s linear infinite;
     }
     .lbItem.rank2{
-      background:linear-gradient(90deg, rgba(192,192,192,.18), rgba(255,255,255,.10));
-      box-shadow:0 0 10px rgba(220,220,220,.38);
+      background:linear-gradient(90deg, rgba(192,192,192,.25), rgba(255,255,255,.12));
+      box-shadow:0 0 14px rgba(220,220,220,.55);
+      animation:pulse 1.6s ease-in-out infinite;
     }
     .lbItem.rank3{
-      background:linear-gradient(90deg, rgba(205,127,50,.18), rgba(255,255,255,.08));
-      box-shadow:0 0 10px rgba(205,127,50,.35);
-    }
-    /* Non-podium entries: cooler lilac gradient */
-    .lbItem:not(.rank1):not(.rank2):not(.rank3){
-      background: linear-gradient(135deg, rgba(234, 231, 255, 0.92), rgba(220, 240, 255, 0.92));
-      border:1px solid rgba(111, 80, 200, 0.18);
-      box-shadow:
-        0 14px 30px rgba(20,10,60,.10),
-        0 0 0 1px rgba(255,255,255,.35) inset;
-    }
-    body.dark .lbItem.rank1{
-      background:linear-gradient(90deg, rgba(255,215,0,.18), rgba(120,90,0,.20));
-      box-shadow:0 0 10px rgba(255,215,0,.35);
-    }
-    body.dark .lbItem.rank2{
-      background:linear-gradient(90deg, rgba(200,200,210,.18), rgba(70,70,90,.24));
-      box-shadow:0 0 8px rgba(200,200,210,.32);
-    }
-    body.dark .lbItem.rank3{
-      background:linear-gradient(90deg, rgba(205,127,50,.18), rgba(90,60,30,.22));
-      box-shadow:0 0 8px rgba(205,127,50,.30);
-    }
-    body.dark .lbItem:not(.rank1):not(.rank2):not(.rank3){
-      background: linear-gradient(135deg, rgba(52,46,82,0.96), rgba(46,44,70,0.92));
-      border:1px solid rgba(255,255,255,.08);
-      box-shadow:
-        0 14px 30px rgba(0,0,0,.25),
-        0 0 0 1px rgba(255,255,255,.06) inset;
+      background:linear-gradient(90deg, rgba(205,127,50,.25), rgba(255,255,255,.10));
+      box-shadow:0 0 12px rgba(205,127,50,.55);
+      animation:bounceMedal 1.6s ease-in-out infinite;
     }
     /* Non-podium entries: cooler lilac gradient */
     .lbItem:not(.rank1):not(.rank2):not(.rank3){
@@ -1485,6 +1446,11 @@
 
         <div style="flex:1; min-width:10px;"></div>
 
+        <div style="display:flex; flex-direction:column; align-items:center; margin:0 10px;">
+           <span class="tiny" style="line-height:1;">Zoom</span>
+           <input type="range" id="zoomSlider" min="0.6" max="1.2" step="0.2" value="1.0" style="width:80px">
+        </div>
+
         <div class="actions">
           <button class="Btn ghost" id="btnMax" title="Maximize Board">⛶</button>
           <button class="Btn ghost" id="btnTheme" style="padding:0 12px;min-width:46px;">🌙</button>
@@ -1710,12 +1676,9 @@
      **********************/
     function collectGridIds(){
       const ids = new Set();
-      if(!isGridReady()) return ids;
       for(let r=0;r<rows;r++){
-        const row = grid[r];
-        if(!row) continue;
         for(let c=0;c<cols;c++){
-          const t = row[c];
+          const t = grid[r][c];
           if(t && t.id) ids.add(t.id);
         }
       }
@@ -2036,14 +1999,6 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
     let GAP = 8;
     let PAD = 14;
 
-    function isGridReady(){
-      return Array.isArray(grid) && rows>0 && cols>0 && grid.length >= rows;
-    }
-
-    function currentPad(){
-      return (document.body.classList.contains("fs") || document.body.classList.contains("maximized")) ? 10 : PAD;
-    }
-
     /**********************
      * UI refs
      **********************/
@@ -2250,55 +2205,55 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
      **********************/
     function computeCell(){
       const wrap = document.getElementById("boardWrap");
-      const rect = wrap.getBoundingClientRect();
+      // Use client dimensions directly to adapt to any container size
       const wrapW = wrap.clientWidth;
+      const wrapH = wrap.clientHeight || window.innerHeight;
 
       const isFs = document.body.classList.contains("fs");
       const isMax = document.body.classList.contains("maximized");
 
       // Margins/Padding
-      const pad = currentPad();
-      const padW = (isFs||isMax) ? 12 : 20;
-      // Vertical padding: allow HUD room but maximize board real estate; smaller boards get slightly less padding
-      const padHBase = (isFs) ? 110 : (isMax ? 80 : 40);
-      const padH = Math.max(40, padHBase - Math.max(0, (10 - rows) * 4));
+      // In FS or Max, we want minimal side padding to fill the "red area"
+      const padW = (isFs||isMax) ? 4 : 20;
+      // Vertical padding: FS needs space for HUD (top ~100px) + bottom margin
+      // Normal: Needs space for topRow + stats
+      const padH = (isFs) ? 140 : (isMax ? 60 : 40);
 
-      // Remaining height: viewport minus current top + small footer reserve
-      const footerReserve = isFs ? 16 : 32; // taskbar/margin
-      const availH = Math.max(260, window.innerHeight - Math.max(0, rect.top) - footerReserve);
+      // If Maximized/FS, use Window Height as constraint to avoid scrolling
+      const availH = (isFs || isMax) ? window.innerHeight : wrapH;
 
-      const usableW = Math.max(320, wrapW - padW);
-      const usableH = Math.max(320, availH - padH);
+      const usableW = Math.max(260, wrapW - padW);
+      const usableH = Math.max(260, availH - padH);
 
-      const cellW = Math.floor((usableW - (cols-1)*GAP - pad*2) / cols);
-      const cellH = Math.floor((usableH - (rows-1)*GAP - pad*2) / rows);
+      const effectivePad = (isFs||isMax) ? 4 : PAD;
 
-      // Only scale downward; never upscale past the preferred base size (adapt to grid density)
-      const preferred = clamp(84 - Math.max(0, rows-8)*2 - Math.max(0, cols-8)*1.5, 70, 96);
-      const minCell = (window.innerWidth < 640) ? 46 : 54;
-      const target = Math.min(Math.min(cellW, cellH), preferred);
-      return clamp(Math.round(target), minCell, preferred);
+      const cellW = Math.floor((usableW - (cols-1)*GAP - effectivePad*2) / cols);
+      const cellH = Math.floor((usableH - (rows-1)*GAP - effectivePad*2) / rows);
+
+      const zoom = window.gameZoomFactor || 1.0;
+
+      // No strict max cap, allow filling the screen
+      const max = 400;
+      const minCell = (window.innerWidth < 640) ? 32 : 40;
+      return clamp(Math.min(cellW, cellH) * zoom, minCell, max);
     }
 
     function setTileXY(el, r, c){
-      const pad = currentPad();
-      const x = c*(CELL+GAP) + pad;
-      const y = r*(CELL+GAP) + pad;
+      const x = c*(CELL+GAP) + PAD;
+      const y = r*(CELL+GAP) + PAD;
       el.style.setProperty("--x", x+"px");
       el.style.setProperty("--y", y+"px");
     }
 
     function layoutBoard(){
       CELL = computeCell();
-      const pad = currentPad();
       document.documentElement.style.setProperty("--cell", CELL+"px");
       document.documentElement.style.setProperty("--gap", GAP+"px");
-      document.documentElement.style.setProperty("--pad", pad+"px");
       document.documentElement.style.setProperty("--cols", cols);
       document.documentElement.style.setProperty("--rows", rows);
 
-      const w = pad*2 + cols*CELL + (cols-1)*GAP;
-      const h = pad*2 + rows*CELL + (rows-1)*GAP;
+      const w = PAD*2 + cols*CELL + (cols-1)*GAP;
+      const h = PAD*2 + rows*CELL + (rows-1)*GAP;
       ui.board.style.width = w+"px";
       ui.board.style.height = h+"px";
 
@@ -3137,7 +3092,6 @@ function updateMellowHp(tile){
     }
 
     function findSpecialQuads(){
-      if(!isGridReady()) return [];
       const found=[];
       // Horizontal Quads
       for(let r=0;r<rows;r++){
@@ -3159,7 +3113,6 @@ function updateMellowHp(tile){
     }
 
     function findLineMatches(){
-      if(!isGridReady()) return {clear:new Set(), spawn:new Map(), hRuns:[], vRuns:[]};
       const clear = new Set();
       const hRuns = [];
       const vRuns = [];
@@ -3167,13 +3120,11 @@ function updateMellowHp(tile){
       for(let r=0;r<rows;r++){
         let c=0;
         while(c<cols){
-          const row = grid[r];
-          if(!row){ c=cols; continue; }
-          const t = row[c];
+          const t = grid[r][c];
           if(!isMatchable(t)){ c++; continue; }
           const k = matchKey(t);
           let start=c;
-          while(c<cols && row[c] && isMatchable(row[c]) && matchKey(row[c])===k) c++;
+          while(c<cols && grid[r][c] && isMatchable(grid[r][c]) && matchKey(grid[r][c])===k) c++;
           const len = c-start;
           if(len>=3){
             const cells=[];
@@ -3189,13 +3140,11 @@ function updateMellowHp(tile){
       for(let c=0;c<cols;c++){
         let r=0;
         while(r<rows){
-          const row = grid[r];
-          if(!row){ r++; continue; }
-          const t = row[c];
+          const t = grid[r][c];
           if(!isMatchable(t)){ r++; continue; }
           const k = matchKey(t);
           let start=r;
-          while(r<rows && grid[r] && grid[r][c] && isMatchable(grid[r][c]) && matchKey(grid[r][c])===k) r++;
+          while(r<rows && grid[r][c] && isMatchable(grid[r][c]) && matchKey(grid[r][c])===k) r++;
           const len = r-start;
           if(len>=3){
             const cells=[];
@@ -4495,7 +4444,6 @@ function updateMellowHp(tile){
     }
 
     function hasMove(){
-      if(!isGridReady()) return false;
       for(let r=0;r<rows;r++){
         for(let c=0;c<cols;c++){
           const t=grid[r][c];
@@ -4559,7 +4507,6 @@ function updateMellowHp(tile){
     }
 
     function ensurePlayableBoard(maxShuffles=6, autoResolve=true){
-      if(!isGridReady()) return true; // defer shuffling until board exists
       try{ if(typeof pruneOrphanTileEls === "function") pruneOrphanTileEls(); }catch(e){}
       let tries = 0;
       while(tries < maxShuffles){
@@ -4650,7 +4597,6 @@ clearHints();
         buildFsBg();
       }else{
         document.body.classList.remove("fs");
-        document.body.classList.remove("maximized");
         document.getElementById("fsBg").innerHTML="";
       }
       layoutBoard();
@@ -5174,6 +5120,28 @@ clearHints();
        document.getElementById("introBack").style.display = "flex";
     });
 
+    // Zoom Slider & Persistence
+    const zoomSlider = document.getElementById("zoomSlider");
+    if(zoomSlider){
+      // Load saved zoom
+      const savedZoom = getCookie("luvvies_zoom");
+      if(savedZoom){
+         const z = parseFloat(savedZoom);
+         if(!isNaN(z) && z>=0.6 && z<=1.2){
+           zoomSlider.value = z;
+           window.gameZoomFactor = z;
+           layoutBoard();
+         }
+      }
+
+      zoomSlider.addEventListener("input", (e)=>{
+         const z = parseFloat(e.target.value);
+         window.gameZoomFactor = z;
+         layoutBoard();
+         setCookie("luvvies_zoom", z, 30); // 30 days
+      });
+    }
+
     document.getElementById("btnPost").addEventListener("click", postScore);
     document.getElementById("btnRefresh").addEventListener("click", refreshLeaderboard);
 
@@ -5216,46 +5184,27 @@ clearHints();
       syncTheme();
     });
 
-    // Maximize Button (fullscreen + draggable HUD)
+    // Maximize Button
       const btnMax = document.getElementById("btnMax");
       if(btnMax){
          btnMax.addEventListener("click", async ()=>{
-            const shouldMax = !document.body.classList.contains("maximized");
-            const root = document.getElementById("playArea") || document.documentElement;
-            if(shouldMax){
-              document.body.classList.add("maximized");
-              layoutBoard();
-              updateUI();
-              try{
-                if(!document.fullscreenElement){
-                  await root.requestFullscreen();
-                }
-              }catch(e){}
-            } else {
-              document.body.classList.remove("maximized");
-              layoutBoard();
-              updateUI();
-              try{
-                if(document.fullscreenElement){
-                  await document.exitFullscreen();
-                }
-              }catch(e){}
-            }
+            try{
+              if(!document.fullscreenElement){
+                await document.documentElement.requestFullscreen();
+              } else {
+                await document.exitFullscreen();
+              }
+            }catch(e){}
          });
       }
 
     
     // Maximize HUD controls
     const btnUnmax = document.getElementById("btnUnmax");
-    if(btnUnmax) btnUnmax.addEventListener("click", async ()=>{
+    if(btnUnmax) btnUnmax.addEventListener("click", ()=>{
        document.body.classList.remove("maximized");
        layoutBoard();
        updateUI();
-       try{
-         if(document.fullscreenElement){
-           await document.exitFullscreen();
-         }
-       }catch(e){}
     });
     const maxHint = document.getElementById("maxHint");
     if(maxHint) maxHint.addEventListener("click", hint);
