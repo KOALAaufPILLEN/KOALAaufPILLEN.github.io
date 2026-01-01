@@ -261,6 +261,11 @@
     }
     .Btn:hover { animation: jello-horizontal 0.9s both; }
     .Btn:active{ transform: scale(.98); }
+    .Btn:disabled, .Btn.loading{
+      opacity: 0.7;
+      cursor: not-allowed;
+      filter: grayscale(0.4);
+    }
     @keyframes jello-horizontal {
       0% { transform: scale3d(1, 1, 1); }
       30% { transform: scale3d(1.20, 0.80, 1); }
@@ -1452,9 +1457,9 @@
         </div>
 
         <div class="actions">
-          <button class="Btn ghost" id="btnMax" title="Maximize Board">⛶</button>
-          <button class="Btn ghost" id="btnTheme" style="padding:0 12px;min-width:46px;">🌙</button>
-          <button class="Btn ghost" id="btnHintTop" title="Hint (kostet 1 Move)">💡</button>
+          <button class="Btn ghost" id="btnMax" title="Maximize Board" aria-label="Maximize Board">⛶</button>
+          <button class="Btn ghost" id="btnTheme" style="padding:0 12px;min-width:46px;" aria-label="Toggle Dark Mode">🌙</button>
+          <button class="Btn ghost" id="btnHintTop" title="Hint (kostet 1 Move)" aria-label="Get Hint">💡</button>
           <button class="Btn" id="btnMenu">Menü</button>
         </div>
       </div>
@@ -4860,92 +4865,99 @@ clearHints();
     async function postScore(){
       if(!sb){ toast("Leaderboard offline","(Supabase nicht erreichbar)", 3200); return; }
 
-      let name = (document.getElementById("lbName").value || document.getElementById("goName").value || document.getElementById("greetName").value || "Anonymous").trim().slice(0,24);
-      name = cleanName(name);
+      const btns = [document.getElementById("btnPost"), document.getElementById("goPost")];
+      btns.forEach(b => { if(b) { b.disabled=true; b.dataset.old=b.textContent; b.textContent="Sende..."; b.classList.add("loading"); }});
 
-      // Save name + keep stable UUID (identity)
-      setCookie("luvvies_name", name, 36500);
-      const uuid = getUuid();
-      localStorage.setItem("luvvies_last_name", name);
+      try {
+        let name = (document.getElementById("lbName").value || document.getElementById("goName").value || document.getElementById("greetName").value || "Anonymous").trim().slice(0,24);
+        name = cleanName(name);
 
-      // Season: current calendar quarter (≈ 3 months)
-      const season = currentSeasonStart();
-      const seasonStartIso = season.isoTs;
+        // Save name + keep stable UUID (identity)
+        setCookie("luvvies_name", name, 36500);
+        const uuid = getUuid();
+        localStorage.setItem("luvvies_last_name", name);
 
-      const payload = {
-        player_name: name,
-        score: totalScore,
-        level: level,
-        difficulty: diff.key,
-        version:"luvvies-crush",
-        user_id: uuid
-      };
+        // Season: current calendar quarter (≈ 3 months)
+        const season = currentSeasonStart();
+        const seasonStartIso = season.isoTs;
 
-      try{
-        // Find existing best for this UUID + difficulty inside current season window
-        let best = null;
+        const payload = {
+          player_name: name,
+          score: totalScore,
+          level: level,
+          difficulty: diff.key,
+          version:"luvvies-crush",
+          user_id: uuid
+        };
+
         try{
-          const { data, error } = await sb
-            .from(SCORE_TABLE)
-            .select("id,score,created_at")
-            .eq("user_id", uuid)
-            .eq("difficulty", diff.key)
-            .gte("created_at", seasonStartIso)
-            .order("score", { ascending:false })
-            .limit(1);
-
-          if(error) throw error;
-          best = (data && data[0]) ? data[0] : null;
-        }catch(selErr){
-          // Fallback if table has no "id" column: select without id
-          const msg = String(selErr?.message || selErr);
-          if(msg.toLowerCase().includes("column") && msg.toLowerCase().includes("id")){
+          // Find existing best for this UUID + difficulty inside current season window
+          let best = null;
+          try{
             const { data, error } = await sb
               .from(SCORE_TABLE)
-              .select("score,created_at")
+              .select("id,score,created_at")
               .eq("user_id", uuid)
               .eq("difficulty", diff.key)
               .gte("created_at", seasonStartIso)
               .order("score", { ascending:false })
               .limit(1);
+
             if(error) throw error;
             best = (data && data[0]) ? data[0] : null;
-          } else {
-            throw selErr;
+          }catch(selErr){
+            // Fallback if table has no "id" column: select without id
+            const msg = String(selErr?.message || selErr);
+            if(msg.toLowerCase().includes("column") && msg.toLowerCase().includes("id")){
+              const { data, error } = await sb
+                .from(SCORE_TABLE)
+                .select("score,created_at")
+                .eq("user_id", uuid)
+                .eq("difficulty", diff.key)
+                .gte("created_at", seasonStartIso)
+                .order("score", { ascending:false })
+                .limit(1);
+              if(error) throw error;
+              best = (data && data[0]) ? data[0] : null;
+            } else {
+              throw selErr;
+            }
           }
-        }
 
-        // If not better, don't spam inserts
-        if(best && Number(payload.score) <= Number(best.score||0)){
-          toast("Schon gespeichert ✅", `Bestscore (${diffLabel(diff.key)}): ${fmt(best.score)}`, 3200);
+          // If not better, don't spam inserts
+          if(best && Number(payload.score) <= Number(best.score||0)){
+            toast("Schon gespeichert ✅", `Bestscore (${diffLabel(diff.key)}): ${fmt(best.score)}`, 3200);
+            await refreshLeaderboard();
+            return;
+          }
+
+          // Update if possible; otherwise insert
+          if(best && best.id){
+            const { error } = await sb.from(SCORE_TABLE).update(payload).eq("id", best.id);
+            if(error) throw error;
+            toast("Bestscore aktualisiert ✅", name+" • "+fmt(totalScore), 3200);
+          } else if(best && !best.id){
+            // Without an id, update the newest season rows for this uuid+diff (keeps single identity, even if duplicates exist)
+            const { error } = await sb
+              .from(SCORE_TABLE)
+              .update(payload)
+              .eq("user_id", uuid)
+              .eq("difficulty", diff.key)
+              .gte("created_at", seasonStartIso);
+            if(error) throw error;
+            toast("Bestscore aktualisiert ✅", name+" • "+fmt(totalScore), 3200);
+          } else {
+            const { error } = await sb.from(SCORE_TABLE).insert(payload);
+            if(error) throw error;
+            toast("Score gepostet ✅", name+" • "+fmt(totalScore), 3200);
+          }
+
           await refreshLeaderboard();
-          return;
+        }catch(e){
+          toast("Post fehlgeschlagen ❌", String(e.message||e), 3400);
         }
-
-        // Update if possible; otherwise insert
-        if(best && best.id){
-          const { error } = await sb.from(SCORE_TABLE).update(payload).eq("id", best.id);
-          if(error) throw error;
-          toast("Bestscore aktualisiert ✅", name+" • "+fmt(totalScore), 3200);
-        } else if(best && !best.id){
-          // Without an id, update the newest season rows for this uuid+diff (keeps single identity, even if duplicates exist)
-          const { error } = await sb
-            .from(SCORE_TABLE)
-            .update(payload)
-            .eq("user_id", uuid)
-            .eq("difficulty", diff.key)
-            .gte("created_at", seasonStartIso);
-          if(error) throw error;
-          toast("Bestscore aktualisiert ✅", name+" • "+fmt(totalScore), 3200);
-        } else {
-          const { error } = await sb.from(SCORE_TABLE).insert(payload);
-          if(error) throw error;
-          toast("Score gepostet ✅", name+" • "+fmt(totalScore), 3200);
-        }
-
-        await refreshLeaderboard();
-      }catch(e){
-        toast("Post fehlgeschlagen ❌", String(e.message||e), 3400);
+      } finally {
+        btns.forEach(b => { if(b) { b.disabled=false; b.textContent=b.dataset.old; b.classList.remove("loading"); }});
       }
     }
 
