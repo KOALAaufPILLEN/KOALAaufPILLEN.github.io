@@ -2007,7 +2007,7 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
     }
 
     function currentPad(){
-      return (document.body.classList.contains("fs") || document.body.classList.contains("maximized")) ? 4 : PAD;
+      return (document.body.classList.contains("fs") || document.body.classList.contains("maximized")) ? 10 : PAD;
     }
 
     /**********************
@@ -2224,19 +2224,17 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
       const isMax = document.body.classList.contains("maximized");
 
       // Margins/Padding
-      // In FS or Max, we want minimal side padding to fill the "red area"
-      const padW = (isFs||isMax) ? 4 : 20;
-      // Vertical padding: FS needs space for HUD (top ~100px) + bottom margin
-      // Normal: Needs space for topRow + stats
-      const padH = (isFs) ? 140 : (isMax ? 60 : 40);
+      // In FS or Max, keep modest padding so tiles remain crisp and centered
+      const pad = currentPad();
+      const padW = (isFs||isMax) ? 12 : 20;
+      // Vertical padding: allow HUD room but maximize board real estate
+      const padH = (isFs) ? 110 : (isMax ? 80 : 40);
 
       // If Maximized/FS, use Window Height as constraint to avoid scrolling
       const availH = (isFs || isMax) ? window.innerHeight : wrapH;
 
-      const usableW = Math.max(260, wrapW - padW);
-      const usableH = Math.max(260, availH - padH);
-
-      const pad = currentPad();
+      const usableW = Math.max(320, wrapW - padW);
+      const usableH = Math.max(320, availH - padH);
 
       const cellW = Math.floor((usableW - (cols-1)*GAP - pad*2) / cols);
       const cellH = Math.floor((usableH - (rows-1)*GAP - pad*2) / rows);
@@ -2244,9 +2242,10 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
       const zoom = window.gameZoomFactor || 1.0;
 
       // No strict max cap, allow filling the screen
-      const max = 400;
-      const minCell = (window.innerWidth < 640) ? 32 : 40;
-      return clamp(Math.min(cellW, cellH) * zoom, minCell, max);
+      const max = 140;
+      const minCell = (window.innerWidth < 640) ? 46 : 54;
+      const target = Math.min(cellW, cellH) * zoom;
+      return clamp(Math.round(target), minCell, max);
     }
 
     function setTileXY(el, r, c){
