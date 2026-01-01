@@ -2006,6 +2006,10 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
       return Array.isArray(grid) && rows>0 && cols>0 && grid.length >= rows;
     }
 
+    function currentPad(){
+      return (document.body.classList.contains("fs") || document.body.classList.contains("maximized")) ? 4 : PAD;
+    }
+
     /**********************
      * UI refs
      **********************/
@@ -2232,10 +2236,10 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
       const usableW = Math.max(260, wrapW - padW);
       const usableH = Math.max(260, availH - padH);
 
-      const effectivePad = (isFs||isMax) ? 4 : PAD;
+      const pad = currentPad();
 
-      const cellW = Math.floor((usableW - (cols-1)*GAP - effectivePad*2) / cols);
-      const cellH = Math.floor((usableH - (rows-1)*GAP - effectivePad*2) / rows);
+      const cellW = Math.floor((usableW - (cols-1)*GAP - pad*2) / cols);
+      const cellH = Math.floor((usableH - (rows-1)*GAP - pad*2) / rows);
 
       const zoom = window.gameZoomFactor || 1.0;
 
@@ -2246,21 +2250,24 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
     }
 
     function setTileXY(el, r, c){
-      const x = c*(CELL+GAP) + PAD;
-      const y = r*(CELL+GAP) + PAD;
+      const pad = currentPad();
+      const x = c*(CELL+GAP) + pad;
+      const y = r*(CELL+GAP) + pad;
       el.style.setProperty("--x", x+"px");
       el.style.setProperty("--y", y+"px");
     }
 
     function layoutBoard(){
       CELL = computeCell();
+      const pad = currentPad();
       document.documentElement.style.setProperty("--cell", CELL+"px");
       document.documentElement.style.setProperty("--gap", GAP+"px");
+      document.documentElement.style.setProperty("--pad", pad+"px");
       document.documentElement.style.setProperty("--cols", cols);
       document.documentElement.style.setProperty("--rows", rows);
 
-      const w = PAD*2 + cols*CELL + (cols-1)*GAP;
-      const h = PAD*2 + rows*CELL + (rows-1)*GAP;
+      const w = pad*2 + cols*CELL + (cols-1)*GAP;
+      const h = pad*2 + rows*CELL + (rows-1)*GAP;
       ui.board.style.width = w+"px";
       ui.board.style.height = h+"px";
 
