@@ -20,7 +20,7 @@
       --cols: 10;
       --rows: 10;
       --cell: 54px;
-      --gap: 8px;
+      --gap: 2px;
       --pad: 14px;
       --boardRadius: 26px;
 
@@ -120,7 +120,7 @@
     #darkOverlay{
       position:fixed;
       inset:0;
-      z-index:4;
+      z-index:100000;
       background:#000;
       opacity:0;
       pointer-events:none;
@@ -492,20 +492,38 @@
     .tile.dragging{ transition:none !important; z-index: 50; filter: drop-shadow(0 22px 20px rgba(0,0,0,.20)); }
     .tile.locked{ pointer-events:none; }
 
+    body.debugTiles .tile{
+      outline: 1px dashed rgba(255,255,255,.45);
+    }
+    body.debugTiles .plate{
+      box-shadow: none !important;
+    }
+    body.debugTiles .tile::after{
+      content: attr(data-base) ":" attr(data-variant);
+      position:absolute;
+      left:4px;
+      bottom:4px;
+      font-size:10px;
+      font-weight:800;
+      color:#fff;
+      background: rgba(0,0,0,.45);
+      padding:2px 4px;
+      border-radius:6px;
+      pointer-events:none;
+      z-index:5;
+    }
+
     .plate{
       width:100%; height:100%;
       border-radius: 16px;
 
       /* Jelly Tile Background (image only) + per-Luvvie pastel tint (background layers only) */
       background-image: var(--bg-img, url('Images/Button/Variant-A1.png'));
-      background-size: cover;
-      background-position: center;
+      background-size: calc(100% + 10px) calc(100% + 10px);
+      background-position: -5px -5px;
       background-repeat: no-repeat;
 
       /* tint only affects background layers (NOT the sprite image) */
-      background-color: var(--p1, rgba(255,255,255,.0));
-      background-blend-mode: hard-light;
-
       /* remove the old "card/backplate" look */
       border: none;
       box-shadow: none;
@@ -523,7 +541,7 @@
       
       /* keep Variant B as jelly-only too (no extra border/backplate) */
       border: none;
-      filter: none;
+      background-blend-mode: normal, normal, normal;
 }
 
     .variantBadge{
@@ -553,35 +571,31 @@
     }
     .tile.bigMellow .plate{ border-radius: 26px; }
 
-    /* Swirl on tile (subtle) */
-    /* IMPORTANT: user wants ONLY the jelly tile visible (no extra swirl/backplate overlays) */
-    .plate:before, .plate:after{ display:none !important; }
-
-    
+    /* Tile overlay (masked to PNG shape so transparency stays clean) */
     .plate:before{
       content:"";
-      position:absolute; inset:-18px;
-      background:
-        conic-gradient(from 120deg at 35% 35%,
-          rgba(255,255,255,.18),
-          rgba(255,255,255,0) 26%,
-          rgba(255,255,255,.12) 54%,
-          rgba(255,255,255,0) 72%,
-          rgba(255,255,255,.18)
-        );
-      opacity:.35;
-      mix-blend-mode: soft-light;
-      pointer-events:none;
-    }
-    .plate:after{
-      content:"";
       position:absolute; inset:0;
-      border-radius:inherit;
-      box-shadow:
-        0 2px 0 rgba(255,255,255,.55) inset,
-        0 -6px 12px rgba(0,0,0,.10) inset;
+      background-image:
+        linear-gradient(135deg,
+          color-mix(in srgb, var(--p1) 40%, transparent),
+          color-mix(in srgb, var(--p2) 40%, transparent)
+        ),
+        url('Images/Button/candies.png');
+      background-size: 100% 100%, 100% 100%;
+      background-position: center, center;
+      background-repeat: no-repeat, no-repeat;
+      opacity: .85;
       pointer-events:none;
+      -webkit-mask-image: var(--bg-img, url('Images/Button/Variant-A1.png'));
+      mask-image: var(--bg-img, url('Images/Button/Variant-A1.png'));
+      -webkit-mask-size: calc(100% + 10px) calc(100% + 10px);
+      mask-size: calc(100% + 10px) calc(100% + 10px);
+      -webkit-mask-position: -5px -5px;
+      mask-position: -5px -5px;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
     }
+    .plate:after{ display:none !important; }
 
     /* Zilla attack warning */
     .attackWarn{
@@ -844,6 +858,8 @@
       opacity:1;
       transform:none;
       animation:none;
+      position:relative;
+      overflow:hidden;
     }
     .lbItem .left b{display:block}
     .lbItem .left small{opacity:.7;font-weight:900}
@@ -864,15 +880,35 @@
     .lbItem.rank1{
       background:linear-gradient(90deg, rgba(255,215,0,.20), rgba(255,255,255,.12));
       box-shadow:0 0 12px rgba(255,215,0,.45);
+      animation: podiumGlowGold 2.8s ease-in-out infinite;
+      background-size: 220% 100%;
     }
     .lbItem.rank2{
       background:linear-gradient(90deg, rgba(192,192,192,.18), rgba(255,255,255,.10));
       box-shadow:0 0 10px rgba(220,220,220,.38);
+      animation: podiumGlowSilver 3.2s ease-in-out infinite;
+      background-size: 220% 100%;
     }
     .lbItem.rank3{
       background:linear-gradient(90deg, rgba(205,127,50,.18), rgba(255,255,255,.08));
       box-shadow:0 0 10px rgba(205,127,50,.35);
+      animation: podiumGlowBronze 3.4s ease-in-out infinite;
+      background-size: 220% 100%;
     }
+    .lbItem.rank1::before,
+    .lbItem.rank2::before,
+    .lbItem.rank3::before{
+      position:absolute;
+      top:8px;
+      left:8px;
+      font-size:18px;
+      filter: drop-shadow(0 6px 8px rgba(0,0,0,.18));
+      animation: bounceMedal 1.8s ease-in-out infinite;
+      content:"";
+    }
+    .lbItem.rank1::before{ content:"🥇"; }
+    .lbItem.rank2::before{ content:"🥈"; }
+    .lbItem.rank3::before{ content:"🥉"; }
     /* Non-podium entries: cooler lilac gradient */
     .lbItem:not(.rank1):not(.rank2):not(.rank3){
       background: linear-gradient(135deg, rgba(234, 231, 255, 0.92), rgba(220, 240, 255, 0.92));
@@ -900,18 +936,24 @@
         0 14px 30px rgba(0,0,0,.25),
         0 0 0 1px rgba(255,255,255,.06) inset;
     }
-    @keyframes shine{
-      0%{filter:brightness(1)}
-      50%{filter:brightness(1.25)}
-      100%{filter:brightness(1)}
-    }
-    @keyframes pulse{
-      0%,100%{transform:scale(1)}
-      50%{transform:scale(1.03)}
-    }
     @keyframes bounceMedal{
       0%,100%{transform:translateY(0)}
       50%{transform:translateY(-2px)}
+    }
+    @keyframes podiumGlowGold{
+      0%{background-position:0% 50%; filter:brightness(1)}
+      50%{background-position:100% 50%; filter:brightness(1.18)}
+      100%{background-position:0% 50%; filter:brightness(1)}
+    }
+    @keyframes podiumGlowSilver{
+      0%{background-position:0% 50%; filter:brightness(1)}
+      50%{background-position:100% 50%; filter:brightness(1.12)}
+      100%{background-position:0% 50%; filter:brightness(1)}
+    }
+    @keyframes podiumGlowBronze{
+      0%{background-position:0% 50%; filter:brightness(1)}
+      50%{background-position:100% 50%; filter:brightness(1.10)}
+      100%{background-position:0% 50%; filter:brightness(1)}
     }
 
     /* Toasts -> rechts seitlich (Desktop/Fullscreen), Mobile oben */
@@ -1333,8 +1375,8 @@
         </div>
         <input id="greetName" placeholder="Dein Name" maxlength="24" />
         <div class="cta">
-          <button class="Btn ghost" id="greetGuide">Anleitung</button>
           <button class="Btn secondary" id="greetPlay">Spielen</button>
+          <button class="Btn ghost" id="greetGuide">Anleitung</button>
         </div>
         <div class="tiny" style="margin-top:10px;">(Dieser Screen erscheint ca. alle 3 Stunden.)</div>
       </div>
@@ -1425,10 +1467,10 @@
          </div>
 
          <div class="cta" style="margin:16px 0; justify-content:center; gap:10px;">
-            <button class="Btn secondary" id="menuNew">Neues Spiel</button>
-            <button class="Btn ghost" id="menuIntro">Anleitung</button>
             <!-- Fullscreen handled via top bar -->
             <button class="Btn" id="menuHint">Hint</button>
+            <button class="Btn secondary" id="menuNew">Neues Spiel</button>
+            <button class="Btn ghost" id="menuIntro">Anleitung</button>
          </div>
 
          <div class="panel">
@@ -1484,8 +1526,8 @@
         <div class="actions">
           <button class="Btn ghost" id="btnMax" title="Maximize Board">⛶</button>
           <button class="Btn ghost" id="btnTheme" style="padding:0 12px;min-width:46px;">🌙</button>
-          <button class="Btn ghost" id="btnHintTop" title="Hint (kostet 1 Move)">💡</button>
           <button class="Btn" id="btnMenu">Menü</button>
+          <button class="Btn ghost" id="btnHintTop" title="Hint (kostet 1 Move)">💡</button>
         </div>
       </div>
 
@@ -1600,6 +1642,9 @@
      * Helpers
      **********************/
     function fmt(n){ return Number(n||0).toLocaleString("de-DE"); }
+    window.toggleTileDebug = function(){
+      document.body.classList.toggle("debugTiles");
+    };
 
     /**********************
      * Identity / Seasons
@@ -1686,7 +1731,7 @@
     }
     function pastelFromHue(h, isLightSprite){
       // pastel but with visible contrast
-      const sat = 55;
+      const sat = 70;
       const l1 = isLightSprite ? 62 : 78;
       const l2 = isLightSprite ? 52 : 66;
       const c1 = hslToRgb(h, sat, l1);
@@ -1711,7 +1756,7 @@
       let h = (preferredHue%360+360)%360;
       // enforce uniqueness against already assigned hues
       for(let attempt=0; attempt<48; attempt++){
-        const clash = USED_TINT_HUES.some(u => hueDist(u,h) < 18);
+        const clash = USED_TINT_HUES.some(u => hueDist(u,h) < 60);
         if(!clash) { USED_TINT_HUES.push(h); return h; }
         h = (h + 29) % 360; // pseudo-golden-ish step
       }
@@ -1728,8 +1773,15 @@
       const {h: spriteHue, l: spriteLight} = deriveSpriteHueAndLight(baseKey);
       const isLightSprite = spriteLight >= 62;
 
-      // prefer complementary hue
-      const preferred = (spriteHue + 180) % 360;
+      // Stable per-character hue, pushed away from the sprite hue
+      const baseHue = (hashStr(baseKey) * 137.508) % 360; // golden angle spread
+      let preferred = baseHue;
+      if(hueDist(preferred, spriteHue) < 36) preferred = (preferred + 90) % 360;
+
+      // Separate A/B variants clearly
+      const vShift = (variant === "B") ? 160 : 0;
+      preferred = (preferred + vShift) % 360;
+
       const h = uniqueHue(preferred);
       const pal = pastelFromHue(h, isLightSprite);
 
@@ -1746,14 +1798,24 @@
       return h>>>0;
     }
 
+    const BG_PICK_CACHE = new Map();
+
     function tileBgFor(tile){
-      const { variant } = parseTypeId(tile?.type || "");
-      const list = ((variant||"A")==="B") ? (IMG.variantsB || []) : (IMG.variantsA || []);
+      const { baseKey, variant } = parseTypeId(tile?.type || "");
+      const v = (variant || "A") === "B" ? "B" : "A";
+      const list = (v === "B") ? (IMG.variantsB || []) : (IMG.variantsA || []);
       if(!list.length) return null;
-      // stable choice per tile id so it doesn't "shuffle" visually during re-renders
-      const idx = hashStr(tile.id || (tile.r+","+tile.c)) % list.length;
+
+      // Stable choice per (baseKey, variant) so identical Luvvies keep identical jelly backgrounds
+      const k = (baseKey || (tile?.type||"")) + ":" + v;
+      let idx = BG_PICK_CACHE.get(k);
+      if(idx == null){
+        idx = hashStr(k) % list.length;
+        BG_PICK_CACHE.set(k, idx);
+      }
       return list[idx];
     }
+
 
 
     // Color helpers (small + cached) to derive complementary gradients per character
@@ -1933,7 +1995,7 @@
       
       // Jelly Buttons (Variants)
       variantsA: ["Images/Button/Variant-A1.png", "Images/Button/Variant-A2.png", "Images/Button/Variant-A3.png", "Images/Button/Variant-A4.png"],
-      variantsB: ["Images/Button/Variant-B1.png", "Images/Button/Variant-B2.png", "Images/Button/Variant-B3.png", "Images/Button/Variant-B4.png"],
+      variantsB: ["Images/Button/variant-B1.png", "Images/Button/variant-B2.png", "Images/Button/variant-B3.png", "Images/Button/variant-B4.png"],
       
       // Special Buttons
       powerBtn: "Images/Button/PowerUpButton.png",
@@ -1946,6 +2008,35 @@
     document.getElementById("greetLogo").src = IMG.logo;
     const ml = document.getElementById("mainLogo");
     if(ml) ml.src = IMG.logo;
+
+    function preloadImages(list){
+      const seen = new Set();
+      list.forEach((src)=>{
+        if(!src || seen.has(src)) return;
+        seen.add(src);
+        const img = new Image();
+        img.decoding = "async";
+        img.loading = "eager";
+        img.src = src;
+      });
+    }
+    function collectImgSources(){
+      const list = [];
+      for(const v of Object.values(IMG)){
+        if(Array.isArray(v)) list.push(...v);
+        else list.push(v);
+      }
+      list.push("Images/Button/candies.png");
+      return list;
+    }
+    try{
+      const allImgs = collectImgSources();
+      if("requestIdleCallback" in window){
+        requestIdleCallback(()=>preloadImages(allImgs));
+      }else{
+        setTimeout(()=>preloadImages(allImgs), 200);
+      }
+    }catch(e){}
 
     /**********************
      * Mystery reveal weights (Wurm > Cit > Mellow > Koala > Lovelie)
@@ -2168,7 +2259,7 @@
 
     // cached sizing
     let CELL = 54;
-    let GAP = 8;
+    let GAP = 2;
     let PAD = 14;
 
     function isGridReady(){
@@ -2226,7 +2317,7 @@
     }
     const matchKey = (tile)=>{
       const p = parseTypeId(tile?.type);
-      return `${p.baseKey}:${p.variant||"A"}`;
+      return `${p.baseKey}`;
     };
 
     /**********************
@@ -2249,6 +2340,7 @@
       }catch(e){ return new Set(); }
     }
     let combosUnlocked = loadComboCookie();
+    let autoResolveQueued = false;
     function saveCombos(){
       try{ setCookie("luvvies_combos", JSON.stringify([...combosUnlocked]), 3650); }catch(e){}
     }
@@ -2390,46 +2482,60 @@
     }
 
     function showComboAnim(score, r, c){
-       // Re-use single overlay element (performance)
-       if(!ui._comboFx){
+       if(!ui._comboPool){
+         ui._comboPool = [];
+         ui._comboPoolIdx = 0;
+       }
+
+       const MIN_POOL = 22;
+       while(ui._comboPool.length < MIN_POOL){
          const fx = document.createElement("div");
          fx.className = "comboFx";
          const txtEl = document.createElement("div");
          txtEl.className = "comboScore";
          fx.appendChild(txtEl);
          ui.fx.appendChild(fx);
-         ui._comboFx = fx;
-         ui._comboFxTxt = txtEl;
-         ui._comboFxTimer = 0;
+         ui._comboPool.push({ fx, txtEl, timer: 0 });
        }
 
-       const fx = ui._comboFx;
-       const txtEl = ui._comboFxTxt;
+       const entry = ui._comboPool[ui._comboPoolIdx++ % ui._comboPool.length];
+       const fx = entry.fx;
+       const txtEl = entry.txtEl;
 
        // Size relative to cell so it never dwarfs the board
-       const size = Math.round(Math.min(200, Math.max(110, CELL * 1.7)));
+       const size = Math.round(Math.min(200, Math.max(96, CELL * 1.45)));
        fx.style.width  = size + "px";
        fx.style.height = size + "px";
 
-       // Score text scaling: never larger than the GIF
-       const fz = Math.round(Math.min(34, Math.max(18, size * 0.22)));
-       txtEl.style.fontSize = fz + "px";
-       txtEl.style.maxWidth = (size * 0.92) + "px";
-       txtEl.textContent = fmt(score);
+       if(score != null){
+         const fz = Math.round(Math.min(34, Math.max(18, size * 0.22)));
+         txtEl.style.fontSize = fz + "px";
+         txtEl.style.maxWidth = (size * 0.92) + "px";
+         txtEl.textContent = fmt(score);
+         txtEl.style.display = "block";
+       }else{
+         txtEl.style.display = "none";
+       }
 
-       // Restart GIF each time (cache-buster)
-       const gifUrl = IMG.comboGif + "?t=" + Date.now();
-       fx.style.backgroundImage = "url('" + gifUrl + "')";
+       const gifUrl = IMG.comboGif;
+       if(fx.dataset.gif !== gifUrl){
+         fx.style.backgroundImage = "url('" + gifUrl + "')";
+         fx.dataset.gif = gifUrl;
+       }
 
        const {x,y} = tileCenter(r,c);
        fx.style.left = x + "px";
        fx.style.top  = y + "px";
 
+       fx.classList.remove("show");
+       void fx.offsetWidth;
        fx.classList.add("show");
 
-       clearTimeout(ui._comboFxTimer);
-       ui._comboFxTimer = setTimeout(()=>{
+       clearTimeout(entry.timer);
+       entry.timer = setTimeout(()=>{
          fx.classList.remove("show");
+         fx.style.backgroundImage = "none";
+         fx.dataset.gif = "";
        }, 950);
     }
 
@@ -2539,6 +2645,13 @@ for(const [id, el] of tileEls){
       // Remove any leftover tile DOM nodes that are no longer in the grid
       pruneOrphanTileEls();
 }
+
+    function relayoutAll(forceBg=false){
+      layoutBoard();
+      syncBgHeight();
+      buildGlobalBg(forceBg);
+      buildFsBg(forceBg);
+    }
 
     let ro=null;
     let resizeTimer;
@@ -2698,6 +2811,12 @@ function refreshTileEl(tile){
   // image
   const plate = el.querySelector(".plate");
   const img = el.querySelector("img");
+  if(plate){
+    const bg = tileBgFor(tile);
+    if(bg){
+      plate.style.setProperty("--bg-img", `url('${bg}')`);
+    }
+  }
   if(img){
     let src = meta?.img || "";
     if(baseKey==="mellowlord") src = IMG.mellowlord;
@@ -2989,7 +3108,7 @@ function updateMellowHp(tile){
           const bk = parseTypeId(cur.type).baseKey;
           if(getSpecial(bk)) continue;
 
-          const m = makeTile(r,c,typeId("mellow","P"));
+          const m = makeTile(r,c,typeId("mellow","A"));
           m.hp = 0; // Small mellow has no HP (invincible)
           const oldEl = tileEls.get(cur.id);
           if(oldEl){ oldEl.remove(); tileEls.delete(cur.id); }
@@ -3064,7 +3183,7 @@ function updateMellowHp(tile){
         if(pick==="cit") newType = typeId("cit","P");
         if(pick==="koala") newType = typeId("koala","P");
         if(pick==="lovelie") newType = typeId("lovelie","P");
-        if(pick==="mellow") newType = typeId("mellow","P");
+        if(pick==="mellow") newType = typeId("mellow","A");
 
         const t2 = makeTile(tile.r, tile.c, newType);
         if(pick==="mellow") t2.hp = 3;
@@ -3325,6 +3444,7 @@ function updateMellowHp(tile){
 
     function doSwap(r1,c1,r2,c2){
       const a = grid[r1][c1], b = grid[r2][c2];
+      if(!a || !b) return;
       grid[r1][c1]=b; grid[r2][c2]=a;
       a.r=r2; a.c=c2;
       b.r=r1; b.c=c1;
@@ -4286,11 +4406,27 @@ function updateMellowHp(tile){
         totalScore += Math.round(scoreAdd);
         levelScore += Math.round(scoreAdd);
 
-        if(combo > 1 && toClear.size > 0){
-           const firstKey = toClear.values().next().value;
-           if(firstKey){
-              const [cr, cc] = firstKey.split(",").map(Number);
-              showComboAnim(Math.round(scoreAdd), cr, cc);
+        if(toClear.size > 0){
+           const cells = Array.from(toClear).map(k=>{
+             const [rr,cc] = k.split(",").map(Number);
+             return {r:rr, c:cc};
+           });
+
+           let avgR = 0, avgC = 0;
+           for(const p of cells){ avgR += p.r; avgC += p.c; }
+           avgR /= cells.length; avgC /= cells.length;
+
+           let center = cells[0];
+           let bestD = 1e9;
+           for(const p of cells){
+             const d = (p.r-avgR)*(p.r-avgR) + (p.c-avgC)*(p.c-avgC);
+             if(d < bestD){ bestD = d; center = p; }
+           }
+
+           const scoreTxt = (combo > 1) ? Math.round(scoreAdd) : null;
+           for(const p of cells){
+             const showTxt = (p.r === center.r && p.c === center.c) ? scoreTxt : null;
+             showComboAnim(showTxt, p.r, p.c);
            }
         }
 
@@ -4535,7 +4671,7 @@ function updateMellowHp(tile){
           });
           const bigId = makeId();
           // MellowLord uses special type
-          const bigTile = { id: bigId, r, c, type: "mellowlord:P", hp: bigHp, big:true };
+          const bigTile = { id: bigId, r, c, type: "mellowlord:A", hp: bigHp, big:true };
           bigMellows.set(bigId, {id:bigId, r, c, hp:bigHp, type:"mellowlord"});
 
           grid[r][c] = bigTile;
@@ -4594,7 +4730,7 @@ function updateMellowHp(tile){
 
     function placeZillaAt(centerR, centerC, zType="mellowzilla", hp=100, setBoss=true){
       const bigId = makeId();
-      const zilla = { id: bigId, r: centerR, c: centerC, type: `${zType}:P`, hp: hp, big:true, zilla:true };
+      const zilla = { id: bigId, r: centerR, c: centerC, type: `${zType}:A`, hp: hp, big:true, zilla:true };
 
       for(let r=centerR; r<centerR+3; r++){
         for(let c=centerC; c<centerC+3; c++){
@@ -4817,7 +4953,13 @@ function updateMellowHp(tile){
       let tries = 0;
       while(tries < maxShuffles){
         if(hasAnyMatchOrSpecial()){
-          if(autoResolve && !busy) resolveAll(false, false);
+          if(autoResolve && !busy && !autoResolveQueued){
+            autoResolveQueued = true;
+            setTimeout(()=>{
+              autoResolveQueued = false;
+              if(!busy) resolveAll(false, false);
+            }, 0);
+          }
           return true; // immediate clearable match/special
         }
         if(hasMove()) return true;              // at least one possible swap-to-match
@@ -4828,18 +4970,22 @@ function updateMellowHp(tile){
     }
 
     function ensureMovesOrShuffle(){
-      if(ensurePlayableBoard()) return;
+      if(ensurePlayableBoard(6, false)) return;
       // Fallback: still stuck? force one last shuffle and try resolving
       shuffleAll();
       layoutBoard();
-      setTimeout(()=>resolveAll(false, false), 60);
+      setTimeout(()=>{ if(!busy) resolveAll(false, false); }, 60);
     }
 
     // Idle watchdog: if matches exist while not busy, auto-resolve to prevent stuck boards
     setInterval(()=>{
-      if(busy) return;
+      if(busy || autoResolveQueued) return;
       if(hasAnyMatchOrSpecial()){
-        resolveAll(false, false);
+        autoResolveQueued = true;
+        setTimeout(()=>{
+          autoResolveQueued = false;
+          if(!busy) resolveAll(false, false);
+        }, 0);
       }
     }, 520);
 
@@ -4900,13 +5046,13 @@ clearHints();
     document.addEventListener("fullscreenchange", ()=>{
       if(document.fullscreenElement){
         document.body.classList.add("fs");
-        buildFsBg();
+        buildFsBg(true);
       }else{
         document.body.classList.remove("fs");
         document.body.classList.remove("maximized");
         document.getElementById("fsBg").innerHTML="";
       }
-      layoutBoard();
+      setTimeout(()=>relayoutAll(true), 120);
     });
 
     function updateUI(){
@@ -5015,6 +5161,8 @@ clearHints();
       target = calcTarget(level);
       moves = calcMoves(level);
       lastSwap=null;
+      TILE_TINT_CACHE.clear();
+      USED_TINT_HUES.length = 0;
 
       // Determine active pool for this game (based on difficulty)
       // Recalculate if level goes up?
