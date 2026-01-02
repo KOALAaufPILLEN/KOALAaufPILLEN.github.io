@@ -232,7 +232,7 @@
       padding: 0 20px;
       border-radius: 999px;
       border: none;
-      background: url('Images/button/candies.png') center/cover no-repeat;
+      background: url('Images/Button/candies.png') center/cover no-repeat;
       color: white;
       box-shadow: 0 8px 16px rgba(0,0,0,.16);
       text-shadow: 0 2px 4px rgba(0,0,0,.25);
@@ -496,18 +496,20 @@
       width:100%; height:100%;
       border-radius: 16px;
 
-      /* Variant Jelly Background (Tinted) */
-      background-color: var(--p1);
-      background-image: var(--bg-img);
+      /* Jelly Tile Background (image only) + per-Luvvie pastel tint (background layers only) */
+      background-image: var(--bg-img, url('Images/Button/Variant-A1.png'));
       background-size: cover;
       background-position: center;
-      background-blend-mode: hard-light; /* Tints the grayscale jelly */
-      
-      border: 1px solid rgba(255,255,255,.4);
-      box-shadow:
-        0 10px 20px rgba(20,10,60,.15),
-        0 4px 8px rgba(0,0,0,.1);
-      
+      background-repeat: no-repeat;
+
+      /* tint only affects background layers (NOT the sprite image) */
+      background-color: var(--p1, rgba(255,255,255,.0));
+      background-blend-mode: hard-light;
+
+      /* remove the old "card/backplate" look */
+      border: none;
+      box-shadow: none;
+
       position:relative;
       overflow:hidden;
 
@@ -616,7 +618,7 @@
 
     /* Animierter Power Background (für Powerups + ??? + Lovelie) */
     .powerAnim .plate{
-      background-image: url('Images/button/PowerUpButton.png') !important;
+      background-image: url('Images/Button/PowerUpButton.png') !important;
       background-color: transparent !important;
       background-blend-mode: normal !important;
       box-shadow: 0 0 22px rgba(255,79,185,.45), 0 0 32px rgba(122,216,255,.35);
@@ -624,7 +626,7 @@
     }
     /* Mystery Tile specific */
     .tile[data-base="myst"] .plate {
-       /* Mystery icon is the sprite (Powerup.png). Background is handled by .powerAnim (PowerUpButton). */
+       background-image: url('Images/Button/Powerup.png') !important;
     }
     @keyframes powerPulse{
       0%{ transform: scale(1); filter:saturate(1); }
@@ -1016,53 +1018,25 @@
     }
 
     /* Combo GIF Overlay */
-    
-.comboFx{
-  position:absolute;
-  transform:translate(-50%,-50%) scale(.6);
-  opacity:0;
-  pointer-events:none;
-  background:center/contain no-repeat;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  z-index:999;
-  filter:drop-shadow(0 10px 18px rgba(0,0,0,.25));
-}
-    .deathFx{
-  position:absolute;
-  transform:translate(-50%,-50%) scale(.65);
-  opacity:0;
-  pointer-events:none;
-  background:center/contain no-repeat;
-  z-index:999;
-  filter:drop-shadow(0 12px 22px rgba(0,0,0,.28));
-}
-.comboFx.fxOn, .deathFx.fxOn{
-  opacity:1;
-  animation: fxPop 0.92s ease-out forwards;
-}
-@keyframes fxPop{
-  0%{ transform:translate(-50%,-50%) scale(.55); opacity:0; }
-  18%{ opacity:1; }
-  42%{ transform:translate(-50%,-50%) scale(1.0); }
-  100%{ transform:translate(-50%,-50%) scale(.75); opacity:0; }
-}
-
-.comboScore{
-  max-width: 92%;
-  position:absolute;
-  left: 50%;
-  top: 10%;
-  transform: translate(-50%,-120%);
-  font-weight: 900;
-  font-size: clamp(14px, 4.4vw, 26px);
-  color: #c46bff;
-  text-shadow: 0 2px 0 rgba(0,0,0,.25), 0 0 18px rgba(170,90,255,.35);
-  letter-spacing: .02em;
-  white-space: nowrap;
-  pointer-events:none;
-}
+    .comboFx {
+      position: absolute;
+      width: 160px; height: 160px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 999;
+      background: url('Images/Animation/Animation-combo.gif') center/contain no-repeat;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .comboScore {
+      font-size: 32px;
+      font-weight: 900;
+      color: #9d4edd;
+      text-shadow: 0 0 10px #e0aaff, 2px 2px 0px #fff;
+      animation: popScore 0.8s ease-out forwards;
+      margin-top: -20px; /* Center it nicely over the burst */
+    }
     @keyframes popScore {
       0% { transform: scale(0.5); opacity: 0; }
       50% { transform: scale(1.2); opacity: 1; }
@@ -1631,6 +1605,133 @@
       myst: ["#d1c4e9", "#9575cd"],
       supernuss: ["#ffd740", "#ff8f00"]
     };
+    // -------------------------
+    // Tile background + tinting
+    // -------------------------
+    // We want each Luvvie (baseKey) to have a stable, UNIQUE pastel tint that CONTRASTS the character
+    // (no "yellow on yellow"), and we want the board tile background to be the jelly image (no extra backplate).
+    const TILE_TINT_CACHE = new Map();     // key -> [c1,c2]
+    const USED_TINT_HUES = [];             // assigned hues to keep them unique
+
+    function clamp(n,min,max){ return Math.min(max, Math.max(min,n)); }
+    function hueDist(a,b){
+      let d = Math.abs(a-b) % 360;
+      return d > 180 ? 360 - d : d;
+    }
+    function hexToRgb(hex){
+      if(!hex) return null;
+      let h = (""+hex).trim().replace("#","");
+      if(h.length===3) h = h.split("").map(x=>x+x).join("");
+      if(h.length!==6) return null;
+      const n = parseInt(h,16);
+      return { r:(n>>16)&255, g:(n>>8)&255, b:n&255 };
+    }
+    function rgbToHsl(r,g,b){
+      r/=255; g/=255; b/=255;
+      const max=Math.max(r,g,b), min=Math.min(r,g,b);
+      let h=0, s=0;
+      const l=(max+min)/2;
+      const d=max-min;
+      if(d!==0){
+        s = d / (1 - Math.abs(2*l - 1));
+        switch(max){
+          case r: h = ((g-b)/d) % 6; break;
+          case g: h = (b-r)/d + 2; break;
+          case b: h = (r-g)/d + 4; break;
+        }
+        h = (h*60+360) % 360;
+      }
+      return {h, s:s*100, l:l*100};
+    }
+    function hslToRgb(h,s,l){
+      s/=100; l/=100;
+      const c=(1-Math.abs(2*l-1))*s;
+      const x=c*(1-Math.abs((h/60)%2 - 1));
+      const m=l-c/2;
+      let r=0,g=0,b=0;
+      if(h<60){ r=c; g=x; b=0; }
+      else if(h<120){ r=x; g=c; b=0; }
+      else if(h<180){ r=0; g=c; b=x; }
+      else if(h<240){ r=0; g=x; b=c; }
+      else if(h<300){ r=x; g=0; b=c; }
+      else { r=c; g=0; b=x; }
+      return { r:Math.round((r+m)*255), g:Math.round((g+m)*255), b:Math.round((b+m)*255) };
+    }
+    function rgbToHex(r,g,b){
+      const to = (n)=>n.toString(16).padStart(2,"0");
+      return "#"+to(r)+to(g)+to(b);
+    }
+    function pastelFromHue(h, isLightSprite){
+      // pastel but with visible contrast
+      const sat = 55;
+      const l1 = isLightSprite ? 62 : 78;
+      const l2 = isLightSprite ? 52 : 66;
+      const c1 = hslToRgb(h, sat, l1);
+      const c2 = hslToRgb(h, sat-8, l2);
+      return [rgbToHex(c1.r,c1.g,c1.b), rgbToHex(c2.r,c2.g,c2.b)];
+    }
+
+    function deriveSpriteHueAndLight(baseKey){
+      // Prefer explicit palettes from BASES (fast, stable, no async).
+      const base = getBase(baseKey);
+      const spec = getSpecial(baseKey);
+      const meta = base || spec;
+      const palA = meta?.palettes?.A;
+      const palB = meta?.palettes?.B;
+      const src = (palA && palA[0]) || (SPECIAL_PALS[baseKey] && SPECIAL_PALS[baseKey][0]) || (NEUTRAL_PALS.A[0]);
+      const rgb = hexToRgb(src);
+      const hsl = rgb ? rgbToHsl(rgb.r,rgb.g,rgb.b) : {h:210, l:60};
+      return {h: hsl.h, l: hsl.l};
+    }
+
+    function uniqueHue(preferredHue){
+      let h = (preferredHue%360+360)%360;
+      // enforce uniqueness against already assigned hues
+      for(let attempt=0; attempt<48; attempt++){
+        const clash = USED_TINT_HUES.some(u => hueDist(u,h) < 18);
+        if(!clash) { USED_TINT_HUES.push(h); return h; }
+        h = (h + 29) % 360; // pseudo-golden-ish step
+      }
+      // fallback (should never happen)
+      USED_TINT_HUES.push(h);
+      return h;
+    }
+
+    function paletteForKey(baseKey, variant){
+      const k = baseKey + ":" + (variant || "A");
+      const cached = TILE_TINT_CACHE.get(k);
+      if(cached) return cached;
+
+      const {h: spriteHue, l: spriteLight} = deriveSpriteHueAndLight(baseKey);
+      const isLightSprite = spriteLight >= 62;
+
+      // prefer complementary hue
+      const preferred = (spriteHue + 180) % 360;
+      const h = uniqueHue(preferred);
+      const pal = pastelFromHue(h, isLightSprite);
+
+      TILE_TINT_CACHE.set(k, pal);
+      return pal;
+    }
+
+    function hashStr(str){
+      let h=2166136261>>>0;
+      for(let i=0;i<str.length;i++){
+        h ^= str.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return h>>>0;
+    }
+
+    function tileBgFor(tile){
+      const { variant } = parseTypeId(tile?.type || "");
+      const list = ((variant||"A")==="B") ? (IMG.variantsB || []) : (IMG.variantsA || []);
+      if(!list.length) return null;
+      // stable choice per tile id so it doesn't "shuffle" visually during re-renders
+      const idx = hashStr(tile.id || (tile.r+","+tile.c)) % list.length;
+      return list[idx];
+    }
+
 
     // Color helpers (small + cached) to derive complementary gradients per character
     function hexToRgb(hex){
@@ -1690,306 +1791,12 @@
     }
 
     function paletteForTile(tile){
-
-const { baseKey, variant } = parseTypeId(tile?.type || "");
-// Fixed palettes for special tiles
-if(SPECIAL_PALS[baseKey]) return SPECIAL_PALS[baseKey];
-
-// Computed per-character contrasting pastel palette (built once after preload).
-const cached = TINT_CACHE.get(baseKey);
-if(cached) return cached;
-
-// Fallback (until tints are computed)
-const v = (variant || "A") === "B" ? "B" : "A";
-return NEUTRAL_PALS[v];
-}
-
-/**********************
- * Asset preloading + dominant color analysis (for contrasting pastel tile tints)
- **********************/
-const FX = { combo:null, comboScore:null, comboTO:null, death:null, deathTO:null };
-function ensureFxLayer(){
-  // Create FX elements once (no DOM spam)
-  if(FX.combo && FX.death) return;
-
-  const combo = document.createElement("div");
-  combo.className = "comboFx";
-  const score = document.createElement("div");
-  score.className = "comboScore";
-  combo.appendChild(score);
-
-  const death = document.createElement("div");
-  death.className = "deathFx";
-
-  ui.fx.appendChild(combo);
-  ui.fx.appendChild(death);
-
-  FX.combo = combo;
-  FX.comboScore = score;
-  FX.death = death;
-}
-
-const IMG_CACHE = new Map(); // src -> Promise<HTMLImageElement|null>
-function loadImage(src){
-  if(!src) return Promise.resolve(null);
-  if(IMG_CACHE.has(src)) return IMG_CACHE.get(src);
-  const img = new Image();
-  img.decoding = "async";
-  img.loading = "eager";
-  const p = new Promise((resolve)=>{
-    img.onload = async ()=>{
-      try{ if(img.decode) await img.decode(); }catch(e){}
-      resolve(img);
-    };
-    img.onerror = ()=>resolve(null);
-  });
-  img.src = src;
-  IMG_CACHE.set(src, p);
-  return p;
-}
-
-function rgbToHsl(r,g,b){
-  r/=255; g/=255; b/=255;
-  const max=Math.max(r,g,b), min=Math.min(r,g,b);
-  let h=0,s=0,l=(max+min)/2;
-  const d=max-min;
-  if(d!==0){
-    s = d / (1 - Math.abs(2*l - 1));
-    switch(max){
-      case r: h = ((g-b)/d) % 6; break;
-      case g: h = (b-r)/d + 2; break;
-      case b: h = (r-g)/d + 4; break;
+      const { baseKey, variant } = parseTypeId(tile?.type || "");
+      // Keep explicit special palettes where they matter visually (powerups etc.)
+      if(SPECIAL_PALS[baseKey]) return SPECIAL_PALS[baseKey];
+      // Unique, stable, contrast-first pastel tint for each (baseKey, variant)
+      return paletteForKey(baseKey, (variant||"A")==="B" ? "B" : "A");
     }
-    h *= 60; if(h<0) h += 360;
-  }
-  return {h, s:s*100, l:l*100};
-}
-function hslToRgb(h,s,l){
-  s/=100; l/=100;
-  const c=(1-Math.abs(2*l-1))*s;
-  const x=c*(1-Math.abs((h/60)%2-1));
-  const m=l-c/2;
-  let r=0,g=0,b=0;
-  if(h<60){ r=c; g=x; b=0;}
-  else if(h<120){ r=x; g=c; b=0;}
-  else if(h<180){ r=0; g=c; b=x;}
-  else if(h<240){ r=0; g=x; b=c;}
-  else if(h<300){ r=x; g=0; b=c;}
-  else { r=c; g=0; b=x;}
-  return {r:Math.round((r+m)*255), g:Math.round((g+m)*255), b:Math.round((b+m)*255)};
-}
-function rgbToHex({r,g,b}){
-  const to=(n)=>n.toString(16).padStart(2,"0");
-  return `#${to(r)}${to(g)}${to(b)}`;
-}
-function relLum({r,g,b}){
-  const sr=[r,g,b].map(v=>v/255).map(v=>v<=0.03928? v/12.92 : Math.pow((v+0.055)/1.055, 2.4));
-  return 0.2126*sr[0] + 0.7152*sr[1] + 0.0722*sr[2];
-}
-function contrastRatio(rgb1, rgb2){
-  const L1=relLum(rgb1), L2=relLum(rgb2);
-  const hi=Math.max(L1,L2), lo=Math.min(L1,L2);
-  return (hi+0.05)/(lo+0.05);
-}
-function hueDist(a,b){
-  const d=Math.abs(a-b)%360;
-  return Math.min(d, 360-d);
-}
-
-async function dominantRgbFromImage(img){
-  try{
-    const canvas = document.createElement("canvas");
-    const w = 32, h = 32;
-    canvas.width = w; canvas.height = h;
-    const ctx = canvas.getContext("2d", {willReadFrequently:true});
-    ctx.clearRect(0,0,w,h);
-    ctx.drawImage(img, 0,0,w,h);
-    const {data} = ctx.getImageData(0,0,w,h);
-
-    let rs=0, gs=0, bs=0, cnt=0;
-    for(let i=0;i<data.length;i+=4){
-      const a = data[i+3];
-      if(a < 60) continue;
-
-      const r=data[i], g=data[i+1], b=data[i+2];
-
-      // Ignore near-white background pixels & near-black outlines
-      const lum = (0.2126*r + 0.7152*g + 0.0722*b)/255;
-      if(lum > 0.97 || lum < 0.05) continue;
-
-      rs += r; gs += g; bs += b; cnt++;
-    }
-    if(cnt < 20){
-      // fallback: average everything opaque
-      rs=0; gs=0; bs=0; cnt=0;
-      for(let i=0;i<data.length;i+=4){
-        const a=data[i+3];
-        if(a<60) continue;
-        rs+=data[i]; gs+=data[i+1]; bs+=data[i+2]; cnt++;
-      }
-    }
-    if(cnt===0) return {r:180,g:180,b:180};
-    return {r:Math.round(rs/cnt), g:Math.round(gs/cnt), b:Math.round(bs/cnt)};
-  }catch(e){
-    return {r:180,g:180,b:180};
-  }
-}
-
-const TINT_CACHE = new Map(); // baseKey -> [p1,p2]
-const PASTEL_POOL = [
-  // curated pastel palette (varied hues)
-  {h:  5, s: 48, l: 78},
-  {h: 28, s: 50, l: 80},
-  {h: 55, s: 46, l: 80},
-  {h: 85, s: 42, l: 78},
-  {h:130, s: 40, l: 78},
-  {h:165, s: 38, l: 76},
-  {h:200, s: 44, l: 78},
-  {h:225, s: 46, l: 78},
-  {h:255, s: 50, l: 78},
-  {h:285, s: 48, l: 78},
-  {h:315, s: 46, l: 78},
-  {h:340, s: 44, l: 78}
-];
-
-function pastelForSprite(spriteRgb){
-  const spriteHsl = rgbToHsl(spriteRgb.r, spriteRgb.g, spriteRgb.b);
-  const spriteLum = relLum(spriteRgb);
-
-  // Target lightness: opposite-ish to sprite brightness while staying pastel
-  const targetL = spriteLum > 0.65 ? 58 : (spriteLum < 0.35 ? 82 : 74);
-
-  // Candidate 1: complement hue
-  const complement = { h:(spriteHsl.h + 180) % 360, s:46, l:targetL };
-
-  const candidates = [complement, ...PASTEL_POOL.map(p=>({h:p.h, s:p.s, l:targetL}))];
-
-  let best = candidates[0];
-  let bestScore = -1;
-
-  for(const cand of candidates){
-    const rgb = hslToRgb(cand.h, cand.s, cand.l);
-    const cr = contrastRatio(spriteRgb, rgb);
-    const hd = hueDist(spriteHsl.h, cand.h);
-    const ld = Math.abs(targetL - spriteHsl.l);
-
-    // Avoid "same hue"
-    const penalty = hd < 28 ? 0.6 : 0;
-    const score = (cr * 2.2) + (hd/180) + (ld/100) - penalty;
-    if(score > bestScore){
-      bestScore = score;
-      best = cand;
-    }
-  }
-
-  // Create 2-tone jelly palette (base + highlight)
-  const p1 = hslToRgb(best.h, Math.min(55, best.s), best.l);
-  const p2 = hslToRgb(best.h, Math.min(52, best.s*0.95), Math.min(92, best.l + 8));
-  return [rgbToHex(p1), rgbToHex(p2)];
-}
-
-async function buildTintCache(){
-  const keys = Array.from(new Set(BASES.map(b=>b.key)));
-  for(const k of keys){
-    const b = getBase(k);
-    const src = b?.img;
-    if(!src) continue;
-    const img = await loadImage(src);
-    if(!img) continue;
-    const dom = await dominantRgbFromImage(img);
-    const pal = pastelForSprite(dom);
-    TINT_CACHE.set(k, pal);
-  }
-}
-
-function bgImgForTile(tile){
-  const {variant} = parseTypeId(tile?.type || "");
-  const arr = (variant === "B") ? IMG.variantsB : IMG.variantsA;
-  const idx = (tile?.bgIdx ?? 0) % (arr.length || 1);
-  return arr[idx] || "";
-}
-
-function applyTileBg(el, tile){
-  const bg = bgImgForTile(tile);
-  if(bg) el.style.setProperty("--bg-img", `url('${bg}')`);
-}
-
-function getLuvvieSprite(baseKey, tile){
-  const base = getBase(baseKey);
-  const spec = getSpecial(baseKey);
-  const meta = base || spec;
-
-  if(baseKey==="myst") return IMG.mystBtn;
-  if(baseKey==="mellowlord") return IMG.mellowlord;
-
-  if(baseKey==="worm") return IMG.sourwurm[tile?.wormIdx||0] || IMG.sourwurm[0] || IMG.worm;
-  if(baseKey==="mellowzilla") return IMG.mellowzilla[tile?.animFrame||0] || IMG.mellowzilla[0] || (meta?.img||"");
-  if(baseKey==="koalazilla") return IMG.koalazilla[tile?.animFrame||0] || IMG.koalazilla[0] || IMG.koala;
-
-  return meta?.img || "";
-}
-
-// Zilla frame advance: swap frame each player move; every 4th is attack
-let zillaMoveCounter = 0;
-function advanceZillaFrames(){
-
-zillaMoveCounter++;
-const frame = (zillaMoveCounter - 1) % 4; // 0..3 (3 = attack)
-
-// Zilla bosses are rendered as a single big tile element positioned over the grid.
-const z = bossFight?.zillaTile;
-if(z){
-  z.animFrame = frame;
-  refreshTileEl(z);
-}
-}
-
-async function preloadGameAssets(){
-// Resolve tile variant filenames (some repos use a1..a4 / b1..b4 instead of Variant-A1..)
-async function resolveTileVariants(){
-  const A = [];
-  const B = [];
-  for(let i=1;i<=4;i++){
-    const aPrimary = `Images/button/a${i}.png`;
-    const aAlt1    = `Images/button/Variant-A${i}.png`;
-    const aAlt2    = `Images/button/variant-A${i}.png`;
-    const bPrimary = `Images/button/b${i}.png`;
-    const bAlt1    = `Images/button/Variant-B${i}.png`;
-    const bAlt2    = `Images/button/variant-B${i}.png`;
-
-    const a = (await loadImage(aPrimary)) ? aPrimary :
-              (await loadImage(aAlt1))    ? aAlt1    :
-              (await loadImage(aAlt2))    ? aAlt2    : aAlt1;
-    const b = (await loadImage(bPrimary)) ? bPrimary :
-              (await loadImage(bAlt1))    ? bAlt1    :
-              (await loadImage(bAlt2))    ? bAlt2    : bAlt1;
-
-    A.push(a);
-    B.push(b);
-  }
-  IMG.variantsA = A;
-  IMG.variantsB = B;
-}
-
-await resolveTileVariants();
-  // Preload tile backgrounds + FX gifs
-  const tileBgs = [...(IMG.variantsA||[]), ...(IMG.variantsB||[])].filter(Boolean);
-  const fxGifs = [IMG.comboGif, IMG.deathGif].filter(Boolean);
-
-  // Preload all Luvvies + important specials/bosses
-  const luvs = BASES.map(b=>b.img).filter(Boolean);
-  const specials = [
-    IMG.mystBtn,
-    IMG.powerBtn,
-    IMG.mellowlord,
-    ...(IMG.sourwurm||[]),
-    ...(IMG.mellowzilla||[]),
-    ...(IMG.koalazilla||[]),
-  ].filter(Boolean);
-
-  const all = Array.from(new Set([...tileBgs, ...fxGifs, ...luvs, ...specials]));
-  await Promise.all(all.map(src=>loadImage(src)));
-}
 /**********************
      * DOM safety: remove orphan tile elements (prevents rare "static tiles" you can't drag)
      **********************/
@@ -2078,8 +1885,8 @@ await resolveTileVariants();
       citrussy: "Images/Luvvies/CItrussie.png",
       
       // Random Worms
-      worm: "Images/Luvvies/Sourwurm-1.png", // Fallback
-      sourwurm: ["Images/Luvvies/Sourwurm-1.png","Images/Luvvies/Sourwurm-2.png","Images/Luvvies/Sourwurm-3.png"],
+      worm: "Images/Luvvies/SourWurm-1.png", // Fallback
+      sourwurm: ["Images/Luvvies/SourWurm-1.png", "Images/Luvvies/Sourwurm-2.png", "Images/Luvvies/Sourwurm-3.png"],
       
       grumpy:   "Images/Luvvies/Grumpycookie.png",
       happy:    "Images/Luvvies/HappyCookie.png",
@@ -2093,7 +1900,7 @@ await resolveTileVariants();
       mellowlord: "Images/Luvvies/MellowLord.png",
       
       // Boss Animations (Frame 1-4)
-      mellowzilla: ["Images/Luvvies/Mellowzilla-1.png", "Images/Luvvies/Mellowzilla-2.png", "Images/Luvvies/Mellowzilla-3.png", "Images/Luvvies/Mellowzilla-4.png"],
+      mellowzilla: ["Images/Luvvies/Mellowzilla-1.png", "Images/Luvvies/MellowZilla-2.png", "Images/Luvvies/Mellowzilla-3.png", "Images/Luvvies/Mellowzilla-4.png"],
       koalazilla:  ["Images/Luvvies/KoalaZilla-1.png", "Images/Luvvies/KoalaZilla-2.png", "Images/Luvvies/KoalaZilla-3.png", "Images/Luvvies/KoalaZilla-4.png"],
       
       fledernuss: "Images/Luvvies/FlederNuss.png",
@@ -2102,16 +1909,16 @@ await resolveTileVariants();
       giraffie: "Images/Luvvies/Giraffie.png",
       
       // Jelly Buttons (Variants)
-      variantsA: ["Images/button/Variant-A1.png","Images/button/Variant-A2.png","Images/button/Variant-A3.png","Images/button/Variant-A4.png"],
-      variantsB: ["Images/button/variant-B1.png", "Images/button/variant-B2.png", "Images/button/variant-B3.png", "Images/button/variant-B4.png"],
+      variantsA: ["Images/Button/Variant-A1.png", "Images/Button/Variant-A2.png", "Images/Button/Variant-A3.png", "Images/Button/Variant-A4.png"],
+      variantsB: ["Images/Button/variant-B1.png", "Images/Button/variant-B2.png", "Images/Button/variant-B3.png", "Images/Button/variant-B4.png"],
       
       // Special Buttons
-      powerBtn: "Images/button/PowerUpButton.png",
-      mystBtn: "Images/button/Powerup.png", // Use as the tile itself for Mystery
+      powerBtn: "Images/Button/PowerUpButton.png",
+      mystBtn: "Images/Button/Powerup.png", // Use as the tile itself for Mystery
       
       // Animations
-      comboGif: "Images/animation/Animation-combo.gif",
-      deathGif: "Images/animation/Deathanimation.gif"
+      comboGif: "Images/Animation/Animation-combo.gif",
+      deathGif: "Images/Animation/Deathanimation.gif"
     };
     document.getElementById("greetLogo").src = IMG.logo;
     const ml = document.getElementById("mainLogo");
@@ -2510,8 +2317,13 @@ await resolveTileVariants();
 
       return { x: boardX + localX, y: boardY + localY };
     }
+    // GIF-only FX mode (performance): disable HTML particle spam for combos
+    const FX_GIF_ONLY = true;
+
 
     function makeStar(x,y, big=false){
+      if(FX_GIF_ONLY) return;
+
       const s = document.createElement("div");
       s.className="star";
       s.style.left = x+"px";
@@ -2535,6 +2347,8 @@ await resolveTileVariants();
       setTimeout(()=>s.remove(), 900);
     }
     function ringFx(x,y){
+      if(FX_GIF_ONLY) return;
+
       const r=document.createElement("div");
       r.className="ring";
       r.style.left=x+"px"; r.style.top=y+"px";
@@ -2542,6 +2356,8 @@ await resolveTileVariants();
       setTimeout(()=>r.remove(), 760);
     }
     function burstFx(x,y, count=12){
+      if(FX_GIF_ONLY) return;
+
       ringFx(x,y);
       for(let i=0;i<count;i++){
         const ang = Math.random()*Math.PI*2;
@@ -2551,60 +2367,39 @@ await resolveTileVariants();
     }
 
     function showComboAnim(score, r, c){
+       const wrap = document.createElement("div");
+       wrap.className = "comboOverlay";
+       
+       // Force reload of GIF to play it from start
+       const gifUrl = IMG.comboGif + "?t=" + Date.now();
+       wrap.style.backgroundImage = `url('${gifUrl}')`;
 
-ensureFxLayer();
+       const {x,y} = tileCenter(r,c);
+       wrap.style.left = x+"px";
+       wrap.style.top = y+"px";
 
-const fx = FX.combo;
-const scoreEl = FX.comboScore;
+       const txt = document.createElement("div");
+       txt.className = "comboScore";
+       txt.textContent = fmt(score);
+       wrap.appendChild(txt);
 
-// Restart GIF by cache-busting
-const gifUrl = IMG.comboGif + "?t=" + Date.now();
-fx.style.backgroundImage = `url('${gifUrl}')`;
-
-// Size: keep readable but never silly big
-const size = Math.max(72, Math.min(200, Math.round(CELL * 1.75)));
-fx.style.width = size + "px";
-fx.style.height = size + "px";
-
-const {x,y} = tileCenter(r,c);
-fx.style.left = x + "px";
-fx.style.top  = y + "px";
-
-scoreEl.textContent = `+${score}`;
-
-// Animate (reuse element, no DOM spam)
-fx.classList.remove("fxOn");
-void fx.offsetWidth;
-fx.classList.add("fxOn");
-
-clearTimeout(FX.comboTO);
-FX.comboTO = setTimeout(()=>fx.classList.remove("fxOn"), 920);
-}
+       ui.fx.appendChild(wrap);
+       setTimeout(()=>wrap.remove(), 1200);
+    }
 
     function showDeathAnim(r, c){
+       const wrap = document.createElement("div");
+       wrap.className = "deathOverlay";
+       const gifUrl = IMG.deathGif + "?t=" + Date.now();
+       wrap.style.backgroundImage = `url('${gifUrl}')`;
 
-ensureFxLayer();
-
-const fx = FX.death;
-
-const gifUrl = IMG.deathGif + "?t=" + Date.now();
-fx.style.backgroundImage = `url('${gifUrl}')`;
-
-const size = Math.max(96, Math.min(260, Math.round(CELL * 2.05)));
-fx.style.width = size + "px";
-fx.style.height = size + "px";
-
-const {x,y} = tileCenter(r,c);
-fx.style.left = x + "px";
-fx.style.top  = y + "px";
-
-fx.classList.remove("fxOn");
-void fx.offsetWidth;
-fx.classList.add("fxOn");
-
-clearTimeout(FX.deathTO);
-FX.deathTO = setTimeout(()=>fx.classList.remove("fxOn"), 1150);
-}
+       const {x,y} = tileCenter(r,c);
+       wrap.style.left = x+"px";
+       wrap.style.top = y+"px";
+       
+       ui.fx.appendChild(wrap);
+       setTimeout(()=>wrap.remove(), 1200);
+    }
 
     /**********************
      * Responsive sizing
@@ -2734,14 +2529,17 @@ for(const [id, el] of tileEls){
       el.style.setProperty("--p1", pal[0]);
       el.style.setProperty("--p2", pal[1]);
 
-      // Board tile background (A1-A4 / B1-B4)
-      applyTileBg(el, tile);
-
       const plate = document.createElement("div");
       plate.className="plate";
+      // Board tile background (jelly image only)
+      const bg = tileBgFor(tile);
+      if(bg){
+        plate.style.setProperty("--bg-img", `url('${bg}')`);
+      }
 
-      // Powerups + ??? + Lovelie: animated background (PowerUpButton)
-      if(isPowerupKey(baseKey) || baseKey==="lovelie" || baseKey==="myst"){
+
+      // Powerups + ??? + Lovelie: animated background
+      if(isPowerupKey(baseKey) || baseKey==="lovelie" || baseKey==="myst" || baseKey==="cit" || baseKey==="worm" || baseKey==="koala" || baseKey==="mellowzilla" || baseKey==="koalazilla"){
         el.classList.add("powerAnim");
       }
 
@@ -2751,22 +2549,30 @@ for(const [id, el] of tileEls){
       }
 
       if(baseKey === "myst"){
-  const img = document.createElement("img");
-  img.src = getLuvvieSprite("myst", tile);
-  img.alt = "???";
-  plate.appendChild(img);
+  const qm = document.createElement("div");
+  qm.className="qmark";
+  qm.textContent = "?";
+  plate.appendChild(qm);
 }else{
   const img = document.createElement("img");
 
   // Resolve image source (bases, specials, bosses)
-  const src = getLuvvieSprite(baseKey, tile);
+  let src = meta?.img || "";
+  if(baseKey==="mellowlord") src = IMG.mellowlord;
+  
+  if(baseKey==="worm") src = IMG.sourwurm[tile.wormIdx||0] || IMG.sourwurm[0];
+  if(baseKey==="mellowzilla") src = IMG.mellowzilla[tile.animFrame||0] || IMG.mellowzilla[0];
+  if(baseKey==="koalazilla") src = IMG.koalazilla[tile.animFrame||0] || IMG.koalazilla[0] || IMG.koala;
 
   img.src = src;
   img.alt = meta?.name || baseKey;
 
-  // Variant badge is below; add image first
+  // Fallbacks (avoid broken icons)
+  img.addEventListener("error", ()=>{
+    if(baseKey==="koalazilla" && img.src !== IMG.koala) img.src = IMG.koala;
+  }, {once:true});
+
   plate.appendChild(img);
-}
 
   // Variant badge so A/B are clearly visible (prevents "combo feels broken")
   if(base && variant==="B"){
@@ -2828,14 +2634,16 @@ function refreshTileEl(tile){
   el.style.setProperty("--p1", pal[0]);
   el.style.setProperty("--p2", pal[1]);
 
-  // Board tile background (A1-A4 / B1-B4)
-  applyTileBg(el, tile);
-
   // image
   const plate = el.querySelector(".plate");
   const img = el.querySelector("img");
   if(img){
-    const src = getLuvvieSprite(baseKey, tile);
+    let src = meta?.img || "";
+    if(baseKey==="mellowlord") src = IMG.mellowlord;
+    
+    if(baseKey==="worm") src = IMG.sourwurm[tile.wormIdx||0] || IMG.sourwurm[0];
+    if(baseKey==="mellowzilla") src = IMG.mellowzilla[tile.animFrame||0] || IMG.mellowzilla[0];
+    if(baseKey==="koalazilla") src = IMG.koalazilla[tile.animFrame||0] || IMG.koalazilla[0] || IMG.koala;
 
     img.src = src;
     img.alt = meta?.name || baseKey;
@@ -2934,13 +2742,10 @@ function updateMellowHp(tile){
     function makeTile(r,c,type){
       const id = makeId();
       const t = { id, r, c, type, hp:0, big:false, animFrame:0 };
-      // Visual-only background variation (A1-A4 / B1-B4)
-      t.bgIdx = Math.floor(Math.random()*4);
       const {baseKey} = parseTypeId(type);
       if(baseKey === "worm") t.wormIdx = Math.floor(Math.random()*3);
       return t;
-    
-}
+    }
 
     function wouldCreateMatch(r,c,type){
       const k = parseTypeId(type).baseKey;
@@ -3470,17 +3275,12 @@ function updateMellowHp(tile){
     }
 
     function spendMoves(n){
-
-moves = Math.max(0, moves - n);
-combo = 0; // Reset combo on each paid/consumed move
-
-// Boss (Zilla) animation: swap sprite per player move, attack on every 4th
-try{ advanceZillaFrames(); }catch(e){}
-
-if(moves===0){
-  setTimeout(()=>gameOver(), 350);
-}
-}
+      moves = Math.max(0, moves - n);
+      combo = 0; // Reset combo on each paid/consumed move
+      if(moves===0){
+        setTimeout(()=>gameOver(), 350);
+      }
+    }
 
     function quadMatchKind(t1,t2,t3,t4){
       if(!t1||!t2||!t3||!t4) return null;
@@ -4754,7 +4554,6 @@ if(moves===0){
       bigMellows.set(bigId, {id:bigId, r:centerR, c:centerC, hp:hp, type:zType});
 
       const el = createTileEl(zilla, false);
-      bossFight.zillaTile = zilla;
       el.classList.add("spawnGlow");
       // Scale for 3x3
       el.style.width = `calc(var(--cell) * 3 + var(--gap) * 2)`;
@@ -4771,8 +4570,7 @@ if(moves===0){
       }
       toast(zType==="mellowzilla" ? "MELLOW ZILLA!! 🦖" : "KOALA ZILLA!! 🐨🦖", "Boss Fight!", 4000);
       return zilla;
-    
-}
+    }
 
     function spawnMellowZilla(){
       if(level < 20) return;
@@ -5854,25 +5652,9 @@ clearHints();
       gameActivePool = BASES.filter(b => selected.has(b.key));
     }
 
-(async ()=>{
-  resetUnlocked();
-  try{
-    await preloadGameAssets();
-    await buildTintCache();
-  }catch(e){}
-  newGame(true);
-
-  // Update existing tiles once tints are ready (if game spawned before)
-  try{
-    for(let r=0;r<rows;r++){
-      for(let c=0;c<cols;c++){
-        const t=grid[r][c];
-        if(t && tileEls.has(t.id)) refreshTileEl(t);
-      }
-    }
-  }catch(e){}
-  showGreetingIfNeeded();
-})();
-</script>
+    resetUnlocked();
+    newGame(true);
+    showGreetingIfNeeded();
+  </script>
 </body>
 </html>
