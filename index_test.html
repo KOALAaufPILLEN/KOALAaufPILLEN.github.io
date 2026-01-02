@@ -498,7 +498,8 @@
 
       /* Jelly Tile Background (image only) + per-Luvvie pastel tint (background layers only) */
       background-image: var(--bg-img, url('Images/Button/Variant-A1.png'));
-      background-size: cover;
+      /* Crop away PNG "frame/outline" by slightly oversizing the background (keeps tile size the same) */
+      background-size: 118% 118%;
       background-position: center;
       background-repeat: no-repeat;
 
@@ -506,9 +507,12 @@
       background-color: var(--p1, rgba(255,255,255,.0));
       background-blend-mode: hard-light;
 
-      /* remove the old "card/backplate" look */
+      /* 3D depth without shrinking the tile */
       border: none;
-      box-shadow: none;
+      box-shadow:
+        0 14px 22px rgba(0,0,0,.12),
+        0 2px 0 rgba(255,255,255,.22) inset,
+        0 -10px 16px rgba(0,0,0,.08) inset;
 
       position:relative;
       overflow:hidden;
@@ -1746,12 +1750,21 @@
       return h>>>0;
     }
 
-    function tileBgFor(tile){
-      const { variant } = parseTypeId(tile?.type || "");
-      const list = ((variant||"A")==="B") ? (IMG.variantsB || []) : (IMG.variantsA || []);
+        const BG_PICK_CACHE = new Map();
+
+function tileBgFor(tile){
+      const { baseKey, variant } = parseTypeId(tile?.type || "");
+      const v = (variant || "A") === "B" ? "B" : "A";
+      const list = (v === "B") ? (IMG.variantsB || []) : (IMG.variantsA || []);
       if(!list.length) return null;
-      // stable choice per tile id so it doesn't "shuffle" visually during re-renders
-      const idx = hashStr(tile.id || (tile.r+","+tile.c)) % list.length;
+
+      // Stable choice per (baseKey, variant) so identical Luvvies keep identical jelly backgrounds
+      const k = (baseKey || (tile?.type||"")) + ":" + v;
+      let idx = BG_PICK_CACHE.get(k);
+      if(idx == null){
+        idx = hashStr(k) % list.length;
+        BG_PICK_CACHE.set(k, idx);
+      }
       return list[idx];
     }
 
@@ -2390,36 +2403,49 @@
     }
 
     function showComboAnim(score, r, c){
-       // Re-use single overlay element (performance)
-       if(!ui._comboFx){
+       // Pool overlays so we can show the GIF on multiple disappearing tiles at once
+       if(!ui._comboPool){
+         ui._comboPool = [];
+         ui._comboPoolIdx = 0;
+       }
+
+       // create a few upfront, grow if needed
+       const MIN_POOL = 18;
+       while(ui._comboPool.length < MIN_POOL){
          const fx = document.createElement("div");
          fx.className = "comboFx";
          const txtEl = document.createElement("div");
          txtEl.className = "comboScore";
          fx.appendChild(txtEl);
          ui.fx.appendChild(fx);
-         ui._comboFx = fx;
-         ui._comboFxTxt = txtEl;
-         ui._comboFxTimer = 0;
+         ui._comboPool.push({ fx, txtEl, timer: 0 });
        }
 
-       const fx = ui._comboFx;
-       const txtEl = ui._comboFxTxt;
+       const entry = ui._comboPool[ui._comboPoolIdx++ % ui._comboPool.length];
+       const fx = entry.fx;
+       const txtEl = entry.txtEl;
 
-       // Size relative to cell so it never dwarfs the board
-       const size = Math.round(Math.min(200, Math.max(110, CELL * 1.7)));
-       fx.style.width  = size + "px";
+       // Sizing: scale with CELL, but clamp
+       const size = Math.max(64, Math.min(220, Math.floor(CELL * 1.12)));
+       fx.style.width = size + "px";
        fx.style.height = size + "px";
 
        // Score text scaling: never larger than the GIF
-       const fz = Math.round(Math.min(34, Math.max(18, size * 0.22)));
-       txtEl.style.fontSize = fz + "px";
-       txtEl.style.maxWidth = (size * 0.92) + "px";
-       txtEl.textContent = fmt(score);
+       if(score != null){
+         txtEl.textContent = "+" + score;
+         txtEl.style.display = "block";
+         const s = Math.min(1.0, size / 160);
+         txtEl.style.transform = `translate(-50%, -50%) scale(${s})`;
+       }else{
+         txtEl.style.display = "none";
+       }
 
-       // Restart GIF each time (cache-buster)
-       const gifUrl = IMG.comboGif + "?t=" + Date.now();
-       fx.style.backgroundImage = "url('" + gifUrl + "')";
+       // GIF background (cached per element)
+       const gifUrl = IMG.comboGif || "Images/Animation/Animation-combo.gif";
+       if(fx.dataset.gif !== gifUrl){
+         fx.style.backgroundImage = "url('" + gifUrl + "')";
+         fx.dataset.gif = gifUrl;
+       }
 
        const {x,y} = tileCenter(r,c);
        fx.style.left = x + "px";
@@ -2427,11 +2453,13 @@
 
        fx.classList.add("show");
 
-       clearTimeout(ui._comboFxTimer);
-       ui._comboFxTimer = setTimeout(()=>{
+       clearTimeout(entry.timer);
+       entry.timer = setTimeout(()=>{
          fx.classList.remove("show");
        }, 950);
     }
+
+
 
     function showDeathAnim(r, c){
        if(!ui._deathFx){
@@ -4286,15 +4314,33 @@ function updateMellowHp(tile){
         totalScore += Math.round(scoreAdd);
         levelScore += Math.round(scoreAdd);
 
-        if(combo > 1 && toClear.size > 0){
-           const firstKey = toClear.values().next().value;
-           if(firstKey){
-              const [cr, cc] = firstKey.split(",").map(Number);
-              showComboAnim(Math.round(scoreAdd), cr, cc);
+        if(toClear.size > 0){
+           // show combo GIF on every cleared tile (text only once on the center tile when combo>1)
+           const cells = Array.from(toClear).map(k=>{
+             const [rr,cc] = k.split(",").map(Number);
+             return {r:rr, c:cc};
+           });
+
+           // pick a "center" tile for the score text
+           let avgR = 0, avgC = 0;
+           for(const p of cells){ avgR += p.r; avgC += p.c; }
+           avgR /= cells.length; avgC /= cells.length;
+
+           let center = cells[0];
+           let bestD = 1e9;
+           for(const p of cells){
+             const d = (p.r-avgR)*(p.r-avgR) + (p.c-avgC)*(p.c-avgC);
+             if(d < bestD){ bestD = d; center = p; }
+           }
+
+           const scoreTxt = (combo > 1) ? Math.round(scoreAdd) : null;
+
+           for(const p of cells){
+             const showTxt = scoreTxt != null && p === center;
+             showComboAnim(showTxt ? scoreTxt : null, p.r, p.c);
            }
         }
-
-        const clearedCells = [];
+const clearedCells = [];
 
         for(const key of toClear){
           const [r,c] = key.split(",").map(Number);
