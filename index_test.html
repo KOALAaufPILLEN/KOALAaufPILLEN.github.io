@@ -1423,6 +1423,14 @@
       <div class="modal">
          <h2>Menü</h2>
 
+         <!-- Auth Section -->
+         <div id="authSection" style="margin-bottom:12px; padding:10px; border-radius:14px; background:rgba(0,0,0,0.04); text-align:center;">
+             <div id="authStatus" class="tiny" style="margin-bottom:8px;">Nicht eingeloggt</div>
+             <button class="Btn" id="btnLogin" style="background:#4285F4; color:#fff; min-height:42px;">G Login mit Google</button>
+             <button class="Btn ghost" id="btnLogout" style="display:none; min-height:42px;">Logout</button>
+             <div class="tiny" style="margin-top:6px; opacity:.7;">(Sync Names & Anti-Cheat)</div>
+         </div>
+
          <div class="panel" style="margin-bottom:10px; display:flex; align-items:center; gap:10px;">
             <b>FX Dimmer</b>
             <input type="range" id="fxSlider" min="0" max="100" value="0" style="flex:1">
@@ -1768,13 +1776,77 @@
     const SCORE_TABLE = "luvvies_crush_scores";
 
     let sb = null;
+    let currentUser = null;
+
     try{
       if(window.supabase?.createClient){
         sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY_PUBLISHABLE, {
-          auth: { persistSession:false, autoRefreshToken:false }
+          auth: { persistSession:true, autoRefreshToken:true }
+        });
+
+        // Auth Logic
+        sb.auth.onAuthStateChange((event, session) => {
+           handleAuthUser(session?.user || null);
         });
       }
     }catch(e){ sb = null; }
+
+    function handleAuthUser(user){
+       currentUser = user;
+       const btnIn = document.getElementById("btnLogin");
+       const btnOut = document.getElementById("btnLogout");
+       const status = document.getElementById("authStatus");
+
+       // Update inputs based on auth state
+       const inputs = [document.getElementById("greetName"), document.getElementById("goName"), document.getElementById("lbName")];
+
+       if(user){
+          if(btnIn) btnIn.style.display="none";
+          if(btnOut) btnOut.style.display="inline-flex";
+          const name = user.user_metadata?.full_name || user.email;
+          if(status) status.innerHTML = `Eingeloggt als: <b>${name}</b>`;
+
+          // Force name
+          inputs.forEach(inp => {
+             if(inp){
+                inp.value = name;
+                inp.disabled = true;
+                inp.title = "Name durch Google Login festgelegt";
+             }
+          });
+       } else {
+          if(btnIn) btnIn.style.display="inline-flex";
+          if(btnOut) btnOut.style.display="none";
+          if(status) status.innerHTML = "Nicht eingeloggt (Gast)";
+
+          inputs.forEach(inp => {
+             if(inp){
+                inp.disabled = false;
+                if(inp.value === "") inp.value = localStorage.getItem("luvvies_last_name") || "";
+             }
+          });
+       }
+    }
+
+    // Auth Buttons
+    const btnLogin = document.getElementById("btnLogin");
+    if(btnLogin) btnLogin.addEventListener("click", async ()=>{
+       if(!sb) return;
+       const { error } = await sb.auth.signInWithOAuth({
+         provider: 'google',
+         options: {
+           redirectTo: window.location.href
+         }
+       });
+       if(error) toast("Login Fehler", error.message, 3000);
+    });
+
+    const btnLogout = document.getElementById("btnLogout");
+    if(btnLogout) btnLogout.addEventListener("click", async ()=>{
+       if(!sb) return;
+       await sb.auth.signOut();
+       toast("Ausgeloggt", "Du spielst nun als Gast.", 2000);
+    });
 
     /**********************
      * Cookies (1x/day greeting)
@@ -5002,6 +5074,7 @@ clearHints();
     }
 
     function getUuid(){
+      if(currentUser && currentUser.id) return currentUser.id;
       let u = getCookie("luvvies_uuid");
       if(!u){
         try{ u = crypto.randomUUID(); }
@@ -5028,13 +5101,26 @@ clearHints();
     async function postScore(){
       if(!sb){ toast("Leaderboard offline","(Supabase nicht erreichbar)", 3200); return; }
 
-      let name = (document.getElementById("lbName").value || document.getElementById("goName").value || document.getElementById("greetName").value || "Anonymous").trim().slice(0,24);
-      name = cleanName(name);
+      let name = "";
+      if(currentUser && currentUser.user_metadata?.full_name){
+        name = currentUser.user_metadata.full_name;
+      } else {
+        name = (document.getElementById("lbName").value || document.getElementById("goName").value || document.getElementById("greetName").value || "Anonymous").trim().slice(0,24);
+        name = cleanName(name);
+        setCookie("luvvies_name", name, 36500);
+        localStorage.setItem("luvvies_last_name", name);
+      }
 
-      // Save name + keep stable UUID (identity)
-      setCookie("luvvies_name", name, 36500);
       const uuid = getUuid();
-      localStorage.setItem("luvvies_last_name", name);
+
+      // Client-Side Anti-Cheat / Sanity Check (Defense in Depth)
+      // Max reasonable score estimation
+      const maxReasonable = (level * 30000) + 200000;
+      if(totalScore > maxReasonable){
+         toast("Fehler", "Score Validierung fehlgeschlagen.", 3000);
+         console.warn("Client Anti-Cheat: Score too high", totalScore, maxReasonable);
+         return;
+      }
 
       // Season: current calendar quarter (≈ 3 months)
       const season = currentSeasonStart();
