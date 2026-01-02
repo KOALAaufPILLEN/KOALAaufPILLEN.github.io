@@ -509,17 +509,24 @@
 
       /* Palette-driven candy plate (makes each Luvvy easier to recognize) */
       background: linear-gradient(145deg, var(--p1), var(--p2));
-      border: 1px solid rgba(255,255,255,.58);
+      background-image: var(--bg-img, none);
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+
+      background-color: var(--p1, rgba(255,255,255,0));
+      background-blend-mode: hard-light;
+
+      /* No border, bigger size */
+      border: none;
       box-shadow:
-        0 0 0 1px rgba(255,255,255,.32) inset,
-        0 0 0 2px var(--p1) inset,
-        0 16px 26px rgba(20,10,60,.12),
-        0 6px 10px rgba(0,0,0,.08),
-        0 -10px 18px rgba(255,255,255,.35) inset;
+        0 10px 18px rgba(0,0,0,.22),
+        0 4px 6px rgba(0,0,0,.10);
+
       position:relative;
       overflow:hidden;
 
-      transform: translateY(var(--oy, 0px)) scale(1);
+      transform: translateY(var(--oy, 0px)) scale(1.16);
       opacity: var(--op, 1);
       transition: transform 260ms cubic-bezier(.2,.9,.2,1), opacity 260ms ease, filter 200ms ease;
     }
@@ -549,9 +556,9 @@
     }
 
     /* Variant B: clear visual difference (helps prevent "combo feels broken") */
-    /* KOALA_VARIANT_OUTLINE: extra klare A/B Abgrenzung */
-    .tile[data-variant="A"] .plate{ outline: 2px solid rgba(255,255,255,.55); }
-    .tile[data-variant="B"] .plate{ outline: 3px solid rgba(0,0,0,.22); }
+    /* Removed outline as requested, using filter only */
+    .tile[data-variant="A"] .plate{ outline: none; }
+    .tile[data-variant="B"] .plate{ outline: none; }
 
     .tile[data-variant="B"] .plate{
       filter: saturate(1.18) contrast(1.06);
@@ -1030,6 +1037,50 @@
       flex-wrap:wrap;
       margin-top: 12px;
     }
+
+    /* Combo GIF Overlay */
+    .comboFx {
+      position: absolute;
+      width: 160px; height: 160px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 999;
+      background-position: center;
+      background-size: contain;
+      background-repeat: no-repeat;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .comboFx.show{ display:flex; }
+
+    .comboScore {
+      font-size: 32px;
+      font-weight: 900;
+      color: #9d4edd;
+      text-shadow: 0 0 10px #e0aaff, 2px 2px 0px #fff;
+      animation: popScore 0.8s ease-out forwards;
+      margin-top: -20px;
+    }
+    @keyframes popScore {
+      0% { transform: scale(0.5); opacity: 0; }
+      50% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(1.0); opacity: 0; }
+    }
+
+    /* Death GIF Overlay */
+    .deathFx{
+      position:absolute;
+      width: 160px; height: 160px;
+      transform: translate(-50%, -50%);
+      pointer-events:none;
+      z-index: 998;
+      background-position:center;
+      background-size:contain;
+      background-repeat:no-repeat;
+      display:none;
+    }
+    .deathFx.show{ display:block; }
 
     /* FX star */
     .star{
@@ -1599,6 +1650,24 @@
       supernuss: ["#ffd740", "#ff8f00"]
     };
 
+    function hashStr(str){
+      let h=2166136261>>>0;
+      for(let i=0;i<str.length;i++){
+        h ^= str.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return h>>>0;
+    }
+
+    function tileBgFor(tile){
+      const { baseKey, variant } = parseTypeId(tile?.type || "");
+      const list = ((variant||"A")==="B") ? (IMG.variantsB || []) : (IMG.variantsA || []);
+      if(!list.length) return null;
+      // Consistent background per character type (baseKey) so all 'Sweety' look the same
+      const idx = hashStr(baseKey || "none") % list.length;
+      return list[idx];
+    }
+
     // Color helpers (small + cached) to derive complementary gradients per character
     function hexToRgb(hex){
       const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex||"");
@@ -1769,7 +1838,15 @@
             koalazilla:  "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/KoalaZilla.png",
 fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/FlederNuss.png",
       flederheld: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/FlederHeld.png",
-      supernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/SuperNuss.png"
+      supernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/SuperNuss.png",
+
+      // Jelly Buttons (Variants)
+      variantsA: ["Images/Button/Variant-A1.png", "Images/Button/Variant-A2.png", "Images/Button/Variant-A3.png", "Images/Button/Variant-A4.png"],
+      variantsB: ["Images/Button/Variant-B1.png", "Images/Button/Variant-B2.png", "Images/Button/Variant-B3.png", "Images/Button/Variant-B4.png"],
+
+      // Animation
+      comboGif: "Images/Animation/Animation-combo.gif",
+      deathGif: "Images/Animation/Deathanimation.gif"
     };
     document.getElementById("greetLogo").src = IMG.logo;
     const ml = document.getElementById("mainLogo");
@@ -2161,6 +2238,83 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
       return { x: boardX + localX, y: boardY + localY };
     }
 
+    // Combo Pool to support multiple animations simultaneously
+    const comboPool = [];
+    function getComboFx(){
+      // find free
+      let fx = comboPool.find(f => !f.active);
+      if(!fx){
+         // create new
+         const el = document.createElement("div");
+         el.className = "comboFx";
+         const txt = document.createElement("div");
+         txt.className = "comboScore";
+         el.appendChild(txt);
+         ui.fx.appendChild(el);
+         fx = { el, txt, active: false, timer: 0 };
+         comboPool.push(fx);
+      }
+      return fx;
+    }
+
+    function showComboAnim(score, r, c){
+       const item = getComboFx();
+       item.active = true;
+       const { el, txt } = item;
+
+       const size = Math.round(Math.min(200, Math.max(110, CELL * 1.7)));
+       el.style.width  = size + "px";
+       el.style.height = size + "px";
+
+       const fz = Math.round(Math.min(34, Math.max(18, size * 0.22)));
+       txt.style.fontSize = fz + "px";
+       txt.textContent = fmt(score);
+
+       // GIF cache bust
+       const gifUrl = IMG.comboGif + "?t=" + Date.now() + Math.random();
+       el.style.backgroundImage = "url('" + gifUrl + "')";
+
+       const {x,y} = tileCenter(r,c);
+       el.style.left = x + "px";
+       el.style.top  = y + "px";
+
+       el.classList.add("show");
+
+       clearTimeout(item.timer);
+       item.timer = setTimeout(()=>{
+         el.classList.remove("show");
+         item.active = false;
+       }, 950);
+    }
+
+    function showDeathAnim(r, c){
+       if(!ui._deathFx){
+         const fx = document.createElement("div");
+         fx.className = "deathFx";
+         ui.fx.appendChild(fx);
+         ui._deathFx = fx;
+         ui._deathFxTimer = 0;
+       }
+       const fx = ui._deathFx;
+
+       const size = Math.round(Math.min(220, Math.max(120, CELL * 1.85)));
+       fx.style.width  = size + "px";
+       fx.style.height = size + "px";
+
+       const gifUrl = IMG.deathGif + "?t=" + Date.now();
+       fx.style.backgroundImage = "url('" + gifUrl + "')";
+
+       const {x,y} = tileCenter(r,c);
+       fx.style.left = x + "px";
+       fx.style.top  = y + "px";
+
+       fx.classList.add("show");
+       clearTimeout(ui._deathFxTimer);
+       ui._deathFxTimer = setTimeout(()=>{
+         fx.classList.remove("show");
+       }, 1100);
+    }
+
     function makeStar(x,y, big=false){
       const s = document.createElement("div");
       s.className="star";
@@ -2330,6 +2484,12 @@ for(const [id, el] of tileEls){
 
       const plate = document.createElement("div");
       plate.className="plate";
+
+      // Jelly Tile Background (image only)
+      const bg = tileBgFor(tile);
+      if(bg){
+        plate.style.setProperty("--bg-img", `url('${bg}')`);
+      }
 
       // Powerups + ??? + Lovelie: animated background
       if(isPowerupKey(baseKey) || baseKey==="lovelie" || baseKey==="myst" || baseKey==="cit" || baseKey==="worm" || baseKey==="koala" || baseKey==="mellowzilla" || baseKey==="koalazilla"){
@@ -3993,6 +4153,41 @@ function updateMellowHp(tile){
         const scoreAdd = toClear.size * scorePerTile() * (1 + (combo-1)*0.12);
         totalScore += Math.round(scoreAdd);
         levelScore += Math.round(scoreAdd);
+
+        // Combo Animation: Trigger on each match center
+        // Collect match centers from hRuns and vRuns
+        const animPoints = [];
+        // Helper to find match center from runs in 'mm'
+        const allMatchRuns = [...(mm.hRuns||[]), ...(mm.vRuns||[])];
+        for(const run of allMatchRuns){
+           const center = run.cells[Math.floor(run.cells.length/2)];
+           // Filter duplicates? Usually runs are distinct enough or we want multiple pops.
+           animPoints.push({r:center.r, c:center.c});
+        }
+
+        // If specific special clears triggered (like Koala magic), we might not have 'runs'.
+        // But for standard matches, we do.
+        // If animPoints is empty but we cleared tiles (special effect), pick one random center.
+        if(animPoints.length === 0 && toClear.size > 0){
+           const firstKey = toClear.values().next().value;
+           if(firstKey){
+             const [cr, cc] = firstKey.split(",").map(Number);
+             animPoints.push({r:cr, c:cc});
+           }
+        }
+
+        // Show animation for each match group
+        // Calculate score portion? Or just show full combo score?
+        // Showing full score on each might be misleading, but "Pop" effect is good.
+        // We'll show the score divided by groups or just the total score on the first one?
+        // User said: "für jedes tile was verschwindet".
+        // Interpreting literally: 3 tiles -> 3 gifs? No, "Comboanimation gif" is likely the explosion.
+        // Showing it on the match center is the standard way.
+        // "nicht für jedes tile": Maybe they meant every MATCH group.
+        // I will stick to one per match group to avoid chaos.
+        animPoints.forEach(p => {
+           showComboAnim(Math.round(scoreAdd / animPoints.length), p.r, p.c);
+        });
 
         const clearedCells = [];
 
