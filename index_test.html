@@ -232,7 +232,7 @@
       padding: 0 20px;
       border-radius: 999px;
       border: none;
-      background: url('Images/Button/candies.png') center/cover no-repeat;
+      background: url('Images/button/candies.png') center/cover no-repeat;
       color: white;
       box-shadow: 0 8px 16px rgba(0,0,0,.16);
       text-shadow: 0 2px 4px rgba(0,0,0,.25);
@@ -495,24 +495,13 @@
     .plate{
       width:100%; height:100%;
       border-radius: 16px;
-      --bg-img: url('Images/Button/Variant-A1.png');
-      --t1: rgba(255,255,255,.38);
-      --t2: rgba(255,255,255,.32);
-      --plate-filter: saturate(.94) brightness(1.05);
 
-      background-image:
-        var(--bg-img),
-        radial-gradient(circle at 26% 26%, var(--t1), transparent 70%),
-        radial-gradient(circle at 76% 74%, var(--t2), transparent 72%),
-        linear-gradient(140deg, var(--t1), var(--t2));
-      background-size:
-        cover,
-        170% 170%,
-        170% 170%,
-        240% 240%;
-      background-repeat:no-repeat;
-      background-position:center;
-      background-blend-mode: soft-light, screen, soft-light, normal;
+      /* Variant Jelly Background (Tinted) */
+      background-color: var(--p1);
+      background-image: var(--bg-img);
+      background-size: cover;
+      background-position: center;
+      background-blend-mode: hard-light; /* Tints the grayscale jelly */
       
       border: 1px solid rgba(255,255,255,.4);
       box-shadow:
@@ -525,16 +514,12 @@
       transform: translateY(var(--oy, 0px)) scale(1);
       opacity: var(--op, 1);
       transition: transform 260ms cubic-bezier(.2,.9,.2,1), opacity 260ms ease, filter 200ms ease;
-      filter: var(--plate-filter) drop-shadow(0 8px 16px rgba(0,0,0,.14));
     }
 
-    /* Variant specific tinting */
-    .tile[data-variant="A"] .plate{
-      --plate-filter: saturate(.9) brightness(1.05) contrast(1.02);
-    }
+    /* Variant B specific styling */
     .tile[data-variant="B"] .plate{
       border: 2px solid rgba(255,255,255,.8);
-      --plate-filter: saturate(1.05) brightness(1.08) contrast(1.04);
+      filter: saturate(1.2) contrast(1.1);
     }
 
     .variantBadge{
@@ -609,9 +594,9 @@
     /* Luvvies auf der Karte größer */
     .tile img{
       position:absolute;
-      inset: 10%;
-      width:80%;
-      height:80%;
+      inset: 6%;
+      width:88%;
+      height:88%;
       object-fit:contain;
       filter: drop-shadow(0 10px 12px rgba(0,0,0,.10));
       user-select:none;
@@ -619,9 +604,9 @@
       pointer-events:none;
     }
     .tile.bigMellow img{
-      inset: 9%;
-      width:82%;
-      height:82%;
+      inset: 8%;
+      width:84%;
+      height:84%;
     }
 
     /* Question mark powerup visual */
@@ -631,19 +616,15 @@
 
     /* Animierter Power Background (für Powerups + ??? + Lovelie) */
     .powerAnim .plate{
-      background-image: url('Images/Button/PowerUpButton.png') !important;
+      background-image: url('Images/button/PowerUpButton.png') !important;
       background-color: transparent !important;
       background-blend-mode: normal !important;
-      background-size: cover !important;
-      background-position: center !important;
-      background-repeat: no-repeat !important;
       box-shadow: 0 0 22px rgba(255,79,185,.45), 0 0 32px rgba(122,216,255,.35);
       animation: powerPulse 1.8s ease-in-out infinite;
     }
     /* Mystery Tile specific */
     .tile[data-base="myst"] .plate {
-       background-image: url('Images/Button/Powerup.png') !important;
-       background-size: cover !important;
+       /* Mystery icon is the sprite (Powerup.png). Background is handled by .powerAnim (PowerUpButton). */
     }
     @keyframes powerPulse{
       0%{ transform: scale(1); filter:saturate(1); }
@@ -688,13 +669,16 @@
       100%{ transform: translateY(0) scale(1); }
     }
 
-    /* Landing bounce */
-    .land .plate{ animation: landPlate 560ms cubic-bezier(.2,.9,.2,1) both; }
+    /* Landing bounce - Jelly Style */
+    .land .plate{ animation: landPlate 600ms linear both; }
     @keyframes landPlate{
-      0%{ transform: translateY(0) scale(1); }
-      28%{ transform: translateY(4px) scale(1.06, .98); }
-      58%{ transform: translateY(-4px) scale(.99,1.04); }
-      100%{ transform: translateY(0) scale(1); }
+      0% { transform: scale(1, 1) translateY(0); }
+      30% { transform: scale(1.25, 0.75) translateY(10px); }
+      40% { transform: scale(0.75, 1.25) translateY(-5px); }
+      50% { transform: scale(1.15, 0.85) translateY(4px); }
+      65% { transform: scale(0.95, 1.05) translateY(-2px); }
+      75% { transform: scale(1.05, 0.95) translateY(1px); }
+      100% { transform: scale(1, 1) translateY(0); }
     }
 
     /* Spawn glow */
@@ -1032,28 +1016,53 @@
     }
 
     /* Combo GIF Overlay */
-    .comboFx {
-      position: absolute;
-      width: 160px; height: 160px;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-      z-index: 999;
-      background: url('Images/Animation/Animation-combo.gif') center/contain no-repeat;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .comboScore {
-      font-size: clamp(18px, 3.6vw, 28px);
-      font-weight: 900;
-      color: #9d4edd;
-      text-shadow: 0 0 10px #e0aaff, 2px 2px 0px #fff;
-      animation: popScore 0.8s ease-out forwards;
-      margin-top: -10px; /* Center it nicely over the burst */
-      max-width: 120px;
-      text-align:center;
-      line-height: 1.05;
-    }
+    
+.comboFx{
+  position:absolute;
+  transform:translate(-50%,-50%) scale(.6);
+  opacity:0;
+  pointer-events:none;
+  background:center/contain no-repeat;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:999;
+  filter:drop-shadow(0 10px 18px rgba(0,0,0,.25));
+}
+    .deathFx{
+  position:absolute;
+  transform:translate(-50%,-50%) scale(.65);
+  opacity:0;
+  pointer-events:none;
+  background:center/contain no-repeat;
+  z-index:999;
+  filter:drop-shadow(0 12px 22px rgba(0,0,0,.28));
+}
+.comboFx.fxOn, .deathFx.fxOn{
+  opacity:1;
+  animation: fxPop 0.92s ease-out forwards;
+}
+@keyframes fxPop{
+  0%{ transform:translate(-50%,-50%) scale(.55); opacity:0; }
+  18%{ opacity:1; }
+  42%{ transform:translate(-50%,-50%) scale(1.0); }
+  100%{ transform:translate(-50%,-50%) scale(.75); opacity:0; }
+}
+
+.comboScore{
+  max-width: 92%;
+  position:absolute;
+  left: 50%;
+  top: 10%;
+  transform: translate(-50%,-120%);
+  font-weight: 900;
+  font-size: clamp(14px, 4.4vw, 26px);
+  color: #c46bff;
+  text-shadow: 0 2px 0 rgba(0,0,0,.25), 0 0 18px rgba(170,90,255,.35);
+  letter-spacing: .02em;
+  white-space: nowrap;
+  pointer-events:none;
+}
     @keyframes popScore {
       0% { transform: scale(0.5); opacity: 0; }
       50% { transform: scale(1.2); opacity: 1; }
@@ -1096,18 +1105,6 @@
       0%{opacity:0; transform:translate(-50%,-50%) scale(.35)}
       15%{opacity:1}
       100%{opacity:0; transform:translate(-50%,-50%) scale(4.2)}
-    }
-
-    /* Boss/Mellowlord death animation overlay */
-    .deathFx{
-      position:absolute;
-      width: 160px;
-      height: 160px;
-      transform: translate(-50%, -50%);
-      pointer-events:none;
-      background: url('Images/Animation/Deathanimation.gif') center/contain no-repeat;
-      mix-blend-mode: screen;
-      z-index: 999;
     }
 
     /* Fullscreen */
@@ -1691,40 +1688,308 @@
       const nl=Math.min(1, hsl.l*0.9 + 0.08);
       return hslToHex(nh, ns, nl);
     }
-    function pastelizeHex(hex, alpha=0.48){
-      const rgb = hexToRgb(hex);
-      if(!rgb) return `rgba(255,255,255,${alpha})`;
-      const lift = (v)=>Math.round(v + (255 - v)*0.28);
-      return `rgba(${lift(rgb.r)}, ${lift(rgb.g)}, ${lift(rgb.b)}, ${alpha})`;
-    }
-    function pastelPair(pal){
-      if(!pal || pal.length<2) return ["rgba(255,255,255,.5)","rgba(255,255,255,.4)"];
-      return [pastelizeHex(pal[0], 0.55), pastelizeHex(pal[1], 0.55)];
-    }
-    function stableIndex(str, mod){
-      if(!mod) return 0;
-      let h=0;
-      for(let i=0;i<(str||"").length;i++){
-        h = (h*31 + (str.charCodeAt(i)||0)) | 0;
-      }
-      return Math.abs(h) % mod;
-    }
 
     function paletteForTile(tile){
-      const { baseKey, variant } = parseTypeId(tile?.type || "");
-      const base = getBase(baseKey);
-      if(base?.palettes){
-        const pal = base.palettes[variant] || base.palettes.A || Object.values(base.palettes)[0];
-        if(pal && pal.length>=2){
-          const c1 = complementHex(pal[0]);
-          const c2 = complementHex(pal[1]);
-          if(c1 && c2) return [c1, c2];
-        }
-      }
-      if(SPECIAL_PALS[baseKey]) return SPECIAL_PALS[baseKey];
-      const v = (variant || "A") === "B" ? "B" : "A";
-      return NEUTRAL_PALS[v];
+
+const { baseKey, variant } = parseTypeId(tile?.type || "");
+// Fixed palettes for special tiles
+if(SPECIAL_PALS[baseKey]) return SPECIAL_PALS[baseKey];
+
+// Computed per-character contrasting pastel palette (built once after preload).
+const cached = TINT_CACHE.get(baseKey);
+if(cached) return cached;
+
+// Fallback (until tints are computed)
+const v = (variant || "A") === "B" ? "B" : "A";
+return NEUTRAL_PALS[v];
+}
+
+/**********************
+ * Asset preloading + dominant color analysis (for contrasting pastel tile tints)
+ **********************/
+const FX = { combo:null, comboScore:null, comboTO:null, death:null, deathTO:null };
+function ensureFxLayer(){
+  // Create FX elements once (no DOM spam)
+  if(FX.combo && FX.death) return;
+
+  const combo = document.createElement("div");
+  combo.className = "comboFx";
+  const score = document.createElement("div");
+  score.className = "comboScore";
+  combo.appendChild(score);
+
+  const death = document.createElement("div");
+  death.className = "deathFx";
+
+  ui.fx.appendChild(combo);
+  ui.fx.appendChild(death);
+
+  FX.combo = combo;
+  FX.comboScore = score;
+  FX.death = death;
+}
+
+const IMG_CACHE = new Map(); // src -> Promise<HTMLImageElement|null>
+function loadImage(src){
+  if(!src) return Promise.resolve(null);
+  if(IMG_CACHE.has(src)) return IMG_CACHE.get(src);
+  const img = new Image();
+  img.decoding = "async";
+  img.loading = "eager";
+  const p = new Promise((resolve)=>{
+    img.onload = async ()=>{
+      try{ if(img.decode) await img.decode(); }catch(e){}
+      resolve(img);
+    };
+    img.onerror = ()=>resolve(null);
+  });
+  img.src = src;
+  IMG_CACHE.set(src, p);
+  return p;
+}
+
+function rgbToHsl(r,g,b){
+  r/=255; g/=255; b/=255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b);
+  let h=0,s=0,l=(max+min)/2;
+  const d=max-min;
+  if(d!==0){
+    s = d / (1 - Math.abs(2*l - 1));
+    switch(max){
+      case r: h = ((g-b)/d) % 6; break;
+      case g: h = (b-r)/d + 2; break;
+      case b: h = (r-g)/d + 4; break;
     }
+    h *= 60; if(h<0) h += 360;
+  }
+  return {h, s:s*100, l:l*100};
+}
+function hslToRgb(h,s,l){
+  s/=100; l/=100;
+  const c=(1-Math.abs(2*l-1))*s;
+  const x=c*(1-Math.abs((h/60)%2-1));
+  const m=l-c/2;
+  let r=0,g=0,b=0;
+  if(h<60){ r=c; g=x; b=0;}
+  else if(h<120){ r=x; g=c; b=0;}
+  else if(h<180){ r=0; g=c; b=x;}
+  else if(h<240){ r=0; g=x; b=c;}
+  else if(h<300){ r=x; g=0; b=c;}
+  else { r=c; g=0; b=x;}
+  return {r:Math.round((r+m)*255), g:Math.round((g+m)*255), b:Math.round((b+m)*255)};
+}
+function rgbToHex({r,g,b}){
+  const to=(n)=>n.toString(16).padStart(2,"0");
+  return `#${to(r)}${to(g)}${to(b)}`;
+}
+function relLum({r,g,b}){
+  const sr=[r,g,b].map(v=>v/255).map(v=>v<=0.03928? v/12.92 : Math.pow((v+0.055)/1.055, 2.4));
+  return 0.2126*sr[0] + 0.7152*sr[1] + 0.0722*sr[2];
+}
+function contrastRatio(rgb1, rgb2){
+  const L1=relLum(rgb1), L2=relLum(rgb2);
+  const hi=Math.max(L1,L2), lo=Math.min(L1,L2);
+  return (hi+0.05)/(lo+0.05);
+}
+function hueDist(a,b){
+  const d=Math.abs(a-b)%360;
+  return Math.min(d, 360-d);
+}
+
+async function dominantRgbFromImage(img){
+  try{
+    const canvas = document.createElement("canvas");
+    const w = 32, h = 32;
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext("2d", {willReadFrequently:true});
+    ctx.clearRect(0,0,w,h);
+    ctx.drawImage(img, 0,0,w,h);
+    const {data} = ctx.getImageData(0,0,w,h);
+
+    let rs=0, gs=0, bs=0, cnt=0;
+    for(let i=0;i<data.length;i+=4){
+      const a = data[i+3];
+      if(a < 60) continue;
+
+      const r=data[i], g=data[i+1], b=data[i+2];
+
+      // Ignore near-white background pixels & near-black outlines
+      const lum = (0.2126*r + 0.7152*g + 0.0722*b)/255;
+      if(lum > 0.97 || lum < 0.05) continue;
+
+      rs += r; gs += g; bs += b; cnt++;
+    }
+    if(cnt < 20){
+      // fallback: average everything opaque
+      rs=0; gs=0; bs=0; cnt=0;
+      for(let i=0;i<data.length;i+=4){
+        const a=data[i+3];
+        if(a<60) continue;
+        rs+=data[i]; gs+=data[i+1]; bs+=data[i+2]; cnt++;
+      }
+    }
+    if(cnt===0) return {r:180,g:180,b:180};
+    return {r:Math.round(rs/cnt), g:Math.round(gs/cnt), b:Math.round(bs/cnt)};
+  }catch(e){
+    return {r:180,g:180,b:180};
+  }
+}
+
+const TINT_CACHE = new Map(); // baseKey -> [p1,p2]
+const PASTEL_POOL = [
+  // curated pastel palette (varied hues)
+  {h:  5, s: 48, l: 78},
+  {h: 28, s: 50, l: 80},
+  {h: 55, s: 46, l: 80},
+  {h: 85, s: 42, l: 78},
+  {h:130, s: 40, l: 78},
+  {h:165, s: 38, l: 76},
+  {h:200, s: 44, l: 78},
+  {h:225, s: 46, l: 78},
+  {h:255, s: 50, l: 78},
+  {h:285, s: 48, l: 78},
+  {h:315, s: 46, l: 78},
+  {h:340, s: 44, l: 78}
+];
+
+function pastelForSprite(spriteRgb){
+  const spriteHsl = rgbToHsl(spriteRgb.r, spriteRgb.g, spriteRgb.b);
+  const spriteLum = relLum(spriteRgb);
+
+  // Target lightness: opposite-ish to sprite brightness while staying pastel
+  const targetL = spriteLum > 0.65 ? 58 : (spriteLum < 0.35 ? 82 : 74);
+
+  // Candidate 1: complement hue
+  const complement = { h:(spriteHsl.h + 180) % 360, s:46, l:targetL };
+
+  const candidates = [complement, ...PASTEL_POOL.map(p=>({h:p.h, s:p.s, l:targetL}))];
+
+  let best = candidates[0];
+  let bestScore = -1;
+
+  for(const cand of candidates){
+    const rgb = hslToRgb(cand.h, cand.s, cand.l);
+    const cr = contrastRatio(spriteRgb, rgb);
+    const hd = hueDist(spriteHsl.h, cand.h);
+    const ld = Math.abs(targetL - spriteHsl.l);
+
+    // Avoid "same hue"
+    const penalty = hd < 28 ? 0.6 : 0;
+    const score = (cr * 2.2) + (hd/180) + (ld/100) - penalty;
+    if(score > bestScore){
+      bestScore = score;
+      best = cand;
+    }
+  }
+
+  // Create 2-tone jelly palette (base + highlight)
+  const p1 = hslToRgb(best.h, Math.min(55, best.s), best.l);
+  const p2 = hslToRgb(best.h, Math.min(52, best.s*0.95), Math.min(92, best.l + 8));
+  return [rgbToHex(p1), rgbToHex(p2)];
+}
+
+async function buildTintCache(){
+  const keys = Array.from(new Set(BASES.map(b=>b.key)));
+  for(const k of keys){
+    const b = getBase(k);
+    const src = b?.img;
+    if(!src) continue;
+    const img = await loadImage(src);
+    if(!img) continue;
+    const dom = await dominantRgbFromImage(img);
+    const pal = pastelForSprite(dom);
+    TINT_CACHE.set(k, pal);
+  }
+}
+
+function bgImgForTile(tile){
+  const {variant} = parseTypeId(tile?.type || "");
+  const arr = (variant === "B") ? IMG.variantsB : IMG.variantsA;
+  const idx = (tile?.bgIdx ?? 0) % (arr.length || 1);
+  return arr[idx] || "";
+}
+
+function applyTileBg(el, tile){
+  const bg = bgImgForTile(tile);
+  if(bg) el.style.setProperty("--bg-img", `url('${bg}')`);
+}
+
+function getLuvvieSprite(baseKey, tile){
+  const base = getBase(baseKey);
+  const spec = getSpecial(baseKey);
+  const meta = base || spec;
+
+  if(baseKey==="myst") return IMG.mystBtn;
+  if(baseKey==="mellowlord") return IMG.mellowlord;
+
+  if(baseKey==="worm") return IMG.sourwurm[tile?.wormIdx||0] || IMG.sourwurm[0] || IMG.worm;
+  if(baseKey==="mellowzilla") return IMG.mellowzilla[tile?.animFrame||0] || IMG.mellowzilla[0] || (meta?.img||"");
+  if(baseKey==="koalazilla") return IMG.koalazilla[tile?.animFrame||0] || IMG.koalazilla[0] || IMG.koala;
+
+  return meta?.img || "";
+}
+
+// Zilla frame advance: swap frame each player move; every 4th is attack
+let zillaMoveCounter = 0;
+function advanceZillaFrames(){
+
+zillaMoveCounter++;
+const frame = (zillaMoveCounter - 1) % 4; // 0..3 (3 = attack)
+
+// Zilla bosses are rendered as a single big tile element positioned over the grid.
+const z = bossFight?.zillaTile;
+if(z){
+  z.animFrame = frame;
+  refreshTileEl(z);
+}
+}
+
+async function preloadGameAssets(){
+// Resolve tile variant filenames (some repos use a1..a4 / b1..b4 instead of Variant-A1..)
+async function resolveTileVariants(){
+  const A = [];
+  const B = [];
+  for(let i=1;i<=4;i++){
+    const aPrimary = `Images/button/a${i}.png`;
+    const aAlt1    = `Images/button/Variant-A${i}.png`;
+    const aAlt2    = `Images/button/variant-A${i}.png`;
+    const bPrimary = `Images/button/b${i}.png`;
+    const bAlt1    = `Images/button/Variant-B${i}.png`;
+    const bAlt2    = `Images/button/variant-B${i}.png`;
+
+    const a = (await loadImage(aPrimary)) ? aPrimary :
+              (await loadImage(aAlt1))    ? aAlt1    :
+              (await loadImage(aAlt2))    ? aAlt2    : aAlt1;
+    const b = (await loadImage(bPrimary)) ? bPrimary :
+              (await loadImage(bAlt1))    ? bAlt1    :
+              (await loadImage(bAlt2))    ? bAlt2    : bAlt1;
+
+    A.push(a);
+    B.push(b);
+  }
+  IMG.variantsA = A;
+  IMG.variantsB = B;
+}
+
+await resolveTileVariants();
+  // Preload tile backgrounds + FX gifs
+  const tileBgs = [...(IMG.variantsA||[]), ...(IMG.variantsB||[])].filter(Boolean);
+  const fxGifs = [IMG.comboGif, IMG.deathGif].filter(Boolean);
+
+  // Preload all Luvvies + important specials/bosses
+  const luvs = BASES.map(b=>b.img).filter(Boolean);
+  const specials = [
+    IMG.mystBtn,
+    IMG.powerBtn,
+    IMG.mellowlord,
+    ...(IMG.sourwurm||[]),
+    ...(IMG.mellowzilla||[]),
+    ...(IMG.koalazilla||[]),
+  ].filter(Boolean);
+
+  const all = Array.from(new Set([...tileBgs, ...fxGifs, ...luvs, ...specials]));
+  await Promise.all(all.map(src=>loadImage(src)));
+}
 /**********************
      * DOM safety: remove orphan tile elements (prevents rare "static tiles" you can't drag)
      **********************/
@@ -1811,8 +2076,11 @@
       cry:      "Images/Luvvies/Cry.png",
       koala:    "Images/Luvvies/KOALA.png",
       citrussy: "Images/Luvvies/CItrussie.png",
-      worm:     "Images/Luvvies/SourWurm-1.png", // Default
-      sourwurm: ["Images/Luvvies/SourWurm-1.png", "Images/Luvvies/Sourwurm-2.png", "Images/Luvvies/Sourwurm-3.png"],
+      
+      // Random Worms
+      worm: "Images/Luvvies/Sourwurm-1.png", // Fallback
+      sourwurm: ["Images/Luvvies/Sourwurm-1.png","Images/Luvvies/Sourwurm-2.png","Images/Luvvies/Sourwurm-3.png"],
+      
       grumpy:   "Images/Luvvies/Grumpycookie.png",
       happy:    "Images/Luvvies/HappyCookie.png",
       mond:     "Images/Luvvies/Mondlie.png",
@@ -1823,21 +2091,27 @@
       lovelie:  "Images/Luvvies/lovvelie.png",
       simba:    "Images/Luvvies/Simba.png",
       mellowlord: "Images/Luvvies/MellowLord.png",
-      mellowzilla: ["Images/Luvvies/Mellowzilla-1.png", "Images/Luvvies/MellowZilla-2.png", "Images/Luvvies/Mellowzilla-3.png", "Images/Luvvies/Mellowzilla-4.png"],
+      
+      // Boss Animations (Frame 1-4)
+      mellowzilla: ["Images/Luvvies/Mellowzilla-1.png", "Images/Luvvies/Mellowzilla-2.png", "Images/Luvvies/Mellowzilla-3.png", "Images/Luvvies/Mellowzilla-4.png"],
       koalazilla:  ["Images/Luvvies/KoalaZilla-1.png", "Images/Luvvies/KoalaZilla-2.png", "Images/Luvvies/KoalaZilla-3.png", "Images/Luvvies/KoalaZilla-4.png"],
+      
       fledernuss: "Images/Luvvies/FlederNuss.png",
       flederheld: "Images/Luvvies/FlederHeld.png",
       supernuss: "Images/Luvvies/SuperNuss.png",
+      giraffie: "Images/Luvvies/Giraffie.png",
       
-      // Variants & Buttons
-      variantsA: ["Images/Button/Variant-A1.png", "Images/Button/Variant-A2.png", "Images/Button/Variant-A3.png", "Images/Button/Variant-A4.png"],
-      variantsB: ["Images/Button/variant-B1.png", "Images/Button/variant-B2.png", "Images/Button/variant-B3.png", "Images/Button/variant-B4.png"],
-      powerBtn: "Images/Button/PowerUpButton.png",
-      mystBtn: "Images/Button/Powerup.png",
+      // Jelly Buttons (Variants)
+      variantsA: ["Images/button/Variant-A1.png","Images/button/Variant-A2.png","Images/button/Variant-A3.png","Images/button/Variant-A4.png"],
+      variantsB: ["Images/button/variant-B1.png", "Images/button/variant-B2.png", "Images/button/variant-B3.png", "Images/button/variant-B4.png"],
+      
+      // Special Buttons
+      powerBtn: "Images/button/PowerUpButton.png",
+      mystBtn: "Images/button/Powerup.png", // Use as the tile itself for Mystery
       
       // Animations
-      comboGif: "Images/Animation/Animation-combo.gif",
-      deathGif: "Images/Animation/Deathanimation.gif"
+      comboGif: "Images/animation/Animation-combo.gif",
+      deathGif: "Images/animation/Deathanimation.gif"
     };
     document.getElementById("greetLogo").src = IMG.logo;
     const ml = document.getElementById("mainLogo");
@@ -2124,54 +2398,6 @@
       const p = parseTypeId(tile?.type);
       return `${p.baseKey}:${p.variant||"A"}`;
     };
-    function textureForTile(tile){
-      const set = (parseTypeId(tile?.type||"").variant === "B") ? IMG.variantsB : IMG.variantsA;
-      if(!set || !set.length) return "Images/Button/Variant-A1.png";
-      return set[stableIndex(tile?.id || JSON.stringify(tile||{}), set.length)] || set[0];
-    }
-    function ensureSkinFrame(tile){
-      const bk = parseTypeId(tile?.type||"").baseKey;
-      if(bk==="worm"){
-        if(typeof tile.skinFrame !== "number"){
-          const len = (IMG.sourwurm?.length) || 1;
-          tile.skinFrame = Math.floor(Math.random()*len);
-        }
-      } else if((bk==="mellowzilla" || bk==="koalazilla") && typeof tile.skinFrame !== "number"){
-        tile.skinFrame = 0;
-      }
-    }
-    function resolveTileImgSrc(baseKey, tile, meta){
-      ensureSkinFrame(tile);
-      if(baseKey==="mellowlord") return IMG.mellowlord;
-      if(baseKey==="mellowzilla"){
-        const frames = IMG.mellowzilla || [];
-        if(frames.length) return frames[Math.abs(tile.skinFrame||0) % frames.length];
-      }
-      if(baseKey==="koalazilla"){
-        const frames = IMG.koalazilla || [];
-        if(frames.length) return frames[Math.abs(tile.skinFrame||0) % frames.length];
-      }
-      if(baseKey==="worm"){
-        const frames = IMG.sourwurm || [];
-        if(frames.length) return frames[Math.abs(tile.skinFrame||0) % frames.length];
-        return IMG.worm;
-      }
-      return meta?.img || "";
-    }
-    function applyPlateVisuals(el, tile){
-      const pal = paletteForTile(tile);
-      el.style.setProperty("--p1", pal[0]);
-      el.style.setProperty("--p2", pal[1]);
-      const [t1,t2] = pastelPair(pal);
-      const plate = el.querySelector(".plate");
-      if(plate){
-        plate.style.setProperty("--t1", t1);
-        plate.style.setProperty("--t2", t2);
-        plate.style.setProperty("--bg-img", `url('${textureForTile(tile)}')`);
-        const variant = parseTypeId(tile?.type||"").variant;
-        plate.style.setProperty("--plate-filter", variant==="B" ? "saturate(1.05) brightness(1.08) contrast(1.04)" : "saturate(.9) brightness(1.05) contrast(1.02)");
-      }
-    }
 
     /**********************
      * Combo unlock tracking (simple cookie-based log)
@@ -2323,30 +2549,62 @@
         makeStar(x + Math.cos(ang)*dist, y + Math.sin(ang)*dist, Math.random()<0.4);
       }
     }
-    function deathFx(x,y, scale=1){
-      const d = document.createElement("div");
-      d.className = "deathFx";
-      d.style.left = x+"px";
-      d.style.top = y+"px";
-      d.style.width = (160*scale)+"px";
-      d.style.height = (160*scale)+"px";
-      d.style.backgroundImage = `url('${IMG.deathGif}')`;
-      ui.fx.appendChild(d);
-      setTimeout(()=>d.remove(), 1000);
-    }
-    function showComboFx(x,y, scoreVal){
-      const fx = document.createElement("div");
-      fx.className = "comboFx";
-      fx.style.left = x+"px";
-      fx.style.top = y+"px";
-      fx.style.backgroundImage = `url('${IMG.comboGif}')`;
-      const label = document.createElement("div");
-      label.className = "comboScore";
-      label.textContent = "+" + fmt(Math.round(scoreVal||0));
-      fx.appendChild(label);
-      ui.fx.appendChild(fx);
-      setTimeout(()=>fx.remove(), 950);
-    }
+
+    function showComboAnim(score, r, c){
+
+ensureFxLayer();
+
+const fx = FX.combo;
+const scoreEl = FX.comboScore;
+
+// Restart GIF by cache-busting
+const gifUrl = IMG.comboGif + "?t=" + Date.now();
+fx.style.backgroundImage = `url('${gifUrl}')`;
+
+// Size: keep readable but never silly big
+const size = Math.max(72, Math.min(200, Math.round(CELL * 1.75)));
+fx.style.width = size + "px";
+fx.style.height = size + "px";
+
+const {x,y} = tileCenter(r,c);
+fx.style.left = x + "px";
+fx.style.top  = y + "px";
+
+scoreEl.textContent = `+${score}`;
+
+// Animate (reuse element, no DOM spam)
+fx.classList.remove("fxOn");
+void fx.offsetWidth;
+fx.classList.add("fxOn");
+
+clearTimeout(FX.comboTO);
+FX.comboTO = setTimeout(()=>fx.classList.remove("fxOn"), 920);
+}
+
+    function showDeathAnim(r, c){
+
+ensureFxLayer();
+
+const fx = FX.death;
+
+const gifUrl = IMG.deathGif + "?t=" + Date.now();
+fx.style.backgroundImage = `url('${gifUrl}')`;
+
+const size = Math.max(96, Math.min(260, Math.round(CELL * 2.05)));
+fx.style.width = size + "px";
+fx.style.height = size + "px";
+
+const {x,y} = tileCenter(r,c);
+fx.style.left = x + "px";
+fx.style.top  = y + "px";
+
+fx.classList.remove("fxOn");
+void fx.offsetWidth;
+fx.classList.add("fxOn");
+
+clearTimeout(FX.deathTO);
+FX.deathTO = setTimeout(()=>fx.classList.remove("fxOn"), 1150);
+}
 
     /**********************
      * Responsive sizing
@@ -2414,7 +2672,7 @@
           ui.fsBg.style.height = h+"px";
         }
       }catch(e){}
-      for(const [id, el] of tileEls){
+for(const [id, el] of tileEls){
         const tile = findTileById(id);
         if(!tile) continue;
         setTileXY(el, tile.r, tile.c);
@@ -2471,11 +2729,19 @@
       const spec = getSpecial(baseKey);
       const meta = base || spec;
 
+      // palettes (neutral): Background is NOT tied to the character (less confusion, more readable)
+      const pal = paletteForTile(tile);
+      el.style.setProperty("--p1", pal[0]);
+      el.style.setProperty("--p2", pal[1]);
+
+      // Board tile background (A1-A4 / B1-B4)
+      applyTileBg(el, tile);
+
       const plate = document.createElement("div");
       plate.className="plate";
 
-      // Powerups + ??? + Lovelie: animated background
-      if(isPowerupKey(baseKey) || baseKey==="lovelie" || baseKey==="myst" || baseKey==="cit" || baseKey==="worm" || baseKey==="koala" || baseKey==="mellowzilla" || baseKey==="koalazilla"){
+      // Powerups + ??? + Lovelie: animated background (PowerUpButton)
+      if(isPowerupKey(baseKey) || baseKey==="lovelie" || baseKey==="myst"){
         el.classList.add("powerAnim");
       }
 
@@ -2484,33 +2750,34 @@
         el.classList.add("bigMellow");
       }
 
-      if(baseKey !== "myst"){
-        const img = document.createElement("img");
+      if(baseKey === "myst"){
+  const img = document.createElement("img");
+  img.src = getLuvvieSprite("myst", tile);
+  img.alt = "???";
+  plate.appendChild(img);
+}else{
+  const img = document.createElement("img");
 
-        // Resolve image source (bases, specials, bosses)
-        const src = resolveTileImgSrc(baseKey, tile, meta);
+  // Resolve image source (bases, specials, bosses)
+  const src = getLuvvieSprite(baseKey, tile);
 
-        img.src = src;
-        img.alt = meta?.name || baseKey;
+  img.src = src;
+  img.alt = meta?.name || baseKey;
 
-        // Fallbacks (avoid broken icons)
-        img.addEventListener("error", ()=>{
-          if(baseKey==="koalazilla" && img.src !== IMG.koala) img.src = IMG.koala;
-        }, {once:true});
+  // Variant badge is below; add image first
+  plate.appendChild(img);
+}
 
-        plate.appendChild(img);
-
-        // Variant badge so A/B are clearly visible (prevents "combo feels broken")
-        if(base && variant==="B"){
-          const vb = document.createElement("div");
-          vb.className = "variantBadge";
-          vb.textContent = "B";
-          plate.appendChild(vb);
-        }
-      }
+  // Variant badge so A/B are clearly visible (prevents "combo feels broken")
+  if(base && variant==="B"){
+    const vb = document.createElement("div");
+    vb.className = "variantBadge";
+    vb.textContent = "B";
+    plate.appendChild(vb);
+  }
+}
 
       el.appendChild(plate);
-      applyPlateVisuals(el, tile);
       if(tile.big && (baseKey==="mellowlord" || baseKey==="mellowzilla" || baseKey==="koalazilla")){
         const hp = document.createElement("div");
         hp.className="hp";
@@ -2557,30 +2824,21 @@ function refreshTileEl(tile){
   const meta = base || spec;
 
   // palettes (character/complement based)
-  applyPlateVisuals(el, tile);
+  const pal = paletteForTile(tile);
+  el.style.setProperty("--p1", pal[0]);
+  el.style.setProperty("--p2", pal[1]);
+
+  // Board tile background (A1-A4 / B1-B4)
+  applyTileBg(el, tile);
 
   // image
   const plate = el.querySelector(".plate");
-  let img = plate ? plate.querySelector("img") : null;
-  if(baseKey==="myst"){
-    if(img) img.remove();
-  } else {
-    let created = false;
-    if(!img && plate){
-      img = document.createElement("img");
-      plate.insertBefore(img, plate.firstChild);
-      created = true;
-    }
-    if(img){
-      const src = resolveTileImgSrc(baseKey, tile, meta);
-      img.src = src;
-      img.alt = meta?.name || baseKey;
-      if(created){
-        img.addEventListener("error", ()=>{
-          if(baseKey==="koalazilla" && img.src !== IMG.koala) img.src = IMG.koala;
-        }, {once:true});
-      }
-    }
+  const img = el.querySelector("img");
+  if(img){
+    const src = getLuvvieSprite(baseKey, tile);
+
+    img.src = src;
+    img.alt = meta?.name || baseKey;
   }
 
   // variant badge
@@ -2669,25 +2927,20 @@ function updateMellowHp(tile){
       return typeId(pick.key, v);
     }
 
-    function initialSkinFrame(type){
-      const bk = parseTypeId(type||"").baseKey;
-      if(bk==="worm"){
-        const len = (IMG.sourwurm?.length) || 1;
-        return Math.floor(Math.random()*len);
-      }
-      if(bk==="mellowzilla" || bk==="koalazilla") return 0;
-      return 0;
-    }
-
     function makeId(){
       return (crypto?.randomUUID?.() || (Math.random().toString(16).slice(2)+Date.now().toString(16)));
     }
 
     function makeTile(r,c,type){
       const id = makeId();
-      const tile = { id, r, c, type, hp:0, big:false, skinFrame: initialSkinFrame(type) };
-      return tile;
-    }
+      const t = { id, r, c, type, hp:0, big:false, animFrame:0 };
+      // Visual-only background variation (A1-A4 / B1-B4)
+      t.bgIdx = Math.floor(Math.random()*4);
+      const {baseKey} = parseTypeId(type);
+      if(baseKey === "worm") t.wormIdx = Math.floor(Math.random()*3);
+      return t;
+    
+}
 
     function wouldCreateMatch(r,c,type){
       const k = parseTypeId(type).baseKey;
@@ -3217,12 +3470,17 @@ function updateMellowHp(tile){
     }
 
     function spendMoves(n){
-      moves = Math.max(0, moves - n);
-      combo = 0; // Reset combo on each paid/consumed move
-      if(moves===0){
-        setTimeout(()=>gameOver(), 350);
-      }
-    }
+
+moves = Math.max(0, moves - n);
+combo = 0; // Reset combo on each paid/consumed move
+
+// Boss (Zilla) animation: swap sprite per player move, attack on every 4th
+try{ advanceZillaFrames(); }catch(e){}
+
+if(moves===0){
+  setTimeout(()=>gameOver(), 350);
+}
+}
 
     function quadMatchKind(t1,t2,t3,t4){
       if(!t1||!t2||!t3||!t4) return null;
@@ -3923,8 +4181,22 @@ function updateMellowHp(tile){
         const zilla = findMellowZilla();
         if(zilla){
           zilla.turn = (zilla.turn || 0) + 1;
-          const phase = zilla.turn % 4;
-          updateZillaFrame(zilla, phase);
+          const phase = zilla.turn % 4; // 1,2,3,0
+          
+          // Update visual frame (0,1,2,3 where 3 is attack)
+          // phase 1-> frame 0
+          // phase 2-> frame 1
+          // phase 3-> frame 2
+          // phase 0-> frame 3 (Attack)
+          
+          let frame = 0;
+          if(phase === 2) frame = 1;
+          if(phase === 3) frame = 2;
+          if(phase === 0) frame = 3;
+          
+          zilla.animFrame = frame;
+          refreshTileEl(zilla);
+
           const zName = (zilla.type==="koalazilla") ? "KoalaZilla" : "MellowZilla";
           const chooseTarget = ()=>{
             const baseR = lastPlayerMove ? lastPlayerMove.r : Math.floor(Math.random()*(rows-1));
@@ -3933,28 +4205,22 @@ function updateMellowHp(tile){
             const cc = clamp(baseC-1, 0, cols-3);
             return {r: rr, c: cc};
           };
-          // Cycle 4:
-          // 1: Idle
-          // 2: Warn Red (1st turn)
-          // 3: Warn Red (2nd turn)
-          // 0: Attack
 
-          if(phase === 2 || phase === 3){ // Warn (Red)
+          if(phase === 2 || phase === 3){ // Warn
              const el = tileEls.get(zilla.id);
              if(el){
-               el.style.border = "5px solid #ff0000";
-               el.style.boxShadow = "0 0 20px red";
-               toast(`${zName} wütend!`, "Attacke in "+(phase===2?"2 Zügen":"1 Zug")+"!", 2000);
+               el.style.boxShadow = "0 0 20px red"; // Subtle red glow
              }
              if(!zillaPlanned) zillaPlanned = chooseTarget();
              if(phase===3 && zillaPlanned) showAttackPreview(zillaPlanned.r, zillaPlanned.c);
+             toast(`${zName} lädt auf...`, "Attacke bald!", 1500);
           } else if(phase === 0 && zilla.turn > 0){ // Attack
-             toast(`${zName} Attacke!`, "3x3 Wipe! 💥", 2600);
+             toast(`${zName} ATTACKE!`, "3x3 Wipe! 💥", 2600);
              const target = zillaPlanned || chooseTarget();
              clearAttackPreview();
              zillaPlanned = null;
 
-             // Wipe targeted 3x3 (aims at last move)
+             // Wipe
              const rr = target.r;
              const cc = target.c;
              const cells = [];
@@ -3965,7 +4231,8 @@ function updateMellowHp(tile){
 
              // Reset visual
              const el = tileEls.get(zilla.id);
-             if(el){ el.style.border = "none"; el.style.boxShadow="none"; }
+             if(el) el.style.boxShadow="none";
+             
              zillaAttackCounter++;
              if(zillaAttackCounter % 3 === 0){
                dropDown();
@@ -3973,9 +4240,9 @@ function updateMellowHp(tile){
                ensureMovesOrShuffle();
              }
           } else {
-             // Idle
+             // Idle (phase 1)
              const el = tileEls.get(zilla.id);
-             if(el){ el.style.border = "none"; el.style.boxShadow="none"; }
+             if(el) el.style.boxShadow="none";
              clearAttackPreview();
              zillaPlanned = null;
           }
@@ -4158,6 +4425,14 @@ function updateMellowHp(tile){
         totalScore += Math.round(scoreAdd);
         levelScore += Math.round(scoreAdd);
 
+        if(combo > 1 && toClear.size > 0){
+           const firstKey = toClear.values().next().value;
+           if(firstKey){
+              const [cr, cc] = firstKey.split(",").map(Number);
+              showComboAnim(Math.round(scoreAdd), cr, cc);
+           }
+        }
+
         const clearedCells = [];
 
         for(const key of toClear){
@@ -4177,12 +4452,6 @@ function updateMellowHp(tile){
           }
           grid[r][c]=null;
           clearedCells.push({r,c});
-        }
-
-        if(toClear.size && combo>1){
-          const sample = clearedCells[0] || (()=>{ const [sr,sc]=(Array.from(toClear)[0]||"0,0").split(",").map(Number); return {r:sr, c:sc}; })();
-          const ctr = tileCenter(sample.r, sample.c);
-          showComboFx(ctr.x, ctr.y, scoreAdd);
         }
 
         damageMellowsAround(clearedCells);
@@ -4405,7 +4674,7 @@ function updateMellowHp(tile){
           });
           const bigId = makeId();
           // MellowLord uses special type
-          const bigTile = { id: bigId, r, c, type: "mellowlord:P", hp: bigHp, big:true, skinFrame:0 };
+          const bigTile = { id: bigId, r, c, type: "mellowlord:P", hp: bigHp, big:true };
           bigMellows.set(bigId, {id:bigId, r, c, hp:bigHp, type:"mellowlord"});
 
           grid[r][c] = bigTile;
@@ -4461,17 +4730,10 @@ function updateMellowHp(tile){
         }
       }
     }
-    function updateZillaFrame(zilla, phase){
-      const anchor = (grid[zilla.r]||[])[zilla.c];
-      if(!anchor || !anchor.id) return;
-      const idx = (phase===0) ? 3 : clamp(phase-1, 0, 3);
-      anchor.skinFrame = idx;
-      refreshTileEl(anchor);
-    }
 
     function placeZillaAt(centerR, centerC, zType="mellowzilla", hp=100, setBoss=true){
       const bigId = makeId();
-      const zilla = { id: bigId, r: centerR, c: centerC, type: `${zType}:P`, hp: hp, big:true, zilla:true, skinFrame:0, turn:0 };
+      const zilla = { id: bigId, r: centerR, c: centerC, type: `${zType}:P`, hp: hp, big:true, zilla:true };
 
       for(let r=centerR; r<centerR+3; r++){
         for(let c=centerC; c<centerC+3; c++){
@@ -4492,6 +4754,7 @@ function updateMellowHp(tile){
       bigMellows.set(bigId, {id:bigId, r:centerR, c:centerC, hp:hp, type:zType});
 
       const el = createTileEl(zilla, false);
+      bossFight.zillaTile = zilla;
       el.classList.add("spawnGlow");
       // Scale for 3x3
       el.style.width = `calc(var(--cell) * 3 + var(--gap) * 2)`;
@@ -4508,7 +4771,8 @@ function updateMellowHp(tile){
       }
       toast(zType==="mellowzilla" ? "MELLOW ZILLA!! 🦖" : "KOALA ZILLA!! 🐨🦖", "Boss Fight!", 4000);
       return zilla;
-    }
+    
+}
 
     function spawnMellowZilla(){
       if(level < 20) return;
@@ -4545,13 +4809,17 @@ function updateMellowHp(tile){
       if(anchor && anchor.id){
         const el = tileEls.get(anchor.id);
         if(el){
+          // Show Death Animation
+          if(big.type.includes("mellowzilla") || big.type.includes("koalazilla") || big.type.includes("mellowlord")){
+             showDeathAnim(big.r + (big.type.includes("zilla") ? 1.5 : 1), big.c + (big.type.includes("zilla") ? 1.5 : 1));
+          }
           el.classList.add("pop");
           setTimeout(()=>{ el.remove(); tileEls.delete(anchor.id); }, 420);
         }
       }
 
       // Boss Check for points
-      if(big.type === "mellowzilla" || big.type === "koalazilla"){
+      if(big.type.includes("mellowzilla") || big.type.includes("koalazilla")){
 
         // KOALA_BOSSFIGHT_CLEAR: Boss besiegt -> Timer stoppen
         try{ if(bossFight && bossFight.active){ bossFight.active=false; bossFight=null; } }catch(e){}
@@ -4569,10 +4837,6 @@ function updateMellowHp(tile){
       }
 
       const size = (big.type==="mellowzilla" || big.type==="koalazilla") ? 3 : 2;
-      const anchorCenter = tileCenter(big.r, big.c);
-      const offset = ((size-1) * (CELL+GAP)) / 2;
-      deathFx(anchorCenter.x + offset, anchorCenter.y + offset, size===3 ? 1.6 : 1.2);
-
       for(let rLoop=big.r; rLoop<big.r+size; rLoop++){
         for(let cLoop=big.c; cLoop<big.c+size; cLoop++){
           if(!inBounds(rLoop,cLoop)) continue;
@@ -5590,9 +5854,25 @@ clearHints();
       gameActivePool = BASES.filter(b => selected.has(b.key));
     }
 
-    resetUnlocked();
-    newGame(true);
-    showGreetingIfNeeded();
-  </script>
+(async ()=>{
+  resetUnlocked();
+  try{
+    await preloadGameAssets();
+    await buildTintCache();
+  }catch(e){}
+  newGame(true);
+
+  // Update existing tiles once tints are ready (if game spawned before)
+  try{
+    for(let r=0;r<rows;r++){
+      for(let c=0;c<cols;c++){
+        const t=grid[r][c];
+        if(t && tileEls.has(t.id)) refreshTileEl(t);
+      }
+    }
+  }catch(e){}
+  showGreetingIfNeeded();
+})();
+</script>
 </body>
 </html>
