@@ -225,18 +225,17 @@
       100%{ background-position:0% 50% }
     }
 
-    /* Jelly Button */
+    /* Jelly Button (Custom Image) */
     .Btn{
       position: relative;
-      height: 46px;
-      padding: 0 16px;
+      height: 48px;
+      padding: 0 20px;
       border-radius: 999px;
       border: none;
-      background-color: rgb(151, 95, 255);
+      background: url('Images/Button/candies.png') center/cover no-repeat;
       color: white;
-      box-shadow: 0px 10px 10px rgb(210, 187, 253) inset,
-                  0px 5px 10px rgba(5, 5, 5, 0.18),
-                  0px -10px 10px rgb(124, 54, 255) inset;
+      box-shadow: 0 8px 16px rgba(0,0,0,.16);
+      text-shadow: 0 2px 4px rgba(0,0,0,.25);
       cursor: pointer;
       display: inline-flex;
       align-items: center;
@@ -244,21 +243,11 @@
       gap:8px;
       font-weight:1000;
       letter-spacing:.1px;
-      transition: transform .12s ease;
+      transition: transform .12s ease, filter .12s ease;
       white-space:nowrap;
+      filter: saturate(1.1);
     }
-    .Btn::before{
-      width: 70%; height: 2px; position: absolute;
-      background-color: rgba(250, 250, 250, 0.678);
-      content: ""; filter: blur(1px);
-      top: 7px; border-radius: 50%; left: 15%;
-    }
-    .Btn::after{
-      width: 70%; height: 2px; position: absolute;
-      background-color: rgba(250, 250, 250, 0.137);
-      content: ""; filter: blur(1px);
-      bottom: 7px; border-radius: 50%; left: 15%;
-    }
+    .Btn::before, .Btn::after { display:none; }
     .Btn:hover { animation: jello-horizontal 0.9s both; }
     .Btn:active{ transform: scale(.98); }
     @keyframes jello-horizontal {
@@ -507,15 +496,20 @@
       width:100%; height:100%;
       border-radius: 16px;
 
-      /* Palette-driven candy plate (makes each Luvvy easier to recognize) */
-      background: linear-gradient(145deg, var(--p1), var(--p2));
-      border: 1px solid rgba(255,255,255,.58);
-      box-shadow:
-        0 0 0 1px rgba(255,255,255,.32) inset,
-        0 0 0 2px var(--p1) inset,
-        0 16px 26px rgba(20,10,60,.12),
-        0 6px 10px rgba(0,0,0,.08),
-        0 -10px 18px rgba(255,255,255,.35) inset;
+      /* Jelly Tile Background (image only) + per-Luvvie pastel tint (background layers only) */
+      background-image: var(--bg-img, url('Images/Button/Variant-A1.png'));
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+
+      /* tint only affects background layers (NOT the sprite image) */
+      background-color: var(--p1, rgba(255,255,255,.0));
+      background-blend-mode: hard-light;
+
+      /* remove the old "card/backplate" look */
+      border: none;
+      box-shadow: none;
+
       position:relative;
       overflow:hidden;
 
@@ -524,44 +518,13 @@
       transition: transform 260ms cubic-bezier(.2,.9,.2,1), opacity 260ms ease, filter 200ms ease;
     }
 
-    .plate::before{
-      content:"";
-      position:absolute;
-      inset:0;
-      background:
-        radial-gradient(circle at 28% 18%, rgba(255,255,255,.88), rgba(255,255,255,0) 58%),
-        linear-gradient(135deg, rgba(255,255,255,.30), rgba(240,240,255,.10));
-      opacity:.85;
-      pointer-events:none;
-    }
-
-    /* Subtle candy sparkle */
-    .plate::after{
-      content:"";
-      position:absolute;
-      inset:-40%;
-      background:
-        radial-gradient(circle at 60% 30%, rgba(255,255,255,.16), rgba(255,255,255,0) 56%),
-        radial-gradient(circle at 20% 70%, rgba(255,255,255,.10), rgba(255,255,255,0) 62%);
-      transform: rotate(12deg);
-      opacity:.45;
-      pointer-events:none;
-    }
-
-    /* Variant B: clear visual difference (helps prevent "combo feels broken") */
-    /* KOALA_VARIANT_OUTLINE: extra klare A/B Abgrenzung */
-    .tile[data-variant="A"] .plate{ outline: 2px solid rgba(255,255,255,.55); }
-    .tile[data-variant="B"] .plate{ outline: 3px solid rgba(0,0,0,.22); }
-
+    /* Variant B specific styling */
     .tile[data-variant="B"] .plate{
-      filter: saturate(1.18) contrast(1.06);
-    }
-    .tile[data-variant="B"] .plate::after{
-      background:
-        repeating-linear-gradient(45deg, rgba(255,255,255,0) 0 10px, rgba(255,255,255,.22) 10px 14px),
-        radial-gradient(circle at 60% 30%, rgba(255,255,255,.20), rgba(255,255,255,0) 58%);
-      opacity:.55;
-    }
+      
+      /* keep Variant B as jelly-only too (no extra border/backplate) */
+      border: none;
+      filter: none;
+}
 
     .variantBadge{
       position:absolute;
@@ -591,6 +554,10 @@
     .tile.bigMellow .plate{ border-radius: 26px; }
 
     /* Swirl on tile (subtle) */
+    /* IMPORTANT: user wants ONLY the jelly tile visible (no extra swirl/backplate overlays) */
+    .plate:before, .plate:after{ display:none !important; }
+
+    
     .plate:before{
       content:"";
       position:absolute; inset:-18px;
@@ -652,29 +619,20 @@
 
     /* Question mark powerup visual */
     .qmark{
-      position:absolute;
-      inset:0;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-weight:1000;
-      font-size: 26px;
-      color:#fff;
-      text-shadow: 0 10px 18px rgba(0,0,0,.22);
-      pointer-events:none;
+      display:none; /* Integrated in Powerup.png */
     }
 
     /* Animierter Power Background (für Powerups + ??? + Lovelie) */
     .powerAnim .plate{
-      background: linear-gradient(135deg, #ff4fb9, #ffcf5a, #7ad8ff, #8b5cf6, #ff4fb9) !important;
-      background-size: 320% 100% !important;
-      animation: mystHue 3.8s ease-in-out infinite, powerPulse 1.8s ease-in-out infinite;
+      background-image: url('Images/Button/PowerUpButton.png') !important;
+      background-color: transparent !important;
+      background-blend-mode: normal !important;
       box-shadow: 0 0 22px rgba(255,79,185,.45), 0 0 32px rgba(122,216,255,.35);
+      animation: powerPulse 1.8s ease-in-out infinite;
     }
-    @keyframes mystHue{
-      0%{background-position:0% 50%}
-      50%{background-position:100% 50%}
-      100%{background-position:0% 50%}
+    /* Mystery Tile specific */
+    .tile[data-base="myst"] .plate {
+       background-image: url('Images/Button/Powerup.png') !important;
     }
     @keyframes powerPulse{
       0%{ transform: scale(1); filter:saturate(1); }
@@ -719,13 +677,16 @@
       100%{ transform: translateY(0) scale(1); }
     }
 
-    /* Landing bounce */
-    .land .plate{ animation: landPlate 560ms cubic-bezier(.2,.9,.2,1) both; }
+    /* Landing bounce - Jelly Style */
+    .land .plate{ animation: landPlate 600ms linear both; }
     @keyframes landPlate{
-      0%{ transform: translateY(0) scale(1); }
-      28%{ transform: translateY(4px) scale(1.06, .98); }
-      58%{ transform: translateY(-4px) scale(.99,1.04); }
-      100%{ transform: translateY(0) scale(1); }
+      0% { transform: scale(1, 1) translateY(0); }
+      30% { transform: scale(1.25, 0.75) translateY(10px); }
+      40% { transform: scale(0.75, 1.25) translateY(-5px); }
+      50% { transform: scale(1.15, 0.85) translateY(4px); }
+      65% { transform: scale(0.95, 1.05) translateY(-2px); }
+      75% { transform: scale(1.05, 0.95) translateY(1px); }
+      100% { transform: scale(1, 1) translateY(0); }
     }
 
     /* Spawn glow */
@@ -862,6 +823,16 @@
       background: rgba(255,255,255,.35);
       border-radius: 999px;
     }
+    body.dark .lbList{
+      background: rgba(20,18,32,.55);
+    }
+    body.dark .lbList::-webkit-scrollbar-thumb{
+      background: rgba(210,190,255,.35);
+      border: 3px solid rgba(32,28,46,.9);
+    }
+    body.dark .lbList::-webkit-scrollbar-track{
+      background: rgba(32,28,46,.9);
+    }
 
     .lbItem{
       display:flex; justify-content:space-between; align-items:center; gap:10px;
@@ -870,12 +841,9 @@
       border-radius:16px;
       padding:10px 10px;
       box-shadow: 0 10px 24px rgba(20,10,60,.07);
-      opacity:0;
-      animation: lbSlideIn 0.4s cubic-bezier(.2,.9,.2,1) forwards;
-    }
-    @keyframes lbSlideIn{
-      from{ opacity:0; transform: translateY(12px) scale(.96); }
-      to{ opacity:1; transform: translateY(0) scale(1); }
+      opacity:1;
+      transform:none;
+      animation:none;
     }
     .lbItem .left b{display:block}
     .lbItem .left small{opacity:.7;font-weight:900}
@@ -883,22 +851,27 @@
       font-weight:1000;
       color:#4a2c6f;
     }
+    body.dark .lbItem{
+      background: linear-gradient(135deg, rgba(40,35,60,.92), rgba(32,28,50,.88));
+      border:1px solid rgba(255,255,255,.08);
+      box-shadow: 0 10px 24px rgba(0,0,0,.35);
+    }
+    body.dark .lbItem .score{
+      color:#e6ddff;
+    }
 
     /* Ranks */
     .lbItem.rank1{
-      background:linear-gradient(90deg, rgba(255,215,0,.28), rgba(255,255,255,.14));
-      box-shadow:0 0 18px rgba(255,215,0,.65);
-      animation:shine 1.9s linear infinite;
+      background:linear-gradient(90deg, rgba(255,215,0,.20), rgba(255,255,255,.12));
+      box-shadow:0 0 12px rgba(255,215,0,.45);
     }
     .lbItem.rank2{
-      background:linear-gradient(90deg, rgba(192,192,192,.25), rgba(255,255,255,.12));
-      box-shadow:0 0 14px rgba(220,220,220,.55);
-      animation:pulse 1.6s ease-in-out infinite;
+      background:linear-gradient(90deg, rgba(192,192,192,.18), rgba(255,255,255,.10));
+      box-shadow:0 0 10px rgba(220,220,220,.38);
     }
     .lbItem.rank3{
-      background:linear-gradient(90deg, rgba(205,127,50,.25), rgba(255,255,255,.10));
-      box-shadow:0 0 12px rgba(205,127,50,.55);
-      animation:bounceMedal 1.6s ease-in-out infinite;
+      background:linear-gradient(90deg, rgba(205,127,50,.18), rgba(255,255,255,.08));
+      box-shadow:0 0 10px rgba(205,127,50,.35);
     }
     /* Non-podium entries: cooler lilac gradient */
     .lbItem:not(.rank1):not(.rank2):not(.rank3){
@@ -907,6 +880,25 @@
       box-shadow:
         0 14px 30px rgba(20,10,60,.10),
         0 0 0 1px rgba(255,255,255,.35) inset;
+    }
+    body.dark .lbItem.rank1{
+      background:linear-gradient(90deg, rgba(255,215,0,.18), rgba(120,90,0,.20));
+      box-shadow:0 0 10px rgba(255,215,0,.35);
+    }
+    body.dark .lbItem.rank2{
+      background:linear-gradient(90deg, rgba(200,200,210,.18), rgba(70,70,90,.24));
+      box-shadow:0 0 8px rgba(200,200,210,.32);
+    }
+    body.dark .lbItem.rank3{
+      background:linear-gradient(90deg, rgba(205,127,50,.18), rgba(90,60,30,.22));
+      box-shadow:0 0 8px rgba(205,127,50,.30);
+    }
+    body.dark .lbItem:not(.rank1):not(.rank2):not(.rank3){
+      background: linear-gradient(135deg, rgba(52,46,82,0.96), rgba(46,44,70,0.92));
+      border:1px solid rgba(255,255,255,.08);
+      box-shadow:
+        0 14px 30px rgba(0,0,0,.25),
+        0 0 0 1px rgba(255,255,255,.06) inset;
     }
     @keyframes shine{
       0%{filter:brightness(1)}
@@ -1031,12 +1023,55 @@
       margin-top: 12px;
     }
 
+    /* Combo GIF Overlay (GIF only, no HTML particle spam) */
+    .comboFx {
+      position: absolute;
+      width: 160px; height: 160px; /* JS will override per CELL */
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 999;
+      background-position: center;
+      background-size: contain;
+      background-repeat: no-repeat;
+      display: none; /* shown by JS */
+      align-items: center;
+      justify-content: center;
+    }
+    .comboFx.show{ display:flex; }
+
+    /* Death GIF Overlay */
+    .deathFx{
+      position:absolute;
+      width: 160px; height: 160px; /* JS will override */
+      transform: translate(-50%, -50%);
+      pointer-events:none;
+      z-index: 998;
+      background-position:center;
+      background-size:contain;
+      background-repeat:no-repeat;
+      display:none;
+    }
+    .deathFx.show{ display:block; }
+    .comboScore {
+      font-size: 32px;
+      font-weight: 900;
+      color: #9d4edd;
+      text-shadow: 0 0 10px #e0aaff, 2px 2px 0px #fff;
+      animation: popScore 0.8s ease-out forwards;
+      margin-top: -20px; /* Center it nicely over the burst */
+    }
+    @keyframes popScore {
+      0% { transform: scale(0.5); opacity: 0; }
+      50% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(1.0); opacity: 0; }
+    }
+
     /* FX star */
     .star{
       position:absolute;
       left:0; top:0;
       width: 12px; height: 12px;
-      transform: translate(-50%,-50%) scale(.6);
+      transform: translate(-50%, -50%) scale(.6);
       opacity:0;
       pointer-events:none;
       mix-blend-mode: screen;
@@ -1446,11 +1481,6 @@
 
         <div style="flex:1; min-width:10px;"></div>
 
-        <div style="display:flex; flex-direction:column; align-items:center; margin:0 10px;">
-           <span class="tiny" style="line-height:1;">Zoom</span>
-           <input type="range" id="zoomSlider" min="0.6" max="1.2" step="0.2" value="1.0" style="width:80px">
-        </div>
-
         <div class="actions">
           <button class="Btn ghost" id="btnMax" title="Maximize Board">⛶</button>
           <button class="Btn ghost" id="btnTheme" style="padding:0 12px;min-width:46px;">🌙</button>
@@ -1598,6 +1628,133 @@
       myst: ["#d1c4e9", "#9575cd"],
       supernuss: ["#ffd740", "#ff8f00"]
     };
+    // -------------------------
+    // Tile background + tinting
+    // -------------------------
+    // We want each Luvvie (baseKey) to have a stable, UNIQUE pastel tint that CONTRASTS the character
+    // (no "yellow on yellow"), and we want the board tile background to be the jelly image (no extra backplate).
+    const TILE_TINT_CACHE = new Map();     // key -> [c1,c2]
+    const USED_TINT_HUES = [];             // assigned hues to keep them unique
+
+    function clamp(n,min,max){ return Math.min(max, Math.max(min,n)); }
+    function hueDist(a,b){
+      let d = Math.abs(a-b) % 360;
+      return d > 180 ? 360 - d : d;
+    }
+    function hexToRgb(hex){
+      if(!hex) return null;
+      let h = (""+hex).trim().replace("#","");
+      if(h.length===3) h = h.split("").map(x=>x+x).join("");
+      if(h.length!==6) return null;
+      const n = parseInt(h,16);
+      return { r:(n>>16)&255, g:(n>>8)&255, b:n&255 };
+    }
+    function rgbToHsl(r,g,b){
+      r/=255; g/=255; b/=255;
+      const max=Math.max(r,g,b), min=Math.min(r,g,b);
+      let h=0, s=0;
+      const l=(max+min)/2;
+      const d=max-min;
+      if(d!==0){
+        s = d / (1 - Math.abs(2*l - 1));
+        switch(max){
+          case r: h = ((g-b)/d) % 6; break;
+          case g: h = (b-r)/d + 2; break;
+          case b: h = (r-g)/d + 4; break;
+        }
+        h = (h*60+360) % 360;
+      }
+      return {h, s:s*100, l:l*100};
+    }
+    function hslToRgb(h,s,l){
+      s/=100; l/=100;
+      const c=(1-Math.abs(2*l-1))*s;
+      const x=c*(1-Math.abs((h/60)%2 - 1));
+      const m=l-c/2;
+      let r=0,g=0,b=0;
+      if(h<60){ r=c; g=x; b=0; }
+      else if(h<120){ r=x; g=c; b=0; }
+      else if(h<180){ r=0; g=c; b=x; }
+      else if(h<240){ r=0; g=x; b=c; }
+      else if(h<300){ r=x; g=0; b=c; }
+      else { r=c; g=0; b=x; }
+      return { r:Math.round((r+m)*255), g:Math.round((g+m)*255), b:Math.round((b+m)*255) };
+    }
+    function rgbToHex(r,g,b){
+      const to = (n)=>n.toString(16).padStart(2,"0");
+      return "#"+to(r)+to(g)+to(b);
+    }
+    function pastelFromHue(h, isLightSprite){
+      // pastel but with visible contrast
+      const sat = 55;
+      const l1 = isLightSprite ? 62 : 78;
+      const l2 = isLightSprite ? 52 : 66;
+      const c1 = hslToRgb(h, sat, l1);
+      const c2 = hslToRgb(h, sat-8, l2);
+      return [rgbToHex(c1.r,c1.g,c1.b), rgbToHex(c2.r,c2.g,c2.b)];
+    }
+
+    function deriveSpriteHueAndLight(baseKey){
+      // Prefer explicit palettes from BASES (fast, stable, no async).
+      const base = getBase(baseKey);
+      const spec = getSpecial(baseKey);
+      const meta = base || spec;
+      const palA = meta?.palettes?.A;
+      const palB = meta?.palettes?.B;
+      const src = (palA && palA[0]) || (SPECIAL_PALS[baseKey] && SPECIAL_PALS[baseKey][0]) || (NEUTRAL_PALS.A[0]);
+      const rgb = hexToRgb(src);
+      const hsl = rgb ? rgbToHsl(rgb.r,rgb.g,rgb.b) : {h:210, l:60};
+      return {h: hsl.h, l: hsl.l};
+    }
+
+    function uniqueHue(preferredHue){
+      let h = (preferredHue%360+360)%360;
+      // enforce uniqueness against already assigned hues
+      for(let attempt=0; attempt<48; attempt++){
+        const clash = USED_TINT_HUES.some(u => hueDist(u,h) < 18);
+        if(!clash) { USED_TINT_HUES.push(h); return h; }
+        h = (h + 29) % 360; // pseudo-golden-ish step
+      }
+      // fallback (should never happen)
+      USED_TINT_HUES.push(h);
+      return h;
+    }
+
+    function paletteForKey(baseKey, variant){
+      const k = baseKey + ":" + (variant || "A");
+      const cached = TILE_TINT_CACHE.get(k);
+      if(cached) return cached;
+
+      const {h: spriteHue, l: spriteLight} = deriveSpriteHueAndLight(baseKey);
+      const isLightSprite = spriteLight >= 62;
+
+      // prefer complementary hue
+      const preferred = (spriteHue + 180) % 360;
+      const h = uniqueHue(preferred);
+      const pal = pastelFromHue(h, isLightSprite);
+
+      TILE_TINT_CACHE.set(k, pal);
+      return pal;
+    }
+
+    function hashStr(str){
+      let h=2166136261>>>0;
+      for(let i=0;i<str.length;i++){
+        h ^= str.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return h>>>0;
+    }
+
+    function tileBgFor(tile){
+      const { variant } = parseTypeId(tile?.type || "");
+      const list = ((variant||"A")==="B") ? (IMG.variantsB || []) : (IMG.variantsA || []);
+      if(!list.length) return null;
+      // stable choice per tile id so it doesn't "shuffle" visually during re-renders
+      const idx = hashStr(tile.id || (tile.r+","+tile.c)) % list.length;
+      return list[idx];
+    }
+
 
     // Color helpers (small + cached) to derive complementary gradients per character
     function hexToRgb(hex){
@@ -1658,27 +1815,22 @@
 
     function paletteForTile(tile){
       const { baseKey, variant } = parseTypeId(tile?.type || "");
-      const base = getBase(baseKey);
-      if(base?.palettes){
-        const pal = base.palettes[variant] || base.palettes.A || Object.values(base.palettes)[0];
-        if(pal && pal.length>=2){
-          const c1 = complementHex(pal[0]);
-          const c2 = complementHex(pal[1]);
-          if(c1 && c2) return [c1, c2];
-        }
-      }
+      // Keep explicit special palettes where they matter visually (powerups etc.)
       if(SPECIAL_PALS[baseKey]) return SPECIAL_PALS[baseKey];
-      const v = (variant || "A") === "B" ? "B" : "A";
-      return NEUTRAL_PALS[v];
+      // Unique, stable, contrast-first pastel tint for each (baseKey, variant)
+      return paletteForKey(baseKey, (variant||"A")==="B" ? "B" : "A");
     }
 /**********************
      * DOM safety: remove orphan tile elements (prevents rare "static tiles" you can't drag)
      **********************/
     function collectGridIds(){
       const ids = new Set();
+      if(!isGridReady()) return ids;
       for(let r=0;r<rows;r++){
+        const row = grid[r];
+        if(!row) continue;
         for(let c=0;c<cols;c++){
-          const t = grid[r][c];
+          const t = row[c];
           if(t && t.id) ids.add(t.id);
         }
       }
@@ -1744,32 +1896,52 @@
     let diff = DIFFS.easy;
 
     /**********************
-     * Images
+     * Images (Local)
      **********************/
     const IMG = {
       logo:     "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/Luvvies-logo.png",
-      sweety:   "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/Sweety.png",
-      sleepy:   "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/Sleepy.png",
-      normal:   "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/normal.png",
-      cry:      "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/Cry.png",
-      koala:    "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/KOALA.png",
-      citrussy: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/Citrussie.png",
-      worm:     "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/SourWurm.png",
-      grumpy:   "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/Grumpycookie.png",
-      happy:    "https://static.wixstatic.com/media/d05122_cff843264bd8495aaa9ac0360d72e131~mv2.png",
-      mond:     "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/Mondly.png",
-      donut:    "https://static.wixstatic.com/media/d05122_5041c19e720d4e7e9439e4acf793655c~mv2.png",
-      joyce:    "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/joyce.png",
-      smokey:   "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/Smokey.png",
-      mellow:   "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/mellow.png",
-      lovelie:  "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/Lovely.png",
-      simba:    "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/Simba.png",
-      mellowlord: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/MellowLord.png",
-      mellowzilla: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/MellowZilla.png",
-            koalazilla:  "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/KoalaZilla.png",
-fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/FlederNuss.png",
-      flederheld: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/FlederHeld.png",
-      supernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/SuperNuss.png"
+      sweety:   "Images/Luvvies/Sweety.png",
+      sleepy:   "Images/Luvvies/Sleepy.png",
+      normal:   "Images/Luvvies/Normalo.png",
+      cry:      "Images/Luvvies/Cry.png",
+      koala:    "Images/Luvvies/KOALA.png",
+      citrussy: "Images/Luvvies/CItrussie.png",
+      
+      // Random Worms
+      worm: "Images/Luvvies/Sourwurm-1.png", // Fallback
+      sourwurm: ["Images/Luvvies/Sourwurm-1.png", "Images/Luvvies/Sourwurm-2.png", "Images/Luvvies/Sourwurm-3.png"],
+      
+      grumpy:   "Images/Luvvies/Grumpycookie.png",
+      happy:    "Images/Luvvies/HappyCookie.png",
+      mond:     "Images/Luvvies/Mondlie.png",
+      donut:    "Images/Luvvies/Donutlie.png",
+      joyce:    "Images/Luvvies/joyce.png",
+      smokey:   "Images/Luvvies/Smokey.png",
+      mellow:   "Images/Luvvies/mellow.png",
+      lovelie:  "Images/Luvvies/lovvelie.png",
+      simba:    "Images/Luvvies/Simba.png",
+      mellowlord: "Images/Luvvies/MellowLord.png",
+      
+      // Boss Animations (Frame 1-4)
+      mellowzilla: ["Images/Luvvies/Mellowzilla-1.png", "Images/Luvvies/MellowZilla-2.png", "Images/Luvvies/Mellowzilla-3.png", "Images/Luvvies/Mellowzilla-4.png"],
+      koalazilla:  ["Images/Luvvies/KoalaZilla-1.png", "Images/Luvvies/KoalaZilla-2.png", "Images/Luvvies/KoalaZilla-3.png", "Images/Luvvies/KoalaZilla-4.png"],
+      
+      fledernuss: "Images/Luvvies/FlederNuss.png",
+      flederheld: "Images/Luvvies/FlederHeld.png",
+      supernuss: "Images/Luvvies/SuperNuss.png",
+      giraffie: "Images/Luvvies/Giraffie.png",
+      
+      // Jelly Buttons (Variants)
+      variantsA: ["Images/Button/Variant-A1.png", "Images/Button/Variant-A2.png", "Images/Button/Variant-A3.png", "Images/Button/Variant-A4.png"],
+      variantsB: ["Images/Button/Variant-B1.png", "Images/Button/Variant-B2.png", "Images/Button/Variant-B3.png", "Images/Button/Variant-B4.png"],
+      
+      // Special Buttons
+      powerBtn: "Images/Button/PowerUpButton.png",
+      mystBtn: "Images/Button/Powerup.png", // Use as the tile itself for Mystery
+      
+      // Animations
+      comboGif: "Images/Animation/Animation-combo.gif",
+      deathGif: "Images/Animation/Deathanimation.gif"
     };
     document.getElementById("greetLogo").src = IMG.logo;
     const ml = document.getElementById("mainLogo");
@@ -1999,6 +2171,14 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
     let GAP = 8;
     let PAD = 14;
 
+    function isGridReady(){
+      return Array.isArray(grid) && rows>0 && cols>0 && grid.length >= rows;
+    }
+
+    function currentPad(){
+      return (document.body.classList.contains("fs") || document.body.classList.contains("maximized")) ? 10 : PAD;
+    }
+
     /**********************
      * UI refs
      **********************/
@@ -2025,7 +2205,7 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
     /**********************
      * Helpers
      **********************/
-    const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+    // duplicate clamp removed (function clamp is defined earlier)
     const posKey=(r,c)=>`${r},${c}`;
     function toast(title, subtitle="", ms=2600){
       document.documentElement.style.setProperty("--toastMs", ms+"ms");
@@ -2160,8 +2340,13 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
 
       return { x: boardX + localX, y: boardY + localY };
     }
+    // GIF-only FX mode (performance): disable HTML particle spam for combos
+    const FX_GIF_ONLY = true;
+
 
     function makeStar(x,y, big=false){
+      if(FX_GIF_ONLY) return;
+
       const s = document.createElement("div");
       s.className="star";
       s.style.left = x+"px";
@@ -2185,6 +2370,8 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
       setTimeout(()=>s.remove(), 900);
     }
     function ringFx(x,y){
+      if(FX_GIF_ONLY) return;
+
       const r=document.createElement("div");
       r.className="ring";
       r.style.left=x+"px"; r.style.top=y+"px";
@@ -2192,6 +2379,8 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
       setTimeout(()=>r.remove(), 760);
     }
     function burstFx(x,y, count=12){
+      if(FX_GIF_ONLY) return;
+
       ringFx(x,y);
       for(let i=0;i<count;i++){
         const ang = Math.random()*Math.PI*2;
@@ -2200,60 +2389,133 @@ fledernuss: "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.git
       }
     }
 
+    function showComboAnim(score, r, c){
+       // Re-use single overlay element (performance)
+       if(!ui._comboFx){
+         const fx = document.createElement("div");
+         fx.className = "comboFx";
+         const txtEl = document.createElement("div");
+         txtEl.className = "comboScore";
+         fx.appendChild(txtEl);
+         ui.fx.appendChild(fx);
+         ui._comboFx = fx;
+         ui._comboFxTxt = txtEl;
+         ui._comboFxTimer = 0;
+       }
+
+       const fx = ui._comboFx;
+       const txtEl = ui._comboFxTxt;
+
+       // Size relative to cell so it never dwarfs the board
+       const size = Math.round(Math.min(200, Math.max(110, CELL * 1.7)));
+       fx.style.width  = size + "px";
+       fx.style.height = size + "px";
+
+       // Score text scaling: never larger than the GIF
+       const fz = Math.round(Math.min(34, Math.max(18, size * 0.22)));
+       txtEl.style.fontSize = fz + "px";
+       txtEl.style.maxWidth = (size * 0.92) + "px";
+       txtEl.textContent = fmt(score);
+
+       // Restart GIF each time (cache-buster)
+       const gifUrl = IMG.comboGif + "?t=" + Date.now();
+       fx.style.backgroundImage = "url('" + gifUrl + "')";
+
+       const {x,y} = tileCenter(r,c);
+       fx.style.left = x + "px";
+       fx.style.top  = y + "px";
+
+       fx.classList.add("show");
+
+       clearTimeout(ui._comboFxTimer);
+       ui._comboFxTimer = setTimeout(()=>{
+         fx.classList.remove("show");
+       }, 950);
+    }
+
+    function showDeathAnim(r, c){
+       if(!ui._deathFx){
+         const fx = document.createElement("div");
+         fx.className = "deathFx";
+         ui.fx.appendChild(fx);
+         ui._deathFx = fx;
+         ui._deathFxTimer = 0;
+       }
+       const fx = ui._deathFx;
+
+       const size = Math.round(Math.min(220, Math.max(120, CELL * 1.85)));
+       fx.style.width  = size + "px";
+       fx.style.height = size + "px";
+
+       const gifUrl = IMG.deathGif + "?t=" + Date.now();
+       fx.style.backgroundImage = "url('" + gifUrl + "')";
+
+       const {x,y} = tileCenter(r,c);
+       fx.style.left = x + "px";
+       fx.style.top  = y + "px";
+
+       fx.classList.add("show");
+       clearTimeout(ui._deathFxTimer);
+       ui._deathFxTimer = setTimeout(()=>{
+         fx.classList.remove("show");
+       }, 1100);
+    }
+
+
     /**********************
      * Responsive sizing
      **********************/
     function computeCell(){
       const wrap = document.getElementById("boardWrap");
-      // Use client dimensions directly to adapt to any container size
+      const rect = wrap.getBoundingClientRect();
       const wrapW = wrap.clientWidth;
-      const wrapH = wrap.clientHeight || window.innerHeight;
 
       const isFs = document.body.classList.contains("fs");
       const isMax = document.body.classList.contains("maximized");
 
       // Margins/Padding
-      // In FS or Max, we want minimal side padding to fill the "red area"
-      const padW = (isFs||isMax) ? 4 : 20;
-      // Vertical padding: FS needs space for HUD (top ~100px) + bottom margin
-      // Normal: Needs space for topRow + stats
-      const padH = (isFs) ? 140 : (isMax ? 60 : 40);
+      const pad = currentPad();
+      const padW = (isFs||isMax) ? 12 : 20;
+      // Vertical padding: allow HUD room but maximize board real estate; smaller boards get slightly less padding
+      const padHBase = (isFs) ? 110 : (isMax ? 80 : 40);
+      const padH = Math.max(40, padHBase - Math.max(0, (10 - rows) * 4));
 
-      // If Maximized/FS, use Window Height as constraint to avoid scrolling
-      const availH = (isFs || isMax) ? window.innerHeight : wrapH;
+      // Remaining height: viewport minus current top + small footer reserve
+      const footerReserve = isFs ? 16 : 32; // taskbar/margin
+      const availH = Math.max(260, window.innerHeight - Math.max(0, rect.top) - footerReserve);
 
-      const usableW = Math.max(260, wrapW - padW);
-      const usableH = Math.max(260, availH - padH);
+      const usableW = Math.max(320, wrapW - padW);
+      const usableH = Math.max(320, availH - padH);
 
-      const effectivePad = (isFs||isMax) ? 4 : PAD;
+      const cellW = Math.floor((usableW - (cols-1)*GAP - pad*2) / cols);
+      const cellH = Math.floor((usableH - (rows-1)*GAP - pad*2) / rows);
 
-      const cellW = Math.floor((usableW - (cols-1)*GAP - effectivePad*2) / cols);
-      const cellH = Math.floor((usableH - (rows-1)*GAP - effectivePad*2) / rows);
-
-      const zoom = window.gameZoomFactor || 1.0;
-
-      // No strict max cap, allow filling the screen
-      const max = 400;
-      const minCell = (window.innerWidth < 640) ? 32 : 40;
-      return clamp(Math.min(cellW, cellH) * zoom, minCell, max);
+      // Only scale downward; never upscale past the preferred base size (adapt to grid density)
+      const preferred = clamp(84 - Math.max(0, rows-8)*2 - Math.max(0, cols-8)*1.5, 70, 96);
+      const minCell = (window.innerWidth < 640) ? 46 : 54;
+      const target = Math.min(Math.min(cellW, cellH), preferred);
+      return clamp(Math.round(target), minCell, preferred);
     }
 
     function setTileXY(el, r, c){
-      const x = c*(CELL+GAP) + PAD;
-      const y = r*(CELL+GAP) + PAD;
+      const pad = currentPad();
+      const x = c*(CELL+GAP) + pad;
+      const y = r*(CELL+GAP) + pad;
       el.style.setProperty("--x", x+"px");
       el.style.setProperty("--y", y+"px");
     }
 
     function layoutBoard(){
       CELL = computeCell();
+      const pad = currentPad();
       document.documentElement.style.setProperty("--cell", CELL+"px");
       document.documentElement.style.setProperty("--gap", GAP+"px");
+      document.documentElement.style.setProperty("--pad", pad+"px");
       document.documentElement.style.setProperty("--cols", cols);
       document.documentElement.style.setProperty("--rows", rows);
 
-      const w = PAD*2 + cols*CELL + (cols-1)*GAP;
-      const h = PAD*2 + rows*CELL + (rows-1)*GAP;
+      const w = pad*2 + cols*CELL + (cols-1)*GAP;
+      const h = pad*2 + rows*CELL + (rows-1)*GAP;
       ui.board.style.width = w+"px";
       ui.board.style.height = h+"px";
 
@@ -2330,6 +2592,12 @@ for(const [id, el] of tileEls){
 
       const plate = document.createElement("div");
       plate.className="plate";
+      // Board tile background (jelly image only)
+      const bg = tileBgFor(tile);
+      if(bg){
+        plate.style.setProperty("--bg-img", `url('${bg}')`);
+      }
+
 
       // Powerups + ??? + Lovelie: animated background
       if(isPowerupKey(baseKey) || baseKey==="lovelie" || baseKey==="myst" || baseKey==="cit" || baseKey==="worm" || baseKey==="koala" || baseKey==="mellowzilla" || baseKey==="koalazilla"){
@@ -2352,8 +2620,10 @@ for(const [id, el] of tileEls){
   // Resolve image source (bases, specials, bosses)
   let src = meta?.img || "";
   if(baseKey==="mellowlord") src = IMG.mellowlord;
-  if(baseKey==="mellowzilla") src = IMG.mellowzilla;
-  if(baseKey==="koalazilla") src = IMG.koalazilla || IMG.koala;
+  
+  if(baseKey==="worm") src = IMG.sourwurm[tile.wormIdx||0] || IMG.sourwurm[0];
+  if(baseKey==="mellowzilla") src = IMG.mellowzilla[tile.animFrame||0] || IMG.mellowzilla[0];
+  if(baseKey==="koalazilla") src = IMG.koalazilla[tile.animFrame||0] || IMG.koalazilla[0] || IMG.koala;
 
   img.src = src;
   img.alt = meta?.name || baseKey;
@@ -2431,8 +2701,11 @@ function refreshTileEl(tile){
   if(img){
     let src = meta?.img || "";
     if(baseKey==="mellowlord") src = IMG.mellowlord;
-    if(baseKey==="mellowzilla") src = IMG.mellowzilla;
-    if(baseKey==="koalazilla") src = IMG.koalazilla || IMG.koala;
+    
+    if(baseKey==="worm") src = IMG.sourwurm[tile.wormIdx||0] || IMG.sourwurm[0];
+    if(baseKey==="mellowzilla") src = IMG.mellowzilla[tile.animFrame||0] || IMG.mellowzilla[0];
+    if(baseKey==="koalazilla") src = IMG.koalazilla[tile.animFrame||0] || IMG.koalazilla[0] || IMG.koala;
+
     img.src = src;
     img.alt = meta?.name || baseKey;
   }
@@ -2529,7 +2802,10 @@ function updateMellowHp(tile){
 
     function makeTile(r,c,type){
       const id = makeId();
-      return { id, r, c, type, hp:0, big:false };
+      const t = { id, r, c, type, hp:0, big:false, animFrame:0 };
+      const {baseKey} = parseTypeId(type);
+      if(baseKey === "worm") t.wormIdx = Math.floor(Math.random()*3);
+      return t;
     }
 
     function wouldCreateMatch(r,c,type){
@@ -3092,6 +3368,7 @@ function updateMellowHp(tile){
     }
 
     function findSpecialQuads(){
+      if(!isGridReady()) return [];
       const found=[];
       // Horizontal Quads
       for(let r=0;r<rows;r++){
@@ -3113,6 +3390,7 @@ function updateMellowHp(tile){
     }
 
     function findLineMatches(){
+      if(!isGridReady()) return {clear:new Set(), spawn:new Map(), hRuns:[], vRuns:[]};
       const clear = new Set();
       const hRuns = [];
       const vRuns = [];
@@ -3120,11 +3398,13 @@ function updateMellowHp(tile){
       for(let r=0;r<rows;r++){
         let c=0;
         while(c<cols){
-          const t = grid[r][c];
+          const row = grid[r];
+          if(!row){ c=cols; continue; }
+          const t = row[c];
           if(!isMatchable(t)){ c++; continue; }
           const k = matchKey(t);
           let start=c;
-          while(c<cols && grid[r][c] && isMatchable(grid[r][c]) && matchKey(grid[r][c])===k) c++;
+          while(c<cols && row[c] && isMatchable(row[c]) && matchKey(row[c])===k) c++;
           const len = c-start;
           if(len>=3){
             const cells=[];
@@ -3140,11 +3420,13 @@ function updateMellowHp(tile){
       for(let c=0;c<cols;c++){
         let r=0;
         while(r<rows){
-          const t = grid[r][c];
+          const row = grid[r];
+          if(!row){ r++; continue; }
+          const t = row[c];
           if(!isMatchable(t)){ r++; continue; }
           const k = matchKey(t);
           let start=r;
-          while(r<rows && grid[r][c] && isMatchable(grid[r][c]) && matchKey(grid[r][c])===k) r++;
+          while(r<rows && grid[r] && grid[r][c] && isMatchable(grid[r][c]) && matchKey(grid[r][c])===k) r++;
           const len = r-start;
           if(len>=3){
             const cells=[];
@@ -3760,7 +4042,22 @@ function updateMellowHp(tile){
         const zilla = findMellowZilla();
         if(zilla){
           zilla.turn = (zilla.turn || 0) + 1;
-          const phase = zilla.turn % 4;
+          const phase = zilla.turn % 4; // 1,2,3,0
+          
+          // Update visual frame (0,1,2,3 where 3 is attack)
+          // phase 1-> frame 0
+          // phase 2-> frame 1
+          // phase 3-> frame 2
+          // phase 0-> frame 3 (Attack)
+          
+          let frame = 0;
+          if(phase === 2) frame = 1;
+          if(phase === 3) frame = 2;
+          if(phase === 0) frame = 3;
+          
+          zilla.animFrame = frame;
+          refreshTileEl(zilla);
+
           const zName = (zilla.type==="koalazilla") ? "KoalaZilla" : "MellowZilla";
           const chooseTarget = ()=>{
             const baseR = lastPlayerMove ? lastPlayerMove.r : Math.floor(Math.random()*(rows-1));
@@ -3769,28 +4066,22 @@ function updateMellowHp(tile){
             const cc = clamp(baseC-1, 0, cols-3);
             return {r: rr, c: cc};
           };
-          // Cycle 4:
-          // 1: Idle
-          // 2: Warn Red (1st turn)
-          // 3: Warn Red (2nd turn)
-          // 0: Attack
 
-          if(phase === 2 || phase === 3){ // Warn (Red)
+          if(phase === 2 || phase === 3){ // Warn
              const el = tileEls.get(zilla.id);
              if(el){
-               el.style.border = "5px solid #ff0000";
-               el.style.boxShadow = "0 0 20px red";
-               toast(`${zName} wütend!`, "Attacke in "+(phase===2?"2 Zügen":"1 Zug")+"!", 2000);
+               el.style.boxShadow = "0 0 20px red"; // Subtle red glow
              }
              if(!zillaPlanned) zillaPlanned = chooseTarget();
              if(phase===3 && zillaPlanned) showAttackPreview(zillaPlanned.r, zillaPlanned.c);
+             toast(`${zName} lädt auf...`, "Attacke bald!", 1500);
           } else if(phase === 0 && zilla.turn > 0){ // Attack
-             toast(`${zName} Attacke!`, "3x3 Wipe! 💥", 2600);
+             toast(`${zName} ATTACKE!`, "3x3 Wipe! 💥", 2600);
              const target = zillaPlanned || chooseTarget();
              clearAttackPreview();
              zillaPlanned = null;
 
-             // Wipe targeted 3x3 (aims at last move)
+             // Wipe
              const rr = target.r;
              const cc = target.c;
              const cells = [];
@@ -3801,7 +4092,8 @@ function updateMellowHp(tile){
 
              // Reset visual
              const el = tileEls.get(zilla.id);
-             if(el){ el.style.border = "none"; el.style.boxShadow="none"; }
+             if(el) el.style.boxShadow="none";
+             
              zillaAttackCounter++;
              if(zillaAttackCounter % 3 === 0){
                dropDown();
@@ -3809,9 +4101,9 @@ function updateMellowHp(tile){
                ensureMovesOrShuffle();
              }
           } else {
-             // Idle
+             // Idle (phase 1)
              const el = tileEls.get(zilla.id);
-             if(el){ el.style.border = "none"; el.style.boxShadow="none"; }
+             if(el) el.style.boxShadow="none";
              clearAttackPreview();
              zillaPlanned = null;
           }
@@ -3993,6 +4285,14 @@ function updateMellowHp(tile){
         const scoreAdd = toClear.size * scorePerTile() * (1 + (combo-1)*0.12);
         totalScore += Math.round(scoreAdd);
         levelScore += Math.round(scoreAdd);
+
+        if(combo > 1 && toClear.size > 0){
+           const firstKey = toClear.values().next().value;
+           if(firstKey){
+              const [cr, cc] = firstKey.split(",").map(Number);
+              showComboAnim(Math.round(scoreAdd), cr, cc);
+           }
+        }
 
         const clearedCells = [];
 
@@ -4368,13 +4668,17 @@ function updateMellowHp(tile){
       if(anchor && anchor.id){
         const el = tileEls.get(anchor.id);
         if(el){
+          // Show Death Animation
+          if(big.type.includes("mellowzilla") || big.type.includes("koalazilla") || big.type.includes("mellowlord")){
+             showDeathAnim(big.r + (big.type.includes("zilla") ? 1.5 : 1), big.c + (big.type.includes("zilla") ? 1.5 : 1));
+          }
           el.classList.add("pop");
           setTimeout(()=>{ el.remove(); tileEls.delete(anchor.id); }, 420);
         }
       }
 
       // Boss Check for points
-      if(big.type === "mellowzilla" || big.type === "koalazilla"){
+      if(big.type.includes("mellowzilla") || big.type.includes("koalazilla")){
 
         // KOALA_BOSSFIGHT_CLEAR: Boss besiegt -> Timer stoppen
         try{ if(bossFight && bossFight.active){ bossFight.active=false; bossFight=null; } }catch(e){}
@@ -4444,6 +4748,7 @@ function updateMellowHp(tile){
     }
 
     function hasMove(){
+      if(!isGridReady()) return false;
       for(let r=0;r<rows;r++){
         for(let c=0;c<cols;c++){
           const t=grid[r][c];
@@ -4507,6 +4812,7 @@ function updateMellowHp(tile){
     }
 
     function ensurePlayableBoard(maxShuffles=6, autoResolve=true){
+      if(!isGridReady()) return true; // defer shuffling until board exists
       try{ if(typeof pruneOrphanTileEls === "function") pruneOrphanTileEls(); }catch(e){}
       let tries = 0;
       while(tries < maxShuffles){
@@ -4597,6 +4903,7 @@ clearHints();
         buildFsBg();
       }else{
         document.body.classList.remove("fs");
+        document.body.classList.remove("maximized");
         document.getElementById("fsBg").innerHTML="";
       }
       layoutBoard();
@@ -5120,28 +5427,6 @@ clearHints();
        document.getElementById("introBack").style.display = "flex";
     });
 
-    // Zoom Slider & Persistence
-    const zoomSlider = document.getElementById("zoomSlider");
-    if(zoomSlider){
-      // Load saved zoom
-      const savedZoom = getCookie("luvvies_zoom");
-      if(savedZoom){
-         const z = parseFloat(savedZoom);
-         if(!isNaN(z) && z>=0.6 && z<=1.2){
-           zoomSlider.value = z;
-           window.gameZoomFactor = z;
-           layoutBoard();
-         }
-      }
-
-      zoomSlider.addEventListener("input", (e)=>{
-         const z = parseFloat(e.target.value);
-         window.gameZoomFactor = z;
-         layoutBoard();
-         setCookie("luvvies_zoom", z, 30); // 30 days
-      });
-    }
-
     document.getElementById("btnPost").addEventListener("click", postScore);
     document.getElementById("btnRefresh").addEventListener("click", refreshLeaderboard);
 
@@ -5184,27 +5469,46 @@ clearHints();
       syncTheme();
     });
 
-    // Maximize Button
+    // Maximize Button (fullscreen + draggable HUD)
       const btnMax = document.getElementById("btnMax");
       if(btnMax){
          btnMax.addEventListener("click", async ()=>{
-            try{
-              if(!document.fullscreenElement){
-                await document.documentElement.requestFullscreen();
-              } else {
-                await document.exitFullscreen();
-              }
-            }catch(e){}
+            const shouldMax = !document.body.classList.contains("maximized");
+            const root = document.getElementById("playArea") || document.documentElement;
+            if(shouldMax){
+              document.body.classList.add("maximized");
+              layoutBoard();
+              updateUI();
+              try{
+                if(!document.fullscreenElement){
+                  await root.requestFullscreen();
+                }
+              }catch(e){}
+            } else {
+              document.body.classList.remove("maximized");
+              layoutBoard();
+              updateUI();
+              try{
+                if(document.fullscreenElement){
+                  await document.exitFullscreen();
+                }
+              }catch(e){}
+            }
          });
       }
 
     
     // Maximize HUD controls
     const btnUnmax = document.getElementById("btnUnmax");
-    if(btnUnmax) btnUnmax.addEventListener("click", ()=>{
+    if(btnUnmax) btnUnmax.addEventListener("click", async ()=>{
        document.body.classList.remove("maximized");
        layoutBoard();
        updateUI();
+       try{
+         if(document.fullscreenElement){
+           await document.exitFullscreen();
+         }
+       }catch(e){}
     });
     const maxHint = document.getElementById("maxHint");
     if(maxHint) maxHint.addEventListener("click", hint);
