@@ -520,9 +520,11 @@
 
     /* Variant B specific styling */
     .tile[data-variant="B"] .plate{
-      border: 2px solid rgba(255,255,255,.8);
-      filter: saturate(1.2) contrast(1.1);
-    }
+      
+      /* keep Variant B as jelly-only too (no extra border/backplate) */
+      border: none;
+      filter: none;
+}
 
     .variantBadge{
       position:absolute;
@@ -552,6 +554,10 @@
     .tile.bigMellow .plate{ border-radius: 26px; }
 
     /* Swirl on tile (subtle) */
+    /* IMPORTANT: user wants ONLY the jelly tile visible (no extra swirl/backplate overlays) */
+    .plate:before, .plate:after{ display:none !important; }
+
+    
     .plate:before{
       content:"";
       position:absolute; inset:-18px;
@@ -1017,18 +1023,35 @@
       margin-top: 12px;
     }
 
-    /* Combo GIF Overlay */
+    /* Combo GIF Overlay (GIF only, no HTML particle spam) */
     .comboFx {
       position: absolute;
-      width: 160px; height: 160px;
+      width: 160px; height: 160px; /* JS will override per CELL */
       transform: translate(-50%, -50%);
       pointer-events: none;
       z-index: 999;
-      background: url('Images/Animation/Animation-combo.gif') center/contain no-repeat;
-      display: flex;
+      background-position: center;
+      background-size: contain;
+      background-repeat: no-repeat;
+      display: none; /* shown by JS */
       align-items: center;
       justify-content: center;
     }
+    .comboFx.show{ display:flex; }
+
+    /* Death GIF Overlay */
+    .deathFx{
+      position:absolute;
+      width: 160px; height: 160px; /* JS will override */
+      transform: translate(-50%, -50%);
+      pointer-events:none;
+      z-index: 998;
+      background-position:center;
+      background-size:contain;
+      background-repeat:no-repeat;
+      display:none;
+    }
+    .deathFx.show{ display:block; }
     .comboScore {
       font-size: 32px;
       font-weight: 900;
@@ -1885,8 +1908,8 @@
       citrussy: "Images/Luvvies/CItrussie.png",
       
       // Random Worms
-      worm: "Images/Luvvies/SourWurm-1.png", // Fallback
-      sourwurm: ["Images/Luvvies/SourWurm-1.png", "Images/Luvvies/Sourwurm-2.png", "Images/Luvvies/Sourwurm-3.png"],
+      worm: "Images/Luvvies/Sourwurm-1.png", // Fallback
+      sourwurm: ["Images/Luvvies/Sourwurm-1.png", "Images/Luvvies/Sourwurm-2.png", "Images/Luvvies/Sourwurm-3.png"],
       
       grumpy:   "Images/Luvvies/Grumpycookie.png",
       happy:    "Images/Luvvies/HappyCookie.png",
@@ -1910,7 +1933,7 @@
       
       // Jelly Buttons (Variants)
       variantsA: ["Images/Button/Variant-A1.png", "Images/Button/Variant-A2.png", "Images/Button/Variant-A3.png", "Images/Button/Variant-A4.png"],
-      variantsB: ["Images/Button/variant-B1.png", "Images/Button/variant-B2.png", "Images/Button/variant-B3.png", "Images/Button/variant-B4.png"],
+      variantsB: ["Images/Button/Variant-B1.png", "Images/Button/Variant-B2.png", "Images/Button/Variant-B3.png", "Images/Button/Variant-B4.png"],
       
       // Special Buttons
       powerBtn: "Images/Button/PowerUpButton.png",
@@ -2182,7 +2205,7 @@
     /**********************
      * Helpers
      **********************/
-    const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+    // duplicate clamp removed (function clamp is defined earlier)
     const posKey=(r,c)=>`${r},${c}`;
     function toast(title, subtitle="", ms=2600){
       document.documentElement.style.setProperty("--toastMs", ms+"ms");
@@ -2367,39 +2390,77 @@
     }
 
     function showComboAnim(score, r, c){
-       const wrap = document.createElement("div");
-       wrap.className = "comboOverlay";
-       
-       // Force reload of GIF to play it from start
+       // Re-use single overlay element (performance)
+       if(!ui._comboFx){
+         const fx = document.createElement("div");
+         fx.className = "comboFx";
+         const txtEl = document.createElement("div");
+         txtEl.className = "comboScore";
+         fx.appendChild(txtEl);
+         ui.fx.appendChild(fx);
+         ui._comboFx = fx;
+         ui._comboFxTxt = txtEl;
+         ui._comboFxTimer = 0;
+       }
+
+       const fx = ui._comboFx;
+       const txtEl = ui._comboFxTxt;
+
+       // Size relative to cell so it never dwarfs the board
+       const size = Math.round(Math.min(200, Math.max(110, CELL * 1.7)));
+       fx.style.width  = size + "px";
+       fx.style.height = size + "px";
+
+       // Score text scaling: never larger than the GIF
+       const fz = Math.round(Math.min(34, Math.max(18, size * 0.22)));
+       txtEl.style.fontSize = fz + "px";
+       txtEl.style.maxWidth = (size * 0.92) + "px";
+       txtEl.textContent = fmt(score);
+
+       // Restart GIF each time (cache-buster)
        const gifUrl = IMG.comboGif + "?t=" + Date.now();
-       wrap.style.backgroundImage = `url('${gifUrl}')`;
+       fx.style.backgroundImage = "url('" + gifUrl + "')";
 
        const {x,y} = tileCenter(r,c);
-       wrap.style.left = x+"px";
-       wrap.style.top = y+"px";
+       fx.style.left = x + "px";
+       fx.style.top  = y + "px";
 
-       const txt = document.createElement("div");
-       txt.className = "comboScore";
-       txt.textContent = fmt(score);
-       wrap.appendChild(txt);
+       fx.classList.add("show");
 
-       ui.fx.appendChild(wrap);
-       setTimeout(()=>wrap.remove(), 1200);
+       clearTimeout(ui._comboFxTimer);
+       ui._comboFxTimer = setTimeout(()=>{
+         fx.classList.remove("show");
+       }, 950);
     }
 
     function showDeathAnim(r, c){
-       const wrap = document.createElement("div");
-       wrap.className = "deathOverlay";
+       if(!ui._deathFx){
+         const fx = document.createElement("div");
+         fx.className = "deathFx";
+         ui.fx.appendChild(fx);
+         ui._deathFx = fx;
+         ui._deathFxTimer = 0;
+       }
+       const fx = ui._deathFx;
+
+       const size = Math.round(Math.min(220, Math.max(120, CELL * 1.85)));
+       fx.style.width  = size + "px";
+       fx.style.height = size + "px";
+
        const gifUrl = IMG.deathGif + "?t=" + Date.now();
-       wrap.style.backgroundImage = `url('${gifUrl}')`;
+       fx.style.backgroundImage = "url('" + gifUrl + "')";
 
        const {x,y} = tileCenter(r,c);
-       wrap.style.left = x+"px";
-       wrap.style.top = y+"px";
-       
-       ui.fx.appendChild(wrap);
-       setTimeout(()=>wrap.remove(), 1200);
+       fx.style.left = x + "px";
+       fx.style.top  = y + "px";
+
+       fx.classList.add("show");
+       clearTimeout(ui._deathFxTimer);
+       ui._deathFxTimer = setTimeout(()=>{
+         fx.classList.remove("show");
+       }, 1100);
     }
+
 
     /**********************
      * Responsive sizing
