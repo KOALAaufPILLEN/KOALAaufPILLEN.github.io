@@ -1680,6 +1680,7 @@
     // (no "yellow on yellow"), and we want the board tile background to be the jelly image (no extra backplate).
     const TILE_TINT_CACHE = new Map();     // key -> [c1,c2]
     const USED_TINT_HUES = [];             // assigned hues to keep them unique
+    const BASE_INDEX_CACHE = new Map();
 
     function clamp(n,min,max){ return Math.min(max, Math.max(min,n)); }
     function hueDist(a,b){
@@ -1756,7 +1757,7 @@
       let h = (preferredHue%360+360)%360;
       // enforce uniqueness against already assigned hues
       for(let attempt=0; attempt<48; attempt++){
-        const clash = USED_TINT_HUES.some(u => hueDist(u,h) < 60);
+        const clash = USED_TINT_HUES.some(u => hueDist(u,h) < 70);
         if(!clash) { USED_TINT_HUES.push(h); return h; }
         h = (h + 29) % 360; // pseudo-golden-ish step
       }
@@ -1773,13 +1774,18 @@
       const {h: spriteHue, l: spriteLight} = deriveSpriteHueAndLight(baseKey);
       const isLightSprite = spriteLight >= 62;
 
-      // Stable per-character hue, pushed away from the sprite hue
-      const baseHue = (hashStr(baseKey) * 137.508) % 360; // golden angle spread
+      // Stable per-character hue with wide spacing
+      let baseIdx = BASE_INDEX_CACHE.get(baseKey);
+      if(baseIdx == null){
+        baseIdx = (getBase(baseKey) ? BASES.findIndex(b=>b.key===baseKey) : -1);
+        BASE_INDEX_CACHE.set(baseKey, baseIdx);
+      }
+      const baseHue = (baseIdx >= 0) ? (baseIdx * 57) % 360 : (hashStr(baseKey) * 137.508) % 360;
       let preferred = baseHue;
-      if(hueDist(preferred, spriteHue) < 36) preferred = (preferred + 90) % 360;
+      if(hueDist(preferred, spriteHue) < 40) preferred = (preferred + 110) % 360;
 
       // Separate A/B variants clearly
-      const vShift = (variant === "B") ? 160 : 0;
+      const vShift = (variant === "B") ? 170 : 0;
       preferred = (preferred + vShift) % 360;
 
       const h = uniqueHue(preferred);
@@ -2011,14 +2017,32 @@
 
     function preloadImages(list){
       const seen = new Set();
+      const queue = [];
       list.forEach((src)=>{
         if(!src || seen.has(src)) return;
         seen.add(src);
-        const img = new Image();
-        img.decoding = "async";
-        img.loading = "eager";
-        img.src = src;
+        queue.push(src);
       });
+
+      const loadNext = (deadline)=>{
+        let n = 0;
+        while(queue.length && (deadline?.timeRemaining?.() > 8 || n < 4)){
+          const src = queue.shift();
+          const img = new Image();
+          img.decoding = "async";
+          img.loading = "eager";
+          img.src = src;
+          n++;
+        }
+        if(queue.length){
+          if("requestIdleCallback" in window){
+            requestIdleCallback(loadNext);
+          }else{
+            setTimeout(()=>loadNext({ timeRemaining: () => 12 }), 80);
+          }
+        }
+      };
+      loadNext();
     }
     function collectImgSources(){
       const list = [];
@@ -2341,6 +2365,7 @@
     }
     let combosUnlocked = loadComboCookie();
     let autoResolveQueued = false;
+    let resolving = false;
     function saveCombos(){
       try{ setCookie("luvvies_combos", JSON.stringify([...combosUnlocked]), 3650); }catch(e){}
     }
@@ -4147,6 +4172,8 @@ function updateMellowHp(tile){
     }
 
     function resolveAll(initial=false, isPlayerSwap=false){
+      if(resolving) return;
+      resolving = true;
       busy = true; // Safety lock
 
       // Safety: Auto-reset busy if something hangs deep in recursion
@@ -4239,6 +4266,7 @@ function updateMellowHp(tile){
           // Sicherstellen, dass das Board nach Level-Ups weiter spielbar bleibt
           ensureMovesOrShuffle();
           busy=false;
+          resolving=false;
           layoutBoard(); // Force sync visual positions to fix drag bugs
           updateUI();
           return;
@@ -4258,6 +4286,7 @@ function updateMellowHp(tile){
         // and 'mm.clear' is empty.
         if(acceptedSpecials.length === 0 && mm.clear.size === 0){
            busy=false;
+           resolving=false;
            layoutBoard(); // Force sync
            updateUI();
            ensureMovesOrShuffle();
@@ -4363,6 +4392,7 @@ function updateMellowHp(tile){
           }, 240);
           checkLevelUp();
           updateUI();
+          resolving=false;
           return;
         }
 
@@ -4524,6 +4554,7 @@ function updateMellowHp(tile){
        } catch(e) {
          console.error("Game Logic Error:", e);
          busy = false;
+         resolving = false;
        }
       };
 
@@ -4535,6 +4566,7 @@ function updateMellowHp(tile){
       }catch(e){
         console.error(e);
         busy=false;
+        resolving=false;
       }
     }
 
@@ -4953,11 +4985,11 @@ function updateMellowHp(tile){
       let tries = 0;
       while(tries < maxShuffles){
         if(hasAnyMatchOrSpecial()){
-          if(autoResolve && !busy && !autoResolveQueued){
+          if(autoResolve && !busy && !autoResolveQueued && !resolving){
             autoResolveQueued = true;
             setTimeout(()=>{
               autoResolveQueued = false;
-              if(!busy) resolveAll(false, false);
+              if(!busy && !resolving) resolveAll(false, false);
             }, 0);
           }
           return true; // immediate clearable match/special
@@ -4970,21 +5002,22 @@ function updateMellowHp(tile){
     }
 
     function ensureMovesOrShuffle(){
+      if(resolving) return;
       if(ensurePlayableBoard(6, false)) return;
       // Fallback: still stuck? force one last shuffle and try resolving
       shuffleAll();
       layoutBoard();
-      setTimeout(()=>{ if(!busy) resolveAll(false, false); }, 60);
+      setTimeout(()=>{ if(!busy && !resolving) resolveAll(false, false); }, 60);
     }
 
     // Idle watchdog: if matches exist while not busy, auto-resolve to prevent stuck boards
     setInterval(()=>{
-      if(busy || autoResolveQueued) return;
+      if(busy || autoResolveQueued || resolving || document.hidden) return;
       if(hasAnyMatchOrSpecial()){
         autoResolveQueued = true;
         setTimeout(()=>{
           autoResolveQueued = false;
-          if(!busy) resolveAll(false, false);
+          if(!busy && !resolving) resolveAll(false, false);
         }, 0);
       }
     }, 520);
@@ -5151,6 +5184,7 @@ clearHints();
 
     function newGame(fromDiffChange=false){
       busy=false;
+      resolving=false;
       autoPostDone=false;
       level=1;
       totalScore=0;
