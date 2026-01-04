@@ -417,7 +417,7 @@
     .bar > i{
       display:block;
       height:100%;
-      width:0%;
+      width:var(--pct, 0%);
       border-radius:999px;
       background: linear-gradient(90deg,
         #ff4fb9,
@@ -430,7 +430,7 @@
       animation: barHueSmooth 6s ease-in-out infinite;
       animation-delay: var(--rainbow-sync, 0s);
       box-shadow: 0 0 18px rgba(255,79,185,.22);
-      transition: width .25s ease;
+      transition: width .25s ease, height .25s ease;
     }
     @keyframes barHue{
       0%{background-position:0% 50%}
@@ -1706,6 +1706,68 @@
         radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--c1, #ffffff) 30%, transparent), transparent 60%),
         radial-gradient(circle at 80% 80%, color-mix(in srgb, var(--c2, #ffffff) 25%, transparent), transparent 65%);
       border:1px solid rgba(255,255,255,.10);
+    }
+    /* Mobile Optimization: Portrait Compact */
+    @media (max-width: 640px) and (orientation: portrait) {
+      .topRow { margin-top: 4px; padding: 8px; }
+      .stats { margin-top: 6px; gap: 4px; }
+      .progressRow { margin-top: 6px; padding: 6px 8px; }
+      .playArea { margin-top: 6px; padding: 4px; }
+      #boardWrap { padding: 2px; }
+    }
+
+    /* Mobile Optimization: Landscape Side Layout */
+    @media (max-width: 900px) and (orientation: landscape) and (max-height: 600px) {
+      #app {
+        display: grid;
+        grid-template-columns: 74px 1fr 50px;
+        grid-template-rows: auto 1fr;
+        grid-template-areas:
+          "top top top"
+          "stats play prog";
+        width: 100vw;
+        height: 100vh;
+        margin: 0;
+        padding: 0 4px 4px;
+        gap: 4px;
+        align-content: start;
+      }
+      .topRow { grid-area: top; margin: 0; margin-bottom: 2px; padding: 4px 8px; border-radius: 0 0 12px 12px; }
+      .stats {
+        grid-area: stats;
+        display: flex !important;
+        flex-direction: column;
+        gap: 4px;
+        margin: 0;
+        padding: 0;
+        grid-template-columns: none;
+      }
+      .stat { 
+        padding: 2px 4px; 
+        min-height: 36px; 
+        font-size: 10px;
+        border-radius: 10px;
+      }
+      .stat .k { font-size: 9px; }
+      .stat .v { font-size: 13px; }
+      
+      .progressRow {
+        grid-area: prog;
+        margin: 0;
+        flex-direction: column-reverse;
+        width: 100%;
+        height: 100%;
+        padding: 8px 4px;
+        justify-content: center;
+      }
+      .progressRow b { writing-mode: vertical-rl; transform: rotate(180deg); margin-bottom: 6px; font-size: 10px; }
+      .bar { width: 12px; height: 100%; flex:1; }
+      .bar > i { width: 100%; height: var(--pct, 0%); }
+      .pct { writing-mode: vertical-rl; transform: rotate(180deg); margin-top: 6px; min-width: 0; text-align: center; }
+      
+      .playArea { grid-area: play; margin: 0; height: 100%; border-radius: 12px; }
+      .below { display: none; }
+      #boardWrap { min-height: 0; height: 100%; padding: 2px; }
     }
 </style>
 </head>
@@ -3460,15 +3522,14 @@
           el.style.setProperty("--y", y+"px");
         }
     
-        function layoutBoard(forceShift=false){
-          const viewportW = getViewportWidth();
-          const isMobile = viewportW < 640;
-          const narrow = viewportW < 400;
-          
-          // Tighten Gaps for better mobile scaling
-          GAP = narrow ? 3 : (isMobile ? 5 : 8);
-          PAD = narrow ? 5 : (isMobile ? 10 : 14);
-          
+            function layoutBoard(forceShift=false){
+              const viewportW = getViewportWidth();
+              const isMobile = viewportW < 640;
+              const narrow = viewportW < 400;
+              
+              // Tighten Gaps for better mobile scaling
+              GAP = narrow ? 1 : (isMobile ? 2 : 8);
+              PAD = narrow ? 4 : (isMobile ? 8 : 14);          
           CELL = computeCell();
           const pad = currentPad();
           document.documentElement.style.setProperty("--cell", CELL+"px");
@@ -6050,14 +6111,14 @@ clearHints();
       ui.combo.textContent = "x"+combo;
 
       const pct = clamp(Math.round((levelScore/target)*100), 0, 100);
-      ui.bar.style.width = pct+"%";
+      ui.bar.style.setProperty("--pct", pct+"%");
       ui.pct.textContent = pct+"%";
 
       ui.hudLevel.textContent = "Level "+level;
       ui.hudScore.textContent = "Score "+fmt(totalScore);
       ui.hudMoves.textContent = "Moves "+moves;
       ui.hudCombo.textContent = "Combo x"+combo;
-      ui.hudBar.style.width = pct+"%";
+      ui.hudBar.style.setProperty("--pct", pct+"%");
       ui.hudPct.textContent = pct+"%";
     
       // Maximize HUD mirror
