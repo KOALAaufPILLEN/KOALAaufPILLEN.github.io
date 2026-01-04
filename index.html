@@ -33,6 +33,8 @@
       --app-height: 100vh;
       --safe-top: env(safe-area-inset-top, 0px);
       --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
     }
 
     *{box-sizing:border-box}
@@ -465,6 +467,12 @@
       z-index:10;
       padding: 8px;
       touch-action: none;
+    }
+    @media (max-width: 900px){
+      #boardWrap{
+        padding-left: calc(8px + var(--safe-left));
+        padding-right: calc(8px + var(--safe-right));
+      }
     }
     body.maximized #boardWrap { min-height: 90vh; }
 
@@ -1409,13 +1417,15 @@
       min-height: var(--app-height, 100vh);
       padding-top: calc(84px + var(--safe-top));
       padding-bottom: calc(12px + var(--safe-bottom));
+      padding-left: calc(8px + var(--safe-left));
+      padding-right: calc(8px + var(--safe-right));
     }
 
     /* FS HUD: left / center / right */
     #fsHud{
       position:absolute;
-      left: 14px;
-      right: 14px;
+      left: calc(14px + var(--safe-left));
+      right: calc(14px + var(--safe-right));
       top: calc(12px + var(--safe-top));
       z-index: 60;
       display:none;
@@ -1573,8 +1583,8 @@
       #fsHud{
         top:auto;
         bottom: calc(10px + var(--safe-bottom));
-        left: 6px;
-        right: 6px;
+        left: calc(6px + var(--safe-left));
+        right: calc(6px + var(--safe-right));
         align-items:flex-end;
         justify-content:center;
         gap:6px;
@@ -1597,8 +1607,8 @@
       #fsHud{
         top:auto;
         bottom: calc(10px + var(--safe-bottom));
-        left: 6px;
-        right: 6px;
+        left: calc(6px + var(--safe-left));
+        right: calc(6px + var(--safe-right));
         align-items:flex-end;
         justify-content:center;
         gap:6px;
@@ -1992,6 +2002,9 @@
     function fmt(n){ return Number(n||0).toLocaleString("de-DE"); }
     function getViewportHeight(){
       return (window.visualViewport && window.visualViewport.height) ? window.visualViewport.height : window.innerHeight;
+    }
+    function getViewportWidth(){
+      return (window.visualViewport && window.visualViewport.width) ? window.visualViewport.width : window.innerWidth;
     }
     function setAppHeight(){
       document.documentElement.style.setProperty("--app-height", Math.round(getViewportHeight()) + "px");
@@ -3387,6 +3400,7 @@
       const rect = wrap.getBoundingClientRect();
       const wrapW = wrap.clientWidth;
       const viewportH = getViewportHeight();
+      const viewportW = getViewportWidth();
 
       const isFs = document.body.classList.contains("fs");
       const isMax = document.body.classList.contains("maximized");
@@ -3406,7 +3420,7 @@
       const footerReserve = isFs ? 12 : (isMobile ? 12 : 32); // taskbar/margin
       const availH = Math.max(260, viewportH - Math.max(0, rect.top) - footerReserve);
 
-      const usableW = Math.max(300, wrapW - padW);
+      const usableW = Math.max(300, Math.min(wrapW, viewportW) - padW);
       const usableH = Math.max(300, availH - padH);
 
       const cellW = Math.floor((usableW - (cols-1)*GAP - pad*2) / cols);
@@ -3468,18 +3482,23 @@
   }
 
       function updateBoardShift(){
-        const board = document.getElementById("board");
-        if(!board) return;
-        if(!document.body.classList.contains("fs")){
-          document.documentElement.style.setProperty("--board-shift-x", "0px");
-          document.documentElement.style.setProperty("--board-shift-y", "0px");
-          return;
-        }
+      const board = document.getElementById("board");
+      if(!board) return;
+      if(!document.body.classList.contains("fs")){
+        document.documentElement.style.setProperty("--board-shift-x", "0px");
+        document.documentElement.style.setProperty("--board-shift-y", "0px");
+        return;
+      }
       const rect = board.getBoundingClientRect();
-      const left = rect.left;
-      const right = window.innerWidth - rect.right;
-      const top = rect.top;
-      const bottom = getViewportHeight() - rect.bottom;
+      const vp = window.visualViewport;
+      const vpLeft = vp ? vp.offsetLeft : 0;
+      const vpTop = vp ? vp.offsetTop : 0;
+      const vpW = getViewportWidth();
+      const vpH = getViewportHeight();
+      const left = rect.left - vpLeft;
+      const right = (vpLeft + vpW) - rect.right;
+      const top = rect.top - vpTop;
+      const bottom = (vpTop + vpH) - rect.bottom;
         let sx = 0;
         let sy = 0;
         const hGap = Math.abs(left - right);
