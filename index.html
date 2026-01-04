@@ -3420,99 +3420,87 @@
     /**********************
      * Responsive sizing
      **********************/
-    function computeCell(){
-      const wrap = document.getElementById("boardWrap");
-      const rect = wrap.getBoundingClientRect();
-      const wrapW = wrap.clientWidth;
-      const viewportH = getViewportHeight();
-      const viewportW = getViewportWidth();
-
-      const isFs = document.body.classList.contains("fs");
-      const isMax = document.body.classList.contains("maximized");
-      const isMobile = window.innerWidth < 640;
-      const isShort = viewportH < 720;
-
-      // Margins/Padding
-      const pad = currentPad();
-      const padW = (isFs||isMax) ? 10 : (isMobile ? 8 : 20);
-      // Vertical padding: allow HUD room but maximize board real estate; smaller boards get slightly less padding
-      const padHBase = (isFs)
-        ? (document.body.classList.contains("hidePanels") ? (isMobile ? 30 : 40) : (isShort ? 70 : 110))
-        : (isMax ? 80 : (isMobile ? 22 : 40));
-      const padH = Math.max(isMobile ? 20 : 40, padHBase - Math.max(0, (10 - rows) * 4));
-
-      // Remaining height: viewport minus current top + small footer reserve
-      const footerReserve = isFs ? 12 : (isMobile ? 12 : 32); // taskbar/margin
-      const availH = Math.max(260, viewportH - Math.max(0, rect.top) - footerReserve);
-
-      const usableW = Math.max(300, Math.min(wrapW, viewportW) - padW);
-      const usableH = Math.max(300, availH - padH);
-
-      const cellW = Math.floor((usableW - (cols-1)*GAP - pad*2) / cols);
-      const cellH = Math.floor((usableH - (rows-1)*GAP - pad*2) / rows);
-
-      // Allow gentle upscaling in fullscreen/maximized so the board fits the viewport
-      const preferred = clamp(84 - Math.max(0, rows-8)*2 - Math.max(0, cols-8)*1.5, 70, 96);
-      const maxCell = (isFs && document.body.classList.contains("hidePanels")) ? 148 : ((isFs || isMax) ? 118 : preferred);
-      const minCell = (viewportW < 360) ? 22
-        : (viewportW < 420) ? 26
-        : (viewportW < 520) ? 32
-        : (viewportW < 640) ? 38
-        : 54;
-      const target = Math.min(Math.min(cellW, cellH), maxCell);
-      const roundedTarget = Math.round(target);
-      const safeMin = Math.min(minCell, roundedTarget);
-      return clamp(roundedTarget, safeMin, maxCell);
-    }
-
-    function setTileXY(el, r, c){
-      const pad = currentPad();
-      const x = c*(CELL+GAP) + pad;
-      const y = r*(CELL+GAP) + pad;
-      el.style.setProperty("--x", x+"px");
-      el.style.setProperty("--y", y+"px");
-    }
-
-    function layoutBoard(forceShift=false){
-      const viewportW = getViewportWidth();
-      const isMobile = viewportW < 640;
-      const narrow = viewportW < 420;
-      GAP = narrow ? 4 : (isMobile ? 6 : 8);
-      PAD = narrow ? 6 : (isMobile ? 10 : 14);
-      CELL = computeCell();
-      const pad = currentPad();
-      document.documentElement.style.setProperty("--cell", CELL+"px");
-      document.documentElement.style.setProperty("--gap", GAP+"px");
-      document.documentElement.style.setProperty("--pad", pad+"px");
-      document.documentElement.style.setProperty("--cols", cols);
-      document.documentElement.style.setProperty("--rows", rows);
-
-      const w = pad*2 + cols*CELL + (cols-1)*GAP;
-      const h = pad*2 + rows*CELL + (rows-1)*GAP;
-      ui.board.style.width = w+"px";
-      ui.board.style.height = h+"px";
-
-      
-
-      // KOALA_LAYOUT_SYNC_FSBG: Fullscreen/Maximize BG exakt an Board-Größe anpassen
-      try{
-        if(ui && ui.fsBg){
-          ui.fsBg.style.width = w+"px";
-          ui.fsBg.style.height = h+"px";
+        function computeCell(){
+          const wrap = document.getElementById("boardWrap");
+          if(!wrap) return 42;
+          const rect = wrap.getBoundingClientRect();
+          const wrapW = wrap.clientWidth;
+          const viewportH = getViewportHeight();
+          const viewportW = getViewportWidth();
+    
+          const isFs = document.body.classList.contains("fs");
+          const isMax = document.body.classList.contains("maximized");
+          const isMobile = window.innerWidth < 640;
+    
+          // Margins/Padding - tighter for mobile
+          const pad = currentPad();
+          const padW = (isFs||isMax) ? 2 : (isMobile ? 4 : 16);
+          
+          // Vertical calculation
+          const topOffset = isFs ? 0 : Math.max(0, rect.top);
+          const bottomReserve = isFs ? 0 : (isMobile ? 8 : 24);
+          const availH = Math.max(200, viewportH - topOffset - bottomReserve);
+    
+          const usableW = Math.max(280, Math.min(wrapW, viewportW) - padW);
+    
+          const cellW = Math.floor((usableW - (cols-1)*GAP - pad*2) / cols);
+          const cellH = Math.floor((availH - (rows-1)*GAP - pad*2) / rows);
+    
+          const maxCell = (isFs||isMax) ? 130 : 92;
+          const minCell = 16;
+          
+          return clamp(Math.min(cellW, cellH), minCell, maxCell);
         }
-      }catch(e){}
-  for(const [id, el] of tileEls){
-          const tile = findTileById(id);
-          if(!tile) continue;
-          setTileXY(el, tile.r, tile.c);
+    
+        function setTileXY(el, r, c){
+          const pad = currentPad();
+          const x = c*(CELL+GAP) + pad;
+          const y = r*(CELL+GAP) + pad;
+          el.style.setProperty("--x", x+"px");
+          el.style.setProperty("--y", y+"px");
         }
-
-        updateBoardShift(forceShift);
-      syncLbHeight();
-      
-      // Remove any leftover tile DOM nodes that are no longer in the grid
-      pruneOrphanTileEls();
-  }
+    
+        function layoutBoard(forceShift=false){
+          const viewportW = getViewportWidth();
+          const isMobile = viewportW < 640;
+          const narrow = viewportW < 400;
+          
+          // Tighten Gaps for better mobile scaling
+          GAP = narrow ? 3 : (isMobile ? 5 : 8);
+          PAD = narrow ? 5 : (isMobile ? 10 : 14);
+          
+          CELL = computeCell();
+          const pad = currentPad();
+          document.documentElement.style.setProperty("--cell", CELL+"px");
+          document.documentElement.style.setProperty("--gap", GAP+"px");
+          document.documentElement.style.setProperty("--pad", pad+"px");
+          document.documentElement.style.setProperty("--cols", cols);
+          document.documentElement.style.setProperty("--rows", rows);
+    
+          const w = pad*2 + cols*CELL + (cols-1)*GAP;
+          const h = pad*2 + rows*CELL + (rows-1)*GAP;
+          ui.board.style.width = w+"px";
+          ui.board.style.height = h+"px";
+    
+          // KOALA_LAYOUT_SYNC_FSBG: Fullscreen/Maximize BG exakt an Board-Größe anpassen
+          try{
+            if(ui && ui.fsBg){
+              ui.fsBg.style.width = w+"px";
+              ui.fsBg.style.height = h+"px";
+            }
+          }catch(e){}
+      for(const [id, el] of tileEls){
+              const tile = findTileById(id);
+              if(!tile) continue;
+              setTileXY(el, tile.r, tile.c);
+            }
+    
+            updateBoardShift(forceShift);
+          syncLbHeight();
+          
+          // Remove any leftover tile DOM nodes that are no longer in the grid
+          pruneOrphanTileEls();
+      }
 
       function updateBoardShift(force=false){
       const board = document.getElementById("board");
@@ -4184,7 +4172,8 @@ function updateMellowHp(tile){
     let busyStart = 0; // Watchdog timestamp
 
     function onPointerDown(e){
-      e.preventDefault(); // avoid text/image dragging or board grabbing
+      if(!e.isPrimary && e.isPrimary!==undefined) return;
+      e.preventDefault(); 
       // Watchdog: If busy for too long (>2.5s) without active resolution, force unlock
       if(busy){
          if(!busyStart) busyStart = Date.now();
@@ -4208,7 +4197,7 @@ function updateMellowHp(tile){
       if(currentDrag) return;
 
       clearHints();
-      tEl.setPointerCapture(e.pointerId);
+      try{ tEl.setPointerCapture(e.pointerId); }catch(ex){}
 
       const rect = tEl.getBoundingClientRect();
       const boardRect = ui.board.getBoundingClientRect();
@@ -4231,7 +4220,8 @@ function updateMellowHp(tile){
         el: tEl,
         r: tile.r,
         c: tile.c,
-        moved: false
+        moved: false,
+        axis: null
       };
 
       tEl.classList.add("dragging");
@@ -4243,14 +4233,18 @@ function updateMellowHp(tile){
       const dx = e.clientX - dragStart.startX;
       const dy = e.clientY - dragStart.startY;
 
-      if(!currentDrag.moved && Math.hypot(dx,dy) > 6) currentDrag.moved = true;
+      // Axis Latching: Only determine axis once threshold is crossed
+      if(!currentDrag.axis){
+        if(Math.hypot(dx, dy) > 8){
+           currentDrag.axis = Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
+           currentDrag.moved = true;
+        }
+      }
 
-      if(currentDrag.moved){
-         // Lock drag to primary axis and clamp to half a cell so tiles never fully overlap
-         const primary = Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
+      if(currentDrag.axis){
          const maxShift = (CELL + GAP) * 0.48;
          let shiftX = 0, shiftY = 0;
-         if(primary === "x"){
+         if(currentDrag.axis === "x"){
             shiftX = Math.max(-maxShift, Math.min(maxShift, dx));
          } else {
             shiftY = Math.max(-maxShift, Math.min(maxShift, dy));
@@ -4266,11 +4260,11 @@ function updateMellowHp(tile){
 
     function onPointerUp(e){
       if(!currentDrag) return;
-      const {id, el, r, c, moved} = currentDrag;
+      const {id, el, r, c, moved, axis} = currentDrag;
       const tile = findTileById(id);
       currentDrag = null;
       el.classList.remove("dragging");
-      el.releasePointerCapture(e.pointerId);
+      try{ el.releasePointerCapture(e.pointerId); }catch(ex){}
 
       // Revert visual to grid slot immediately (animation happens if swap valid)
       setTileXY(el, r, c);
@@ -4291,9 +4285,10 @@ function updateMellowHp(tile){
       if(Math.hypot(dx,dy) < 15) return;
 
       // Direction
+      const finalAxis = axis || (Math.abs(dx) > Math.abs(dy) ? "x" : "y");
       let dirStr = "";
-      if(Math.abs(dx) > Math.abs(dy)) dirStr = dx>0 ? "R" : "L";
-      else dirStr = dy>0 ? "D" : "U";
+      if(finalAxis === "x") dirStr = dx > 0 ? "R" : "L";
+      else dirStr = dy > 0 ? "D" : "U";
 
       const dr = (dirStr==="D")?1:(dirStr==="U")?-1:0;
       const dc = (dirStr==="R")?1:(dirStr==="L")?-1:0;
