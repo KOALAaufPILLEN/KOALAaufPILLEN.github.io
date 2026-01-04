@@ -218,6 +218,20 @@
       position:relative;
       z-index:5; /* Vordergrund */
     }
+    @media (max-width: 980px), (pointer: coarse){
+      #app{
+        width: 100vw;
+        margin: 8px 0 18px;
+        padding: 0 8px;
+      }
+      .playArea{
+        padding: 6px;
+        border-radius: 18px;
+      }
+      #boardWrap{
+        padding: 4px;
+      }
+    }
 
     .topRow{
       margin-top: 12px;
@@ -3440,13 +3454,15 @@
       // Allow gentle upscaling in fullscreen/maximized so the board fits the viewport
       const preferred = clamp(84 - Math.max(0, rows-8)*2 - Math.max(0, cols-8)*1.5, 70, 96);
       const maxCell = (isFs && document.body.classList.contains("hidePanels")) ? 148 : ((isFs || isMax) ? 118 : preferred);
-      const minCell = (viewportW < 360) ? 26
-        : (viewportW < 420) ? 30
-        : (viewportW < 520) ? 36
-        : (viewportW < 640) ? 42
+      const minCell = (viewportW < 360) ? 22
+        : (viewportW < 420) ? 26
+        : (viewportW < 520) ? 32
+        : (viewportW < 640) ? 38
         : 54;
       const target = Math.min(Math.min(cellW, cellH), maxCell);
-      return clamp(Math.round(target), minCell, maxCell);
+      const roundedTarget = Math.round(target);
+      const safeMin = Math.min(minCell, roundedTarget);
+      return clamp(roundedTarget, safeMin, maxCell);
     }
 
     function setTileXY(el, r, c){
@@ -3457,7 +3473,7 @@
       el.style.setProperty("--y", y+"px");
     }
 
-    function layoutBoard(){
+    function layoutBoard(forceShift=false){
       const viewportW = getViewportWidth();
       const isMobile = viewportW < 640;
       const narrow = viewportW < 420;
@@ -3491,14 +3507,14 @@
           setTileXY(el, tile.r, tile.c);
         }
 
-        updateBoardShift();
+        updateBoardShift(forceShift);
       syncLbHeight();
       
       // Remove any leftover tile DOM nodes that are no longer in the grid
       pruneOrphanTileEls();
   }
 
-      function updateBoardShift(){
+      function updateBoardShift(force=false){
       const board = document.getElementById("board");
       if(!board) return;
       if(!document.body.classList.contains("fs")){
@@ -3506,6 +3522,7 @@
         document.documentElement.style.setProperty("--board-shift-y", "0px");
         return;
       }
+      if(!force && (busy || resolving)) return;
       const rect = board.getBoundingClientRect();
       const vp = window.visualViewport;
       const vpLeft = vp ? vp.offsetLeft : 0;
@@ -3532,8 +3549,8 @@
         document.documentElement.style.setProperty("--board-shift-y", Math.round(sy) + "px");
       }
 
-    function relayoutAll(forceBg=false){
-      layoutBoard();
+    function relayoutAll(forceBg=false, forceShift=false){
+      layoutBoard(forceShift);
       syncBgHeight();
       buildGlobalBg(forceBg);
       buildFsBg(forceBg);
@@ -3546,7 +3563,7 @@
         setAppHeight();
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(()=>{
-           layoutBoard();
+           layoutBoard(true);
            syncBgHeight();
            buildGlobalBg();
            buildFsBg();
@@ -6027,7 +6044,7 @@ clearHints();
         document.getElementById("fsBg").innerHTML="";
       }
       setAppHeight();
-      setTimeout(()=>relayoutAll(true), 120);
+      setTimeout(()=>relayoutAll(true, true), 120);
     });
 
     function updateUI(){
@@ -6574,7 +6591,7 @@ clearHints();
       document.body.classList.toggle("showPanels", !isShowing);
       document.body.classList.toggle("hidePanels", isShowing);
       fsToggleUi.textContent = document.body.classList.contains("showPanels") ? "HIDE" : "SHOW";
-      setTimeout(()=>{ try{ relayoutAll(); }catch(e){} }, 30);
+      setTimeout(()=>{ try{ relayoutAll(false, true); }catch(e){} }, 30);
       setTimeout(()=>{ try{ syncBgHeight(); }catch(e){} }, 80);
       try{ positionComboModal(); }catch(e){}
     });
