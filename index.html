@@ -3508,7 +3508,7 @@
           const cellW = Math.floor((usableW - (cols-1)*GAP - pad*2) / cols);
           const cellH = Math.floor((availH - (rows-1)*GAP - pad*2) / rows);
     
-          const maxCell = (isFs||isMax) ? 130 : 92;
+          const maxCell = (isFs||isMax) ? 160 : 120;
           const minCell = 16;
           
           return clamp(Math.min(cellW, cellH), minCell, maxCell);
@@ -3524,11 +3524,20 @@
     
             function layoutBoard(forceShift=false){
               const viewportW = getViewportWidth();
+              const viewportH = getViewportHeight();
               const isMobile = viewportW < 640;
               const narrow = viewportW < 400;
+              const isLandscape = viewportW > viewportH;
+              const isFs = document.body.classList.contains("fs") || document.body.classList.contains("maximized");
               
               // Tighten Gaps for better mobile scaling
               GAP = narrow ? 1 : (isMobile ? 2 : 8);
+              
+              // User request: -10px gap in fullscreen or mobile landscape
+              if(isFs || (isMobile && isLandscape)) {
+                  GAP = -10;
+              }
+
               PAD = narrow ? 4 : (isMobile ? 8 : 14);          
           CELL = computeCell();
           const pad = currentPad();
