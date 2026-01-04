@@ -3527,16 +3527,9 @@
               const viewportH = getViewportHeight();
               const isMobile = viewportW < 640;
               const narrow = viewportW < 400;
-              const isLandscape = viewportW > viewportH;
-              const isFs = document.body.classList.contains("fs") || document.body.classList.contains("maximized");
               
-              // Tighten Gaps for better mobile scaling
-              GAP = narrow ? 1 : (isMobile ? 2 : 8);
-              
-              // User request: -10px gap in fullscreen or mobile landscape
-              if(isFs || (isMobile && isLandscape)) {
-                  GAP = -10;
-              }
+              // Global Gap: -2px for a compact look on all boards
+              GAP = -2;
 
               PAD = narrow ? 4 : (isMobile ? 8 : 14);          
           CELL = computeCell();
