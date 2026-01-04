@@ -3522,7 +3522,7 @@
         document.documentElement.style.setProperty("--board-shift-y", "0px");
         return;
       }
-      if(!force && (busy || resolving)) return;
+      if(!force) return;
       const rect = board.getBoundingClientRect();
       const vp = window.visualViewport;
       const vpLeft = vp ? vp.offsetLeft : 0;
