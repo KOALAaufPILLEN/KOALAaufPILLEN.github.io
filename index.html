@@ -232,29 +232,19 @@
 
     #infoBack{ z-index: 100000; } /* Ensure Bio is above Menu */
     /* Hide menus in fullscreen */
-    body.fs .below, body.fs .topRow, body.fs .stats, body.fs .progressRow, body.fs #luvPanel, body.fs #rightPanel, body.fs #settingsBack {
+    body.fs .topRow,
+    body.fs .progressRow,
+    body.fs .stats,
+    body.fs .below,
+    body.fs #luvPanel,
+    body.fs #rightPanel,
+    body.fs #settingsBack,
+    body.fs #maxHud{
       display: none !important;
     }
-    body.fs.showPanels .topRow,
-    body.fs.showPanels .progressRow{ display:flex !important; }
-    body.fs.showPanels .stats{ display:grid !important; }
-    body.fs.showPanels .below{ display:grid !important; }
-    body.fs.showPanels #luvPanel,
-    body.fs.showPanels #rightPanel{ display:block !important; }
-    body.fs.showPanels #boardWrap{
-      min-height: 60vh;
-      padding-top: 60px;
-      padding-bottom: 18px;
-    }
-    body.fs.hidePanels #boardWrap{
-      min-height: 100vh;
-      padding-top: 8px;
-      padding-bottom: 4px;
-    }
-    body.fs.hidePanels #fsHud .hudLeft,
-    body.fs.hidePanels #fsHud .hudCenter,
-    body.fs.hidePanels #fsHud .hudRight{
-      display:none;
+    body.fs #boardWrap{
+      padding-top: 18px;
+      padding-bottom: 96px;
     }
 
     .diffWrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -418,13 +408,19 @@
         #ff4fb9
       );
       background-size: 300% 100%;
-      animation: barHue 3.2s linear infinite;
+      animation: barHueSmooth 6s ease-in-out infinite;
+      animation-delay: var(--rainbow-sync, 0s);
       box-shadow: 0 0 18px rgba(255,79,185,.22);
       transition: width .25s ease;
     }
     @keyframes barHue{
       0%{background-position:0% 50%}
       100%{background-position:100% 50%}
+    }
+    @keyframes barHueSmooth{
+      0%{background-position:0% 50%}
+      50%{background-position:100% 50%}
+      100%{background-position:0% 50%}
     }
     .pct{font-weight:1000; min-width:46px; text-align:right}
     body.dark .progressRow b,
@@ -472,6 +468,7 @@
     #board{
       position:relative;
       z-index:12; /* Board immer vorne */
+      transform: translate(var(--board-shift-x, 0px), var(--board-shift-y, 0px));
       padding: var(--pad);
       border-radius: var(--boardRadius);
       background:
@@ -535,13 +532,14 @@
       position:absolute;
       inset:0;
       z-index:20;
+      transform: translate(var(--board-shift-x, 0px), var(--board-shift-y, 0px));
     }
 
     #fsBg{
       position:absolute;
       left:50%;
       top:50%;
-      transform: translate(-50%, -50%);
+      transform: translate(-50%, -50%) translate(var(--board-shift-x, 0px), var(--board-shift-y, 0px));
       width: 0px;
       height: 0px;
       z-index:5; /* hinter board */
@@ -618,33 +616,58 @@
 
     /* Variant B specific styling */
     .tile[data-variant="B"] .plate{
-      
-      /* keep Variant B as jelly-only too (no extra border/backplate) */
-      border: none;
-      background-blend-mode: normal, normal, normal;
-}
+        
+        /* keep Variant B as jelly-only too (no extra border/backplate) */
+        border: none;
+        background-blend-mode: normal, normal, normal;
+  }
+    .tile[data-variant="B"] .plate:before{
+        background-image:
+          linear-gradient(135deg,
+            color-mix(in srgb, var(--p1) 58%, transparent),
+            color-mix(in srgb, var(--p2) 58%, transparent)
+          );
+        background-size: 100% 100%;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
 
     .variantBadge{
-      position:absolute;
-      top:6px;
-      left:6px;
-      width:18px;
-      height:18px;
-      border-radius:999px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-weight:900;
-      font-size:11px;
-      letter-spacing:.02em;
-      color:#fff;
-      background: rgba(0,0,0,.28);
-      border: 1px solid rgba(255,255,255,.72);
-      box-shadow: 0 10px 16px rgba(0,0,0,.16);
-      pointer-events:none;
-      z-index:3;
-      text-shadow: 0 1px 2px rgba(0,0,0,.22);
-    }
+        position:absolute;
+        top:6px;
+        right:6px;
+        width:20px;
+        height:20px;
+        border-radius:999px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-weight:900;
+        font-size:12px;
+        letter-spacing:.02em;
+        color:#1c0f33;
+        background: rgba(255,255,255,.92);
+        border: 1px solid rgba(17,13,26,.12);
+        box-shadow: 0 10px 16px rgba(0,0,0,.16);
+        pointer-events:none;
+        z-index:3;
+        text-shadow: 0 1px 0 rgba(255,255,255,.6);
+        overflow:hidden;
+        isolation:isolate;
+      }
+      .variantBadge::before{
+        content:"";
+        position:absolute;
+        inset:-3px;
+        border-radius:inherit;
+        background: linear-gradient(90deg, #ff4fb9, #ffcf5a, #7ad8ff, #8b5cf6, #ff4fb9);
+        background-size:300% 100%;
+        animation: barHueSmooth 6s ease-in-out infinite;
+        animation-delay: var(--rainbow-sync, 0s);
+        z-index:-1;
+        opacity:.95;
+        filter: blur(0.6px);
+      }
     /* Enhance image contrast */
     .tile img {
        filter: drop-shadow(0 10px 14px rgba(0,0,0,.18)) drop-shadow(0 0 1px rgba(255,255,255,.60)) saturate(1.18) contrast(1.05);
@@ -723,20 +746,20 @@
 
     /* Animierter Power Background (für Powerups + ??? + Lovelie) */
     .powerAnim .plate{
-      background-image: var(--powerBtn) !important;
-      background-color: transparent !important;
-      background-blend-mode: normal !important;
-      box-shadow: 0 0 22px rgba(255,79,185,.45), 0 0 32px rgba(122,216,255,.35);
-      animation: powerPulse 1.8s ease-in-out infinite;
-    }
+        background-image: var(--powerBtn) !important;
+        background-color: transparent !important;
+        background-blend-mode: normal !important;
+        box-shadow: none;
+        animation: powerPulse 1.8s ease-in-out infinite;
+      }
     /* Mystery Tile specific */
     .tile[data-base="myst"] .plate {
        background-image: var(--mystBtn) !important;
     }
     @keyframes powerPulse{
-      0%{ transform: scale(1); filter:saturate(1); }
-      50%{ transform: scale(1.05); filter:saturate(1.2); }
-      100%{ transform: scale(1); filter:saturate(1); }
+      0%{ transform: translateY(var(--oy, 0px)) scale(1); }
+      50%{ transform: translateY(var(--oy, 0px)) scale(1.05); }
+      100%{ transform: translateY(var(--oy, 0px)) scale(1); }
     }
     /* Boss tint */
     .tile[data-base="mellowzilla"] .plate,
@@ -855,6 +878,13 @@
       .below{grid-template-columns:1fr;}
       #boardWrap{min-height: 52vh;}
     }
+    @media (max-width: 640px){
+      .stats{grid-template-columns: repeat(3, minmax(0,1fr)); gap:8px;}
+      .stat{min-height: 52px; padding: 8px 10px;}
+      .progressRow{padding: 8px 10px;}
+      .playArea{padding: 10px;}
+      #boardWrap{min-height: 60vh; padding: 4px;}
+    }
 
     .panel{
       background: var(--card2);
@@ -886,9 +916,9 @@
     .luvCard b{display:block}
     .luvCard small{opacity:.7;font-weight:900}
     .luvChange{
-      position:absolute;
-      right:8px;
-      bottom:8px;
+        position:absolute;
+        right:8px;
+        bottom:8px;
       height:26px;
       min-width:28px;
       padding:0 6px;
@@ -899,6 +929,30 @@
       font-size:12px;
       cursor:pointer;
       box-shadow: 0 6px 14px rgba(0,0,0,.10);
+        isolation: isolate;
+      }
+      .variantBadge.btn{
+        pointer-events:auto;
+        cursor:pointer;
+      }
+      .luvCard .variantBadge.btn{
+        right:40px;
+        bottom:8px;
+        top:auto;
+        left:auto;
+      }
+    .luvChange:before{
+      content:"";
+      position:absolute;
+      inset:-3px;
+      border-radius:inherit;
+      background: linear-gradient(90deg, #ff4fb9, #ffcf5a, #7ad8ff, #8b5cf6, #ff4fb9);
+      background-size:300% 100%;
+      animation: barHueSmooth 6s ease-in-out infinite;
+      animation-delay: var(--rainbow-sync, 0s);
+      z-index:-1;
+      opacity:.95;
+      filter: blur(0.4px);
     }
     body.dark .luvChange{
       color:#fff;
@@ -1242,14 +1296,38 @@
       transform: translate(-50%, -50%);
       pointer-events: none;
       z-index: 999;
-      background-position: center;
-      background-size: contain;
-      background-repeat: no-repeat;
       display: none; /* shown by JS */
       align-items: center;
       justify-content: center;
     }
     .comboFx.show{ display:flex; }
+    .comboSprite{
+      position:absolute;
+      width: 120px; height: 120px;
+      transform: translate(-50%, -50%);
+      pointer-events:none;
+      z-index: 998;
+      background-position: 0% 0%;
+      background-repeat: no-repeat;
+      display:block;
+      animation:
+        comboRainbow var(--rainbow-dur, 520ms) linear infinite,
+        comboFlicker var(--flicker-dur, 320ms) ease-in-out infinite;
+      animation-delay: var(--rainbow-delay, 0ms);
+    }
+    @keyframes comboRainbow{
+      0%{ filter: sepia(1) saturate(var(--rainbow-sat, 3.2)) hue-rotate(calc(var(--rainbow-hue, 0deg) + 0deg)) brightness(var(--rainbow-br, 1.05)); }
+      100%{ filter: sepia(1) saturate(var(--rainbow-sat, 3.2)) hue-rotate(calc(var(--rainbow-hue, 0deg) + 360deg)) brightness(var(--rainbow-br, 1.05)); }
+    }
+    @keyframes comboFlicker{
+      0%{ opacity: 1; transform: translate(-50%, -50%) rotate(var(--combo-rot, 0deg)) scale(1); }
+      12%{ opacity: 0.78; transform: translate(-50%, -50%) rotate(calc(var(--combo-rot, 0deg) + var(--combo-wiggle, 0deg))) scale(1.1); }
+      25%{ opacity: 1; transform: translate(-50%, -50%) rotate(calc(var(--combo-rot, 0deg) - var(--combo-wiggle, 0deg))) scale(0.92); }
+      45%{ opacity: 0.7; transform: translate(-50%, -50%) rotate(calc(var(--combo-rot, 0deg) + var(--combo-wiggle, 0deg))) scale(1.16); }
+      60%{ opacity: 1; transform: translate(-50%, -50%) rotate(calc(var(--combo-rot, 0deg) - var(--combo-wiggle, 0deg))) scale(0.9); }
+      78%{ opacity: 0.8; transform: translate(-50%, -50%) rotate(calc(var(--combo-rot, 0deg) + var(--combo-wiggle, 0deg))) scale(1.08); }
+      100%{ opacity: 1; transform: translate(-50%, -50%) rotate(var(--combo-rot, 0deg)) scale(1); }
+    }
 
     /* Death GIF Overlay */
     .deathFx{
@@ -1427,17 +1505,11 @@
       padding: 0 10px;
       font-size: 12px;
     }
-    #fsToggleUi{
-      position:absolute;
-      left:50%;
-      top:-6px;
-      transform: translateX(-50%);
-      background: linear-gradient(135deg, rgba(255,220,80,.94), rgba(255,120,220,.88));
-      color:#2b1b4f;
-      border:1px solid rgba(255,255,255,.45);
-      box-shadow: 0 10px 22px rgba(0,0,0,.16);
-      z-index:61;
-    }
+      #fsToggleUi{
+        background: linear-gradient(135deg, rgba(255,220,80,.94), rgba(255,120,220,.88));
+        color:#2b1b4f;
+        border:1px solid rgba(255,255,255,.45);
+      }
     body.fs #fsHud .hudChip{
       color:#fff;
       background: rgba(30,24,48,.72);
@@ -1469,12 +1541,18 @@
       color:#fff;
       border: 1px solid rgba(255,255,255,.28);
     }
-    .hudBtn.hint{
-      background: linear-gradient(135deg, rgba(255,79,185,.92), rgba(255,170,230,.86));
-      color:#fff;
-      border: 1px solid rgba(255,255,255,.28);
-      animation: pulseBtn 2s infinite;
-    }
+      .hudBtn.hint{
+        background: linear-gradient(135deg, rgba(255,79,185,.92), rgba(255,170,230,.86));
+        color:#fff;
+        border: 1px solid rgba(255,255,255,.28);
+        animation: pulseBtn 2s infinite;
+      }
+      /* FX Light: reduce heavy effects for smoother dragging */
+      body.fxLight .tile{ transition: transform 140ms ease; }
+      body.fxLight .tile img{ filter: none; }
+      body.fxLight .plate:before{ opacity: .6; }
+      body.fxLight .hudBtn{ animation: none; }
+      body.fxLight #board{ filter: none; }
     @keyframes pulseBtn{
       0%{ transform:scale(1); box-shadow: 0 0 0 0 rgba(255,79,185, 0.7); }
       70%{ transform:scale(1.05); box-shadow: 0 0 0 10px rgba(255,79,185, 0); }
@@ -1691,6 +1769,10 @@
             <button class="Btn ghost" id="menuHintQuick" style="height:40px;min-width:86px;">Hint</button>
          </div>
          <div class="panel" style="margin-bottom:10px; display:flex; align-items:center; gap:10px;">
+            <b>FX Light</b>
+            <input type="checkbox" id="fxLightToggle">
+         </div>
+         <div class="panel" style="margin-bottom:10px; display:flex; align-items:center; gap:10px;">
             <b>Sprache</b>
             <div id="translateWidget" style="flex:1;min-height:32px;"></div>
          </div>
@@ -1700,6 +1782,10 @@
             <button class="Btn" id="menuHint">Hint</button>
             <button class="Btn secondary" id="menuNew">Neues Spiel</button>
             <button class="Btn ghost" id="menuIntro">Anleitung</button>
+         </div>
+         <div class="cta" style="margin:8px 0; justify-content:center; gap:10px;">
+            <button class="Btn ghost" id="menuSaveColors">Farben speichern</button>
+            <button class="Btn ghost" id="menuLoadColors">Farben laden</button>
          </div>
 
          <div class="panel">
@@ -1719,6 +1805,10 @@
             <b>FX Dimmer</b>
             <input type="range" id="fsMenuFx" min="0" max="100" value="0" style="flex:1">
          </div>
+         <div class="panel" style="margin-bottom:12px; display:flex; align-items:center; gap:10px;">
+            <b>FX Light</b>
+            <input type="checkbox" id="fsMenuFxLight">
+         </div>
 
          <div class="panel" style="margin-bottom:12px;">
             <h3>Secret Kombos</h3>
@@ -1728,8 +1818,12 @@
          <div class="cta" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
             <button class="Btn secondary" id="fsMenuClose">Weiter</button>
             <button class="Btn ghost" id="fsMenuIntro">Anleitung</button>
-            <button class="Btn" id="fsMenuLuv">Luvvies</button>
-            <button class="Btn" id="fsMenuTheme">🌙</button>
+            <button class="Btn ghost" id="fsMenuLuv">Luvvies</button>
+         </div>
+         <div class="panel fsQuickRow" style="margin-top:12px; display:flex; align-items:center; justify-content:center; gap:10px;">
+            <button class="hudBtn mini" id="fsMenuMax" title="Maximize">⛶</button>
+            <button class="hudBtn mini" id="fsMenuReroll" title="Farben neu wuerfeln">🌈</button>
+            <button class="hudBtn mini" id="fsMenuTheme" title="Theme">🌙</button>
          </div>
          <div style="margin-top:12px; text-align:center;">
             <button class="Btn ghost" onclick="document.exitFullscreen()">Exit Fullscreen</button>
@@ -1782,7 +1876,6 @@
           <div id="fxLayer"></div>
 
           <div id="fsHud">
-            <button class="hudBtn mini" id="fsToggleUi" data-allow-drag="1" title="Menü anzeigen/verstecken">SHOW</button>
             <div class="hudLeft">
               <div class="hudChip color" id="hudLevel">Level 1</div>
               <div class="hudChip color" id="hudScore">Score 0</div>
@@ -1916,6 +2009,8 @@
     const TINT_OVERRIDES = new Map();
     const TINT_STATE_KEY = "luvvies_tint_state";
     const TINT_OVERRIDES_KEY = "luvvies_tint_overrides";
+    const TINT_SNAPSHOT_KEY = "luvvies_tint_snapshot";
+    const TINT_SNAPSHOT_OVERRIDES_KEY = "luvvies_tint_snapshot_overrides";
 
     function clamp(n,min,max){ return Math.min(max, Math.max(min,n)); }
     function hueDist(a,b){
@@ -2016,7 +2111,7 @@
         BASE_INDEX_CACHE.set(baseKey, baseIdx);
       }
       const baseHue = (baseIdx >= 0) ? (baseIdx * 92) % 360 : (hashStr(baseKey) * 137.508) % 360;
-      const override = TINT_OVERRIDES.get(baseKey) || 0;
+        const override = TINT_OVERRIDES.get(baseKey + ":" + (variant || "A")) || TINT_OVERRIDES.get(baseKey) || 0;
       let preferred = (baseHue + TINT_STATE.seed + TINT_STATE.extraShift + override) % 360;
       if(hueDist(preferred, spriteHue) < 55) preferred = (preferred + 140) % 360;
 
@@ -2121,6 +2216,9 @@
 
     function paletteForTile(tile){
       const { baseKey, variant } = parseTypeId(tile?.type || "");
+      if(isPowerupKey(baseKey) || baseKey==="myst" || baseKey==="lovelie"){
+        return ["rgba(255,255,255,0)","rgba(255,255,255,0)"];
+      }
       // Keep explicit special palettes where they matter visually (powerups etc.)
       if(SPECIAL_PALS[baseKey]) return SPECIAL_PALS[baseKey];
       // Unique, stable, contrast-first pastel tint for each (baseKey, variant)
@@ -2162,6 +2260,53 @@
         }
       }catch(e){}
     }
+    function saveTintSnapshot(){
+      try{
+        localStorage.setItem(TINT_SNAPSHOT_KEY, JSON.stringify(TINT_STATE));
+        const obj = {};
+        for(const [k,v] of TINT_OVERRIDES.entries()) obj[k] = v;
+        localStorage.setItem(TINT_SNAPSHOT_OVERRIDES_KEY, JSON.stringify(obj));
+        toast("Farben gespeichert", "Du kannst sie spaeter laden.", 2200);
+      }catch(e){}
+    }
+    function applyTintSnapshot(){
+      try{
+        const rawState = localStorage.getItem(TINT_SNAPSHOT_KEY);
+        if(!rawState){ toast("Keine Farben gespeichert", "Bitte zuerst speichern.", 2000); return; }
+        if(TINT_OVERRIDES.size > 0){
+          const ok = confirm("Du hast individuelle Luvvie-Farben. Alle ueberschreiben?");
+          if(!ok) return;
+        }
+        const v = JSON.parse(rawState);
+        if(v && typeof v.seed === "number") TINT_STATE.seed = v.seed;
+        if(v && typeof v.minDist === "number") TINT_STATE.minDist = v.minDist;
+        if(v && typeof v.extraShift === "number") TINT_STATE.extraShift = v.extraShift;
+        TINT_OVERRIDES.clear();
+        const rawOv = localStorage.getItem(TINT_SNAPSHOT_OVERRIDES_KEY);
+        if(rawOv){
+          const obj = JSON.parse(rawOv);
+          if(obj && typeof obj === "object"){
+            for(const k of Object.keys(obj)){
+              const n = Number(obj[k]);
+              if(!Number.isNaN(n)) TINT_OVERRIDES.set(k, n);
+            }
+          }
+        }
+        TILE_TINT_CACHE.clear();
+        USED_TINT_HUES.length = 0;
+        saveTintState();
+        saveTintOverrides();
+        if(isGridReady()){
+          for(let r=0;r<rows;r++){
+            for(let c=0;c<cols;c++){
+              const t = grid[r][c];
+              if(t) refreshTileEl(t);
+            }
+          }
+        }
+        toast("Farben geladen", "Alle Luvvies aktualisiert.", 2200);
+      }catch(e){}
+    }
 
     function rerollTileTints(){
       TINT_STATE.seed = Math.random() * 360;
@@ -2184,7 +2329,7 @@
     function rerollLuvvieTint(baseKey){
       if(!baseKey) return;
       TINT_STATE.minDist = 86;
-      TINT_OVERRIDES.set(baseKey, Math.random() * 360);
+      TINT_OVERRIDES.set(baseKey + ":A", Math.random() * 360);
       TILE_TINT_CACHE.clear();
       USED_TINT_HUES.length = 0;
       saveTintState();
@@ -2197,6 +2342,27 @@
         }
       }
       toast("Luvvie‑Farbe geändert ✨", getBase(baseKey)?.name || baseKey, 2000);
+    }
+
+    function rerollLuvvieTintB(baseKey){
+      if(!baseKey) return;
+      TINT_STATE.minDist = 86;
+      TINT_OVERRIDES.set(baseKey + ":B", Math.random() * 360);
+      TILE_TINT_CACHE.clear();
+      USED_TINT_HUES.length = 0;
+      saveTintState();
+      saveTintOverrides();
+      if(!isGridReady()) return;
+      for(let r=0;r<rows;r++){
+        for(let c=0;c<cols;c++){
+          const t = grid[r][c];
+          if(t){
+            const p = parseTypeId(t.type);
+            if(p.baseKey === baseKey && p.variant === "B") refreshTileEl(t);
+          }
+        }
+      }
+      toast("Variante B Farbe geÇÏndert ƒoù", getBase(baseKey)?.name || baseKey, 2000);
     }
 /**********************
      * DOM safety: remove orphan tile elements (prevents rare "static tiles" you can't drag)
@@ -2213,6 +2379,20 @@
         }
       }
       return ids;
+    }
+    function gridHasVariantB(baseKey){
+      if(!baseKey || !isGridReady()) return false;
+      for(let r=0;r<rows;r++){
+        const row = grid[r];
+        if(!row) continue;
+        for(let c=0;c<cols;c++){
+          const t = row[c];
+          if(!t) continue;
+          const p = parseTypeId(t.type);
+          if(p.baseKey === baseKey && p.variant === "B") return true;
+        }
+      }
+      return false;
     }
     function pruneOrphanTileEls(){
       const ids = collectGridIds();
@@ -2334,8 +2514,12 @@
       
       // Animations
       comboGif: `${OPT}/Animation/Animation-combo.gif`,
+      comboSprite: "Images/Animation/Combo.png",
       deathGif: `${OPT}/Animation/Deathanimation.gif`
     };
+    const RAINBOW_LOOP_S = 6;
+    const rainbowOffset = -((Date.now()/1000) % RAINBOW_LOOP_S);
+    document.documentElement.style.setProperty("--rainbow-sync", rainbowOffset + "s");
     document.getElementById("greetLogo").src = IMG.logo;
     const ml = document.getElementById("mainLogo");
     if(ml) ml.src = IMG.logo;
@@ -2567,7 +2751,7 @@
           shock:["OVERLOAD!","LASER 🍩","MEHR!!!"]
         }
       },
-      { key:"joyce", name:"Joyce Podenko", img:IMG.joyce, tag:"normal",
+      { key:"joyce", name:"Joyce", img:IMG.joyce, tag:"normal",
         palettes:{ A:["#efebe9","#d7ccc8"], B:["#bcaaa4","#a1887f"] },
         ability:"Buddy Burst: Teamplayer durch und durch.",
         story:"Joyce ist loyal – wenn Smokey da ist, zündet’s richtig.",
@@ -2636,9 +2820,38 @@
      * Variant unlock
      **********************/
     let unlocked = {};
+    const UNLOCKED_KEY = "luvvies_unlocked_variants";
+    function saveUnlocked(){
+      try{
+        const out = {};
+        for(const k of Object.keys(unlocked)){
+          out[k] = Array.from(unlocked[k] || []);
+        }
+        localStorage.setItem(UNLOCKED_KEY, JSON.stringify(out));
+      }catch(e){}
+    }
+    function loadUnlocked(){
+      try{
+        const raw = localStorage.getItem(UNLOCKED_KEY);
+        if(!raw) return null;
+        const obj = JSON.parse(raw);
+        if(!obj || typeof obj !== "object") return null;
+        return obj;
+      }catch(e){ return null; }
+    }
     function resetUnlocked(){
       unlocked = {};
       for(const b of BASES) unlocked[b.key] = new Set(["A"]);
+      const saved = loadUnlocked();
+      if(saved){
+        for(const key of Object.keys(saved)){
+          if(!unlocked[key]) continue;
+          const list = saved[key];
+          if(Array.isArray(list)){
+            for(const v of list) unlocked[key].add(v);
+          }
+        }
+      }
     }
     function maybeUnlockVariant(){
       if(level < 5) return;
@@ -2647,7 +2860,9 @@
       if(!candidates.length) return;
       const pick = candidates[Math.floor(Math.random()*candidates.length)];
       unlocked[pick.key].add("B");
+      saveUnlocked();
       toast(`Neue Variante 🎨`, `${pick.name} hat jetzt auch Farbe B ✨`, 3200);
+      try{ buildMenu(); }catch(e){}
     }
 
     /**********************
@@ -2747,38 +2962,23 @@
      * Combo unlock tracking (simple cookie-based log)
      **********************/
     const COMBOS = {
-      moonshuffle: { title:"Sleepy × Mond Shuffle", desc:"Shuffle‑Combo", story:"Wenn Sleepy & Mondlie synchron shufflen, wird das Board neu gemixt.", icons:["sleepy","sleepy","mond"] },
-      therapy: { title:"Grumpy Therapy", desc:"Moves‑Boost", story:"Happy beruhigt die Grumpy‑Crew – du bekommst extra Moves.", icons:["grumpy","grumpy","grumpy","happy"] },
-      sprinkle: { title:"Donut Sprinkle", desc:"Beam‑Combo", story:"Sweety triggert den Sprinkle‑Beam – alles glitzert!", icons:["donut","donut","donut","sweety"] },
-      sugar: { title:"Donut Sugar Rush", desc:"Rush‑Combo", story:"Happy + Donuts = Zuckerrausch & Extra‑Clears.", icons:["donut","donut","donut","happy"] },
-      buddies: { title:"Buddy Burst", desc:"Buddy‑Welle", story:"Beste Freunde zünden gemeinsam eine Welle.", icons:["joyce","smokey","simba"] },
-      powercombo: { title:"Power Combo", desc:"Power‑Fusion", story:"Powerup‑Kombi löst eine Spezial‑Welle aus.", icons:["worm","cit","koala"] },
-      simba_mix: { title:"Simba Variant Mix", desc:"Variant‑Fusion", story:"Zwei Simba‑Varianten verschmelzen zu einem Clear.", icons:["simba","simba","simba","simba"] }
+      moonshuffle: { title:"Moon Dream Shuffle", desc:"Shuffle Combo", story:"3x Sleepy + 1x Mondlie -> Board wird neu gemixt.", icons:["sleepy","sleepy","sleepy","mond"] },
+      therapy: { title:"Grumpy Therapy", desc:"Moves Boost", story:"Happy beruhigt die Grumpy-Crew -> du bekommst extra Moves.", icons:["grumpy","grumpy","grumpy","happy"] },
+      sprinkle: { title:"Sprinkle Beam", desc:"Beam Combo", story:"3x Donut + Sweety -> Glitzer-Beam raeumt auf.", icons:["donut","donut","donut","sweety"] },
+      sugar: { title:"Zuckerrausch", desc:"Rush Combo", story:"3x Donut + Happy -> Extra-Clears + Bonus-Moves.", icons:["donut","donut","donut","happy"] },
+      buddies: { title:"Buddy Burst", desc:"Buddy-Welle", story:"3x Joyce + 1x Smokey (oder umgekehrt) -> Wellen-Boom.", icons:["joyce","joyce","joyce","smokey"] },
+      bestbuddies: { title:"Best Buddies Wave", desc:"Buddy-Finale", story:"3x Simba + 1x Smokey (oder umgekehrt) -> Reihe+Spalte + Bonus.", icons:["simba","simba","simba","smokey"] }
     };
-    const LUVVIE_COMBOS = {
-      sweety: "sprinkle",
-      sleepy: "moonshuffle",
-      normal: "powercombo",
-      cry: "powercombo",
-      koala: "powercombo",
-      cit: "powercombo",
-      worm: "powercombo",
-      grumpy: "therapy",
-      happy: "therapy",
-      mond: "moonshuffle",
-      donut: "sprinkle",
-      joyce: "buddies",
-      smokey: "buddies",
-      simba: "buddies",
-      mellow: "powercombo",
-      lovelie: "powercombo",
-      fledernuss: "powercombo",
-      flederheld: "powercombo",
-      supernuss: "powercombo",
-      giraffie: "powercombo",
-      mellowzilla: "powercombo",
-      koalazilla: "powercombo"
-    };
+    function comboKeysForBase(baseKey){
+      if(!baseKey) return [];
+      const keys = [];
+      for(const k of Object.keys(COMBOS)){
+        const c = COMBOS[k];
+        if(c && c.icons && c.icons.includes(baseKey)) keys.push(k);
+      }
+      return keys;
+    }
+
     function loadComboCookie(){
       try{
         const raw = getCookie("luvvies_combos");
@@ -2810,7 +3010,7 @@
 
         const icons = document.createElement("div");
         icons.className = "comboIcons";
-        const keysToShow = unlocked ? c.icons : [null, null, null];
+        const keysToShow = unlocked ? c.icons : Array((c.icons && c.icons.length) || 0).fill(null);
         keysToShow.forEach((key, idx)=>{
           if(idx>0){
             const plus = document.createElement("span");
@@ -2950,8 +3150,9 @@
       const boardRect = ui.board.getBoundingClientRect();
       const fxRect = ui.fx.getBoundingClientRect();
 
-      const localX = PAD + c*(CELL+GAP) + CELL/2;
-      const localY = PAD + r*(CELL+GAP) + CELL/2;
+      const pad = currentPad();
+      const localX = pad + c*(CELL+GAP) + CELL/2;
+      const localY = pad + r*(CELL+GAP) + CELL/2;
 
       // Board Pos relative to FX layer
       const boardX = boardRect.left - fxRect.left;
@@ -2961,6 +3162,7 @@
     }
     // GIF-only FX mode (performance): disable HTML particle spam for combos
     const FX_GIF_ONLY = true;
+    const COMBO_SPRITE = { cols: 4, rows: 4, frames: 16, fps: 28 };
 
 
     function makeStar(x,y, big=false){
@@ -2997,15 +3199,73 @@
       ui.fx.appendChild(r);
       setTimeout(()=>r.remove(), 760);
     }
-    function burstFx(x,y, count=12){
-      if(FX_GIF_ONLY) return;
-
-      ringFx(x,y);
-      for(let i=0;i<count;i++){
-        const ang = Math.random()*Math.PI*2;
-        const dist = 10 + Math.random()*40;
-        makeStar(x + Math.cos(ang)*dist, y + Math.sin(ang)*dist, Math.random()<0.4);
+      function burstFx(x,y, count=12){
+        if(FX_GIF_ONLY) return;
+  
+        ringFx(x,y);
+        for(let i=0;i<count;i++){
+          const ang = Math.random()*Math.PI*2;
+          const dist = 10 + Math.random()*40;
+          makeStar(x + Math.cos(ang)*dist, y + Math.sin(ang)*dist, Math.random()<0.4);
+        }
       }
+  
+      function showComboSprite(r, c){
+         if(!IMG.comboSprite) return;
+         const fx = document.createElement("div");
+         fx.className = "comboSprite";
+ 
+         const size = Math.round(Math.min(190, Math.max(86, CELL + 24)));
+         fx.style.width = size + "px";
+         fx.style.height = size + "px";
+       const hue = Math.floor(Math.random() * 360);
+       const rot = Math.floor(Math.random() * 360);
+       const wiggle = 18 + Math.floor(Math.random() * 30);
+       const dur = 1100 + Math.floor(Math.random() * 1200);
+       const delay = -Math.floor(Math.random() * dur);
+       const sat = (2.6 + Math.random() * 2.2).toFixed(2);
+       const br = (0.95 + Math.random() * 0.25).toFixed(2);
+       const flicker = 140 + Math.floor(Math.random() * 220);
+       fx.style.setProperty("--rainbow-hue", hue + "deg");
+       fx.style.setProperty("--rainbow-dur", dur + "ms");
+       fx.style.setProperty("--rainbow-delay", delay + "ms");
+       fx.style.setProperty("--rainbow-sat", sat);
+       fx.style.setProperty("--rainbow-br", br);
+       fx.style.setProperty("--flicker-dur", flicker + "ms");
+       fx.style.setProperty("--combo-rot", rot + "deg");
+       fx.style.setProperty("--combo-wiggle", wiggle + "deg");
+         fx.style.backgroundImage = "url('" + IMG.comboSprite + "')";
+         fx.style.backgroundSize = (COMBO_SPRITE.cols * size) + "px " + (COMBO_SPRITE.rows * size) + "px";
+
+       const {x,y} = tileCenter(r,c);
+       fx.style.left = x + "px";
+       fx.style.top  = y + "px";
+
+       ui.fx.appendChild(fx);
+
+       let frame = 0;
+       const frameCount = COMBO_SPRITE.frames;
+       const frameMs = Math.max(16, Math.round(1000 / COMBO_SPRITE.fps));
+       const setFrame = (idx)=>{
+         const col = idx % COMBO_SPRITE.cols;
+         const row = Math.floor(idx / COMBO_SPRITE.cols);
+         fx.style.backgroundPosition = (-col * size) + "px " + (-row * size) + "px";
+       };
+       setFrame(0);
+       const timer = setInterval(()=>{
+         frame++;
+         if(frame >= frameCount){
+           clearInterval(timer);
+           fx.remove();
+           return;
+         }
+         setFrame(frame);
+       }, frameMs);
+
+       setTimeout(()=>{
+         clearInterval(timer);
+         fx.remove();
+       }, frameMs * frameCount + 60);
     }
 
     function showComboAnim(score, r, c){
@@ -3034,7 +3294,8 @@
        fx.style.width  = size + "px";
        fx.style.height = size + "px";
 
-       if(score != null){
+       const showScore = Number.isFinite(score) && score > 0;
+       if(showScore){
          const fz = Math.round(Math.min(34, Math.max(18, size * 0.22)));
          txtEl.style.fontSize = fz + "px";
          txtEl.style.maxWidth = (size * 0.92) + "px";
@@ -3043,12 +3304,7 @@
        }else{
          txtEl.style.display = "none";
        }
-
-       const gifUrl = IMG.comboGif;
-       if(fx.dataset.gif !== gifUrl){
-         fx.style.backgroundImage = "url('" + gifUrl + "')";
-         fx.dataset.gif = gifUrl;
-       }
+       showComboSprite(r, c);
 
        const {x,y} = tileCenter(r,c);
        fx.style.left = x + "px";
@@ -3061,8 +3317,6 @@
        clearTimeout(entry.timer);
        entry.timer = setTimeout(()=>{
          fx.classList.remove("show");
-         fx.style.backgroundImage = "none";
-         fx.dataset.gif = "";
        }, 950);
     }
 
@@ -3105,20 +3359,21 @@
 
       const isFs = document.body.classList.contains("fs");
       const isMax = document.body.classList.contains("maximized");
+      const isMobile = window.innerWidth < 640;
 
       // Margins/Padding
       const pad = currentPad();
-      const padW = (isFs||isMax) ? 12 : 20;
+      const padW = (isFs||isMax) ? 10 : (isMobile ? 8 : 20);
       // Vertical padding: allow HUD room but maximize board real estate; smaller boards get slightly less padding
-      const padHBase = (isFs) ? (document.body.classList.contains("hidePanels") ? 40 : 110) : (isMax ? 80 : 40);
-      const padH = Math.max(40, padHBase - Math.max(0, (10 - rows) * 4));
+      const padHBase = (isFs) ? (document.body.classList.contains("hidePanels") ? (isMobile ? 30 : 40) : 110) : (isMax ? 80 : (isMobile ? 22 : 40));
+      const padH = Math.max(isMobile ? 20 : 40, padHBase - Math.max(0, (10 - rows) * 4));
 
       // Remaining height: viewport minus current top + small footer reserve
-      const footerReserve = isFs ? 16 : 32; // taskbar/margin
+      const footerReserve = isFs ? 12 : (isMobile ? 12 : 32); // taskbar/margin
       const availH = Math.max(260, window.innerHeight - Math.max(0, rect.top) - footerReserve);
 
-      const usableW = Math.max(320, wrapW - padW);
-      const usableH = Math.max(320, availH - padH);
+      const usableW = Math.max(300, wrapW - padW);
+      const usableH = Math.max(300, availH - padH);
 
       const cellW = Math.floor((usableW - (cols-1)*GAP - pad*2) / cols);
       const cellH = Math.floor((usableH - (rows-1)*GAP - pad*2) / rows);
@@ -3140,6 +3395,9 @@
     }
 
     function layoutBoard(){
+      const isMobile = window.innerWidth < 640;
+      GAP = isMobile ? 6 : 8;
+      PAD = isMobile ? 10 : 14;
       CELL = computeCell();
       const pad = currentPad();
       document.documentElement.style.setProperty("--cell", CELL+"px");
@@ -3162,17 +3420,47 @@
           ui.fsBg.style.height = h+"px";
         }
       }catch(e){}
-for(const [id, el] of tileEls){
-        const tile = findTileById(id);
-        if(!tile) continue;
-        setTileXY(el, tile.r, tile.c);
-      }
+  for(const [id, el] of tileEls){
+          const tile = findTileById(id);
+          if(!tile) continue;
+          setTileXY(el, tile.r, tile.c);
+        }
 
+        updateBoardShift();
       syncLbHeight();
-    
+      
       // Remove any leftover tile DOM nodes that are no longer in the grid
       pruneOrphanTileEls();
-}
+  }
+
+      function updateBoardShift(){
+        const board = document.getElementById("board");
+        if(!board) return;
+        if(!document.body.classList.contains("fs")){
+          document.documentElement.style.setProperty("--board-shift-x", "0px");
+          document.documentElement.style.setProperty("--board-shift-y", "0px");
+          return;
+        }
+        const rect = board.getBoundingClientRect();
+        const left = rect.left;
+        const right = window.innerWidth - rect.right;
+        const top = rect.top;
+        const bottom = window.innerHeight - rect.bottom;
+        let sx = 0;
+        let sy = 0;
+        const hGap = Math.abs(left - right);
+        if(hGap > 40){
+          const delta = Math.min(hGap / 2, 90);
+          sx = left > right ? -delta : delta;
+        }
+        const vGap = Math.abs(top - bottom);
+        if(vGap > 40){
+          const delta = Math.min(vGap / 2, 90);
+          sy = top > bottom ? -delta : delta;
+        }
+        document.documentElement.style.setProperty("--board-shift-x", Math.round(sx) + "px");
+        document.documentElement.style.setProperty("--board-shift-y", Math.round(sy) + "px");
+      }
 
     function relayoutAll(forceBg=false){
       layoutBoard();
@@ -3361,13 +3649,13 @@ function refreshTileEl(tile){
 
   // variant badge
   const oldBadge = el.querySelector(".variantBadge");
-  if(oldBadge) oldBadge.remove();
-  if(plate && base && variant==="B"){
-    const vb = document.createElement("div");
-    vb.className="variantBadge";
-    vb.textContent="B";
-    plate.appendChild(vb);
-  }
+    if(oldBadge) oldBadge.remove();
+    if(plate && base && variant==="B"){
+      const vb = document.createElement("div");
+      vb.className="variantBadge";
+      vb.textContent="B";
+      plate.appendChild(vb);
+    }
 }
 
 function updateMellowHp(tile){
@@ -3841,8 +4129,8 @@ function updateMellowHp(tile){
         startX: e.clientX,
         startY: e.clientY,
         // Store initial CSS transform values
-        initialLeft: tile.c * (CELL+GAP) + PAD,
-        initialTop:  tile.r * (CELL+GAP) + PAD,
+        initialLeft: tile.c * (CELL+GAP) + currentPad(),
+        initialTop:  tile.r * (CELL+GAP) + currentPad(),
       };
 
       currentDrag = {
@@ -4058,12 +4346,12 @@ function updateMellowHp(tile){
       if(count("donut")===3 && count("sweety")===1){ unlockCombo("sprinkle"); return "sprinkle"; }
       if(count("donut")===3 && count("happy")===1){ unlockCombo("sugar"); return "sugar"; }
 
-      // Buddies: 3 of either + 1 of other
-      if(count("smokey")===3 && count("joyce")===1) return "buddies";
-      if(count("joyce")===3 && count("smokey")===1) return "buddies";
+        // Buddies: 3 of either + 1 of other
+        if(count("smokey")===3 && count("joyce")===1){ unlockCombo("buddies"); return "buddies"; }
+        if(count("joyce")===3 && count("smokey")===1){ unlockCombo("buddies"); return "buddies"; }
 
-      if(count("smokey")===3 && count("simba")===1) return "bestbuddies";
-      if(count("simba")===3 && count("smokey")===1) return "bestbuddies";
+        if(count("smokey")===3 && count("simba")===1){ unlockCombo("bestbuddies"); return "bestbuddies"; }
+        if(count("simba")===3 && count("smokey")===1){ unlockCombo("bestbuddies"); return "bestbuddies"; }
 
       return null;
     }
@@ -4372,6 +4660,7 @@ function updateMellowHp(tile){
         if(el){
           el.classList.add("pop");
           const center = tileCenter(r,c);
+          showComboSprite(r, c);
           makeStar(center.x, center.y, true);
           setTimeout(()=>{ el.remove(); tileEls.delete(t.id); }, 420);
         }
@@ -5175,19 +5464,27 @@ function updateMellowHp(tile){
           while(segStart>=0 && !isBlocker(grid[segStart][c])) segStart--;
 
           let write = segEnd;
-          for(let rr=segEnd; rr>=segStart+1; rr--){
-            const t = grid[rr][c];
-            if(t){
-              if(write !== rr){
-                grid[write][c]=t;
-                grid[rr][c]=null;
-                t.r=write; t.c=c;
-                const el = tileEls.get(t.id);
-                if(el) setTileXY(el, t.r, t.c);
+            for(let rr=segEnd; rr>=segStart+1; rr--){
+              const t = grid[rr][c];
+              if(t){
+                if(write !== rr){
+                  grid[write][c]=t;
+                  grid[rr][c]=null;
+                  t.r=write; t.c=c;
+                  const el = tileEls.get(t.id);
+                  if(el){
+                    setTileXY(el, t.r, t.c);
+                    el.classList.remove("land");
+                    void el.offsetWidth;
+                    setTimeout(()=>{
+                      el.classList.add("land");
+                      setTimeout(()=>el.classList.remove("land"), 560);
+                    }, 200);
+                  }
+                }
+                write--;
               }
-              write--;
             }
-          }
 
           for(let rr=write; rr>=segStart+1; rr--){
             let tType = randNormalType();
@@ -5303,13 +5600,18 @@ function updateMellowHp(tile){
       if(!fx) return;
       clearAttackPreview();
       const size = CELL;
+      const boardRect = ui.board.getBoundingClientRect();
+      const fxRect = fx.getBoundingClientRect();
+      const boardX = boardRect.left - fxRect.left;
+      const boardY = boardRect.top - fxRect.top;
+      const pad = currentPad();
       for(let r=rr; r<rr+3; r++){
         for(let c=cc; c<cc+3; c++){
           if(!inBounds(r,c)) continue;
           const warn = document.createElement("div");
           warn.className = "attackWarn";
-          warn.style.left = (PAD + c*(CELL+GAP)) + "px";
-          warn.style.top  = (PAD + r*(CELL+GAP)) + "px";
+          warn.style.left = (boardX + pad + c*(CELL+GAP)) + "px";
+          warn.style.top  = (boardY + pad + r*(CELL+GAP)) + "px";
           warn.style.width = size + "px";
           warn.style.height = size + "px";
           fx.appendChild(warn);
@@ -5425,6 +5727,7 @@ function updateMellowHp(tile){
       for(let rLoop=big.r; rLoop<big.r+size; rLoop++){
         for(let cLoop=big.c; cLoop<big.c+size; cLoop++){
           if(!inBounds(rLoop,cLoop)) continue;
+          showComboSprite(rLoop, cLoop);
           const t = grid[rLoop][cLoop];
           if(t && isPlaceholder(t) && t.partOf===bigId) grid[rLoop][cLoop]=null;
           if(t && t.id===bigId) grid[rLoop][cLoop]=null;
@@ -5625,7 +5928,7 @@ clearHints();
     }
 
     async function toggleFullscreen(){
-      const root = document.getElementById("playArea");
+      const root = document.documentElement;
       try{
         if(document.fullscreenElement){
           await document.exitFullscreen();
@@ -5822,7 +6125,9 @@ clearHints();
         card.style.setProperty("--c2", pal[1]);
         const imgSrc = b.imgSmall || b.img || "";
         const imgHtml = imgSrc ?
-          `<img src="${imgSrc}" alt="${b.name}">` : `<div style="width:78px;height:78px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#ff4fb9,#7ad8ff);color:#fff;font-weight:1000;font-size:32px;box-shadow:0 12px 20px rgba(0,0,0,.12);">?</div>`;
+          `<img src="${imgSrc}" alt="${b.name}">` :
+          `<div style="width:78px;height:78px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#ff4fb9,#7ad8ff);color:#fff;font-weight:1000;font-size:32px;box-shadow:0 12px 20px rgba(0,0,0,.12);">?</div>`;
+        const hasB = (unlocked[b.key] && unlocked[b.key].has("B")) || gridHasVariantB(b.key);
         card.innerHTML = `
           ${imgHtml}
           <div>
@@ -5830,6 +6135,7 @@ clearHints();
             <small>${b.tag || "normal"}</small>
           </div>
           <button class="luvChange" title="Farbe wechseln">🌈</button>
+          ${hasB ? `<button class="variantBadge btn" title="Variante B Farbe">B</button>` : ""}
         `;
         card.addEventListener("click", ()=>openInfo(b));
         const changeBtn = card.querySelector(".luvChange");
@@ -5837,6 +6143,13 @@ clearHints();
           changeBtn.addEventListener("click", (e)=>{
             e.stopPropagation();
             rerollLuvvieTint(b.key);
+          });
+        }
+        const changeBtnB = card.querySelector(".variantBadge.btn");
+        if(changeBtnB){
+          changeBtnB.addEventListener("click", (e)=>{
+            e.stopPropagation();
+            rerollLuvvieTintB(b.key);
           });
         }
         return card;
@@ -5857,14 +6170,15 @@ clearHints();
       document.getElementById("infoTag").textContent = (b.tag || "normal") + " • Varianten: A/B (ab Level 5)";
       document.getElementById("infoAbility").textContent = b.ability || "—";
       document.getElementById("infoStory").textContent = b.story || "—";
-      const comboKey = LUVVIE_COMBOS[b.key];
       const comboEl = document.getElementById("infoCombo");
-      if(comboKey && COMBOS[comboKey]){
-        const unlocked = combosUnlocked.has(comboKey);
-        const c = COMBOS[comboKey];
-        comboEl.textContent = unlocked ? c.title : "???";
-      }else{
-        comboEl.textContent = "—";
+      if(comboEl){
+        const keys = comboKeysForBase(b.key);
+        const unlocked = keys.filter(k => combosUnlocked.has(k));
+        if(unlocked.length){
+          comboEl.textContent = unlocked.map(k => COMBOS[k].title).join(" • ");
+        }else{
+          comboEl.textContent = keys.length ? "???" : "—";
+        }
       }
 
       const ul = document.getElementById("infoLines");
@@ -6269,7 +6583,7 @@ clearHints();
       if(btnMax){
          btnMax.addEventListener("click", async ()=>{
             const shouldMax = !document.body.classList.contains("maximized");
-            const root = document.getElementById("playArea") || document.documentElement;
+            const root = document.documentElement;
             if(shouldMax){
               document.body.classList.add("maximized");
               layoutBoard();
@@ -6365,8 +6679,7 @@ clearHints();
     }
 
     // aktivieren (script läuft nach DOM)
-    try{ makeHudDraggable(document.getElementById("fsToggleUi"), "luvHudPos_toggle"); }catch(e){}
-    try{ makeHudDraggable(document.getElementById("maxHud"), "luvHudPos_max"); }catch(e){}
+        try{ makeHudDraggable(document.getElementById("maxHud"), "luvHudPos_max"); }catch(e){}
 
 // FX Slider (Dimmer Overlay)
     function updateFx(v){
@@ -6382,6 +6695,24 @@ clearHints();
       if(document.getElementById("fxSlider")) document.getElementById("fxSlider").value = v;
       if(document.getElementById("fsMenuFx")) document.getElementById("fsMenuFx").value = v;
     }
+
+    const FX_LIGHT_KEY = "luvvies_fx_light";
+    function setFxLight(v){
+      document.body.classList.toggle("fxLight", !!v);
+      try{ localStorage.setItem(FX_LIGHT_KEY, v ? "1" : "0"); }catch(e){}
+      const a = document.getElementById("fxLightToggle");
+      const b = document.getElementById("fsMenuFxLight");
+      if(a) a.checked = !!v;
+      if(b) b.checked = !!v;
+    }
+    try{
+      const raw = localStorage.getItem(FX_LIGHT_KEY);
+      if(raw === "1") setFxLight(true);
+    }catch(e){}
+    const fxLightToggle = document.getElementById("fxLightToggle");
+    if(fxLightToggle) fxLightToggle.addEventListener("change", (e)=>setFxLight(e.target.checked));
+    const fsMenuFxLight = document.getElementById("fsMenuFxLight");
+    if(fsMenuFxLight) fsMenuFxLight.addEventListener("change", (e)=>setFxLight(e.target.checked));
 
     const fxSlider = document.getElementById("fxSlider");
     fxSlider.addEventListener("input", (e)=>updateFx(e.target.value));
@@ -6422,6 +6753,10 @@ clearHints();
     if(menuLuv) menuLuv.addEventListener("click", ()=>{
        toast("Luvvies Menü", "Bitte Spiel beenden für Details", 2000);
     });
+    const menuSaveColors = document.getElementById("menuSaveColors");
+    if(menuSaveColors) menuSaveColors.addEventListener("click", saveTintSnapshot);
+    const menuLoadColors = document.getElementById("menuLoadColors");
+    if(menuLoadColors) menuLoadColors.addEventListener("click", applyTintSnapshot);
 
     // Dark mode in FS Menu
     const fsTheme = document.getElementById("fsMenuTheme");
@@ -6431,6 +6766,15 @@ clearHints();
       // Sync icon
       fsTheme.textContent = document.body.classList.contains("dark") ? "☀️" : "🌙";
     });
+
+    const fsMenuMax = document.getElementById("fsMenuMax");
+    if(fsMenuMax) fsMenuMax.addEventListener("click", ()=>{
+      const btnMax = document.getElementById("btnMax");
+      if(btnMax) btnMax.click();
+    });
+
+    const fsMenuReroll = document.getElementById("fsMenuReroll");
+    if(fsMenuReroll) fsMenuReroll.addEventListener("click", rerollTileTints);
 
     // Old FS listeners (kept for safety if buttons exist)
     const fsIntroBtn = document.getElementById("fsIntro");
