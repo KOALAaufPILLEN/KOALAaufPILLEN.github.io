@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <link rel="icon" type="image/png" href="Luvvies/Luvvies-Logonew.png" />
+  <link rel="apple-touch-icon" href="Luvvies/Luvvies-Logonew.png" />
   <title>Luvvies Crush</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -257,7 +259,6 @@
     body.fs .below,
     body.fs #luvPanel,
     body.fs #rightPanel,
-    body.fs #settingsBack,
     body.fs #maxHud{
       display: none !important;
     }
@@ -305,7 +306,7 @@
       padding: 0 20px;
       border-radius: 999px;
       border: none;
-      background: var(--btnCandy) center/cover no-repeat;
+      background: linear-gradient(135deg, #ff78c8, #ff4fb9);
       color: white;
       box-shadow: 0 8px 16px rgba(0,0,0,.16);
       text-shadow: 0 2px 4px rgba(0,0,0,.25);
@@ -1769,6 +1770,34 @@
       .below { display: none; }
       #boardWrap { min-height: 0; height: 100%; padding: 2px; }
     }
+    /* Fix FS HUD Mobile Top Position & Width & Draggable */
+    @media (max-width: 820px), (max-height: 720px) {
+      body.fs #fsHud {
+        top: calc(10px + var(--safe-top));
+        bottom: auto;
+        flex-wrap: nowrap;
+        align-items: center;
+        background: rgba(255,255,255,0.85);
+        border-radius: 999px;
+        padding: 4px 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        pointer-events: auto;
+        width: fit-content;
+        max-width: 96vw;
+        justify-content: center;
+        left: 50%;
+        transform: translateX(-50%);
+        touch-action: none;
+      }
+      body.dark.fs #fsHud {
+        background: rgba(30,24,48,0.85);
+      }
+      body.fs #fsHud .hudLeft, 
+      body.fs #fsHud .hudRight { display: flex; transform: scale(0.85); gap: 4px; }
+      body.fs #fsHud .hudProg { min-width: 120px; width: 140px; }
+      body.fs #fsHud .hudChip { padding: 4px 8px; font-size: 11px; }
+      body.fs #fsHud .hudBtn { height: 32px; padding: 0 8px; font-size: 11px; }
+    }
 </style>
 </head>
 
@@ -1798,19 +1827,39 @@
 
     <div class="modalBack" id="introBack">
       <div class="modal">
-        <h2>Anleitung – Luvvies Crush 🍭</h2>
-        <ul>
-          <li><b>Match 3+</b> gleiche Luvvies (gleiche Figur).</li>
-          <li><b>4er/5er/T/L</b> Matches erzeugen Powerups.</li>
-          <li><b>Powerups kombinieren</b> aktiviert Spezial‑Effekte.</li>
-          <li><b>Geheime Kombos</b> werden erst nach dem Finden sichtbar.</li>
-          <li><b>Mellow</b> ab Level 3 (alle 4 Level): hat kein HP, kann <b>10x gratis</b> bewegt werden.</li>
-          <li><b>???</b> klicken → <b>random</b> Powerup/Bonus/Block (mit Puff-Animation)</li>
-          <li><b>Swap ohne Match</b> kostet <b>1 Move</b> (Live-Swap).</li>
-          <li><b>Keine Züge</b> → Auto-Shuffle, −1 Move.</li>
-        </ul>
+        <h2>So spielst du Luvvies Crush 🍭</h2>
+        <div style="font-weight:900; opacity:.85; margin-bottom:12px;">Ein knuffiges Puzzle-Abenteuer!</div>
+        
+        <div class="panel" style="margin-bottom:10px;">
+           <h3>Grundlagen</h3>
+           <ul>
+             <li><b>Verschiebe</b> Luvvies, um 3 oder mehr Gleiche zu matchen.</li>
+             <li><b>Zieh Menüs weg:</b> Das Menü und die Toast-Nachrichten kannst du einfach per Drag & Drop verschieben, wenn sie im Weg sind!</li>
+             <li><b>4er/5er Matches</b> erschaffen Powerups (Würmer, Citrussies, Koalas).</li>
+           </ul>
+        </div>
+
+        <div class="panel" style="margin-bottom:10px;">
+           <h3>Tipps & Tricks</h3>
+           <ul>
+             <li><b>Kombiniere Powerups</b> (z.B. Koala + Wurm) für riesige Effekte!</li>
+             <li><b>Mellows</b> (die kleinen Geister) sind keine Gegner – du kannst sie <b>gratis bewegen</b>, um Kombos zu bauen.</li>
+             <li><b>Entdecke Secrets:</b> Manche Luvvies haben geheime Synergien (z.B. Sweety + Sleepy). Probier alles aus!</li>
+           </ul>
+        </div>
+
+        <div class="panel">
+           <h3>Menü-Guide</h3>
+           <ul style="list-style:none; padding-left:4px;">
+             <li>💡 <b>Hint:</b> Zeigt dir einen möglichen Zug (kostet 1 Move).</li>
+             <li>🌈 <b>Farben:</b> Würfelt die Farben deiner Luvvies neu (nur Optik).</li>
+             <li>🌙 <b>Theme:</b> Wechselt zwischen Tag- und Nachtmodus.</li>
+             <li>⚙️ <b>Optionen:</b> Einstellungen, Grafik & Speicherstand.</li>
+           </ul>
+        </div>
+
         <div class="foot">
-          <button class="Btn ghost" id="introClose">Schließen</button>
+          <button class="Btn ghost" id="introClose">Verstanden!</button>
         </div>
       </div>
     </div>
@@ -1818,7 +1867,16 @@
     <div class="modalBack" id="gameOverBack" style="z-index:99999;">
       <div class="modal" style="text-align:center;">
         <h2 style="font-size:32px;margin-bottom:4px;">GAME OVER 😵</h2>
-        <div class="sub" style="font-size:18px;margin-bottom:18px;">Keine Moves mehr möglich!</div>
+        
+        <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px;">
+           <img id="goZillaLeft" style="height:110px;transform:scaleX(-1);filter:drop-shadow(0 10px 20px rgba(0,0,0,.2));object-fit:contain;" alt="">
+           <div style="font-weight:900;font-size:24px;opacity:.4;font-style:italic;">VS</div>
+           <img id="goZillaRight" style="height:110px;filter:drop-shadow(0 10px 20px rgba(0,0,0,.2));object-fit:contain;" alt="">
+        </div>
+
+        <div class="sub" style="font-size:16px;margin-bottom:18px;max-width:320px;margin-left:auto;margin-right:auto;line-height:1.4;">
+           Schade, die Mellows haben gewonnen.<br>Versuch es nochmal!
+        </div>
 
         <div class="stat" style="margin:0 auto 18px; max-width:200px;">
            <div class="k">Final Score</div>
@@ -1881,40 +1939,37 @@
     </div>
 
     <div class="modalBack" id="settingsBack">
-      <div class="modal">
-         <h2>Menü</h2>
+      <div class="modal" style="position:relative;">
+         <button id="menuCloseX" style="position:sticky;top:0;float:right;z-index:100;background:rgba(255,255,255,0.95);border-radius:50%;width:40px;height:40px;border:2px solid #ff4fb9;color:#ff4fb9;font-size:28px;font-weight:bold;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,0.15);margin:-6px -6px 10px 10px;">×</button>
+         <h2 style="margin-right:30px;">Optionen</h2>
 
-         <div class="panel" style="margin-bottom:10px; display:flex; align-items:center; gap:10px;">
-            <b>FX Dimmer</b>
-            <input type="range" id="fxSlider" min="0" max="100" value="0" style="flex:1">
-         
-            <button class="Btn ghost" id="menuHintQuick" style="height:40px;min-width:86px;">Hint</button>
-         </div>
-         <div class="panel" style="margin-bottom:10px; display:flex; align-items:center; gap:10px;">
-            <b>FX Light</b>
-            <input type="checkbox" id="fxLightToggle">
-         </div>
-         <div class="panel" style="margin-bottom:10px; display:flex; align-items:center; gap:10px;">
-            <b>Sprache</b>
-            <div id="translateWidget" style="flex:1;min-height:32px;"></div>
+         <div class="panel" style="margin-bottom:10px;">
+            <h3>Grafik & FX</h3>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+               <b>FX Dimmer</b>
+               <input type="range" id="fxSlider" min="0" max="100" value="0" style="flex:1">
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+               <b>FX Light (Performance)</b>
+               <input type="checkbox" id="fxLightToggle">
+            </div>
          </div>
 
-         <div class="cta" style="margin:16px 0; justify-content:center; gap:10px;">
-            <!-- Fullscreen handled via top bar -->
-            <button class="Btn" id="menuHint">Hint</button>
-            <button class="Btn secondary" id="menuNew">Neues Spiel</button>
-            <button class="Btn ghost" id="menuIntro">Anleitung</button>
+         <div class="panel" style="margin-bottom:10px;">
+            <h3>Spiel</h3>
+            <div class="cta" style="justify-content:flex-start;gap:10px;">
+               <button class="Btn secondary" id="menuNew">Neues Spiel</button>
+               <button class="Btn ghost" id="menuIntro">Anleitung</button>
+               <button class="Btn ghost" id="menuHint">Hint</button>
+            </div>
          </div>
-         <div class="cta" style="margin:8px 0; justify-content:center; gap:10px;">
-            <button class="Btn ghost" id="menuSaveColors">Farben speichern</button>
-            <button class="Btn ghost" id="menuLoadColors">Farben laden</button>
-         </div>
+
+
 
          <div class="panel">
             <h3>Deine Luvvies</h3>
             <div class="luvGrid" id="menuLuvGrid"></div>
          </div>
-         <div class="foot"><button class="Btn ghost" id="menuClose">Schließen</button></div>
       </div>
     </div>
 
@@ -1954,9 +2009,7 @@
     </div>
 
     <div id="app">
-      <div class="topRow">
-        <img id="mainLogo" alt="Luvvies Crush" style="height:46px;width:auto;margin-right:12px;filter:drop-shadow(0 4px 6px rgba(0,0,0,.1));display:block;" />
-
+      <div class="topRow" style="position:relative;">
         <div class="diffWrap">
           <div class="diffPills" id="diffPills">
             <input type="radio" name="diff" id="d_easy" value="easy" checked><label for="d_easy">Easy</label>
@@ -1964,16 +2017,17 @@
             <input type="radio" name="diff" id="d_hard" value="hard"><label for="d_hard">Hard</label>
             <input type="radio" name="diff" id="d_shock" value="shock"><label for="d_shock">Zuckerschock</label>
           </div>
+          <button class="Btn ghost" id="btnHintTop" title="Hint (kostet 1 Move)" style="margin-left:8px;">💡</button>
         </div>
 
-        <div style="flex:1; min-width:10px;"></div>
+        <img id="mainLogo" alt="Luvvies Crush" style="height:90px;width:auto;position:absolute;left:50%;top:50%;transform:translate(-50%, -50%);z-index:10;filter:drop-shadow(0 10px 20px rgba(0,0,0,.15));pointer-events:none;display:block;" />
 
         <div class="actions">
           <button class="Btn ghost" id="btnMax" title="Maximize Board">⛶</button>
           <button class="Btn ghost" id="btnReroll" title="Farben neu würfeln" style="padding:0 12px;min-width:46px;">🌈</button>
+          <button class="Btn ghost" id="btnSaveColors" title="Farben speichern" style="padding:0 12px;min-width:46px;">💾</button>
           <button class="Btn ghost" id="btnTheme" style="padding:0 12px;min-width:46px;">🌙</button>
-          <button class="Btn" id="btnMenu">Menü</button>
-          <button class="Btn ghost" id="btnHintTop" title="Hint (kostet 1 Move)">💡</button>
+          <button class="Btn" id="btnMenu">Optionen</button>
         </div>
       </div>
 
@@ -2016,7 +2070,9 @@
             <div class="hudRight">
               <button class="hudBtn hint" id="fsHint">💡</button>
               <button class="hudBtn" id="fsReroll" title="Farben neu würfeln">🌈</button>
-              <button class="hudBtn" id="fsMenuBtn">Menü</button>
+              <button class="hudBtn" id="fsTheme" title="Theme">🌙</button>
+              <button class="hudBtn" id="fsSaveColors" title="Farben speichern">💾</button>
+              <button class="hudBtn" id="fsMenuBtn">Optionen</button>
               <button class="hudBtn exit" id="fsExit">Exit</button>
             </div>
           </div>
@@ -2035,7 +2091,10 @@
 
       <div class="below">
         <div class="panel" id="luvPanel">
-          <h3>Deine Luvvies <span class="tiny">(anklicken für Steckbrief)</span></h3>
+          <h3 style="display:flex;justify-content:space-between;align-items:center;">
+            <span>Deine Luvvies <span class="tiny">(anklicken für Steckbrief)</span></span>
+            <button class="Btn ghost mini" id="btnResetColors" style="height:30px;font-size:12px;padding:0 10px;">Farben Reset</button>
+          </h3>
           <div class="luvGrid" id="luvMenu"></div>
         </div>
 
@@ -2242,13 +2301,18 @@
         BASE_INDEX_CACHE.set(baseKey, baseIdx);
       }
       const baseHue = (baseIdx >= 0) ? (baseIdx * 92) % 360 : (hashStr(baseKey) * 137.508) % 360;
-        const override = TINT_OVERRIDES.get(baseKey + ":" + (variant || "A")) || TINT_OVERRIDES.get(baseKey) || 0;
-      let preferred = (baseHue + TINT_STATE.seed + TINT_STATE.extraShift + override) % 360;
-      if(hueDist(preferred, spriteHue) < 55) preferred = (preferred + 140) % 360;
-
-      // Separate A/B variants clearly
-      const vShift = (variant === "B") ? 185 : 0;
-      preferred = (preferred + vShift) % 360;
+      const override = TINT_OVERRIDES.get(baseKey + ":" + (variant || "A")) || TINT_OVERRIDES.get(baseKey);
+      
+      let preferred;
+      if(override !== undefined && override !== null){
+        preferred = override;
+      } else {
+        preferred = (baseHue + TINT_STATE.seed + TINT_STATE.extraShift) % 360;
+        if(hueDist(preferred, spriteHue) < 55) preferred = (preferred + 140) % 360;
+        // Separate A/B variants clearly
+        const vShift = (variant === "B") ? 185 : 0;
+        preferred = (preferred + vShift) % 360;
+      }
 
       const tone = (hashStr(baseKey) % 3) - 1 + (variant === "B" ? -1 : 0);
       const h = uniqueHue(preferred);
@@ -2603,13 +2667,14 @@
     document.documentElement.style.setProperty("--powerBtn", `url('${OPT}/Button/PowerUpButton.png')`);
     document.documentElement.style.setProperty("--mystBtn", `url('${OPT}/Button/Powerup.png')`);
     const IMG = {
-      logo:     "https://raw.githubusercontent.com/KOALAaufPILLEN/KOALAaufPILLEN.github.io/main/Luvvies/Luvvies-logo.png",
+      logo:     "Luvvies/Luvvies-Logonew.png",
       sweety:   `${OPT}/Luvvies/Sweety.png`,
       sleepy:   `${OPT}/Luvvies/Sleepy.png`,
       normal:   `${OPT}/Luvvies/Normalo.png`,
       cry:      `${OPT}/Luvvies/Cry.png`,
       koala:    `${OPT}/Luvvies/KOALA.png`,
       citrussy: `${OPT}/Luvvies/CItrussie.png`,
+      cit:      `${OPT}/Luvvies/CItrussie.png`,
       
       // Random Worms
       worm: `${OPT}/Luvvies/Sourwurm-1.png`, // Fallback
@@ -2661,6 +2726,7 @@
       cry:      `${OPT_SMALL}/Luvvies/Cry.png`,
       koala:    `${OPT_SMALL}/Luvvies/KOALA.png`,
       citrussy: `${OPT_SMALL}/Luvvies/CItrussie.png`,
+      cit:      `${OPT_SMALL}/Luvvies/CItrussie.png`,
       worm:     `${OPT_SMALL}/Luvvies/Sourwurm-1.png`,
       grumpy:   `${OPT_SMALL}/Luvvies/Grumpycookie.png`,
       happy:    `${OPT_SMALL}/Luvvies/HappyCookie.png`,
@@ -2792,6 +2858,23 @@
         ability:"Explodiert!",
         story:"Die ultimative Nuss.",
         lines:{ easy:["BOOM!"], normal:["SUPER!"], hard:["MEGA!"], shock:["ULTRA!"] }
+      },
+      { key:"mellowlord", name:"Mellow Lord", img:IMG.mellowlord, tag:"boss", minLevel:999, // Only via Merge
+        palettes:{ A:["#e57373","#ffcdd2"], B:["#ff5252","#ff8a80"] },
+        ability:"3x3 Explosion bei Zerstörung.",
+        story:"Der König der Mellows. Wenn er erscheint, bebt das Board.",
+        lines:{ easy:["Mellow King!","3x3 Boom!","Mächtig!"], normal:["Zerstör mich!","Platz da!","Boss!"], hard:["Nicht im Weg stehen.","Macht.","King."], shock:["LORD!!","BOOM","MELLOW POWER!"] }
+      },
+      { key:"giraffie", name:"Giraffie", img:IMG.giraffie, tag:"normal", minLevel:30,
+        palettes:{ A:["#fff59d","#fff176"], B:["#ffee58","#fdd835"] },
+        ability:"Sieht alles von oben.",
+        story:"Giraffie behält den Überblick. Kombinierbar für Tower Power.",
+        lines:{
+          easy:["Hoher Hals!","Überblick!","Hallo unten!"],
+          normal:["Safari Time.","Tower Power?","Weitsicht."],
+          hard:["Strategie.","Langfristig.","Plan."],
+          shock:["HOCH HINAUS!","GIRAFFEN POWER!","RAGE!"]
+        }
       },
       { key:"sweety", name:"Sweety", img:IMG.sweety, tag:"normal",
         palettes:{ A:["#f8bbd0","#f48fb1"], B:["#f48fb1","#ec407a"] },
@@ -3097,8 +3180,26 @@
       sprinkle: { title:"Sprinkle Beam", desc:"Beam Combo", story:"3x Donut + Sweety -> Glitzer-Beam raeumt auf.", icons:["donut","donut","donut","sweety"] },
       sugar: { title:"Zuckerrausch", desc:"Rush Combo", story:"3x Donut + Happy -> Extra-Clears + Bonus-Moves.", icons:["donut","donut","donut","happy"] },
       buddies: { title:"Buddy Burst", desc:"Buddy-Welle", story:"3x Joyce + 1x Smokey (oder umgekehrt) -> Wellen-Boom.", icons:["joyce","joyce","joyce","smokey"] },
-      bestbuddies: { title:"Best Buddies Wave", desc:"Buddy-Finale", story:"3x Simba + 1x Smokey (oder umgekehrt) -> Reihe+Spalte + Bonus.", icons:["simba","simba","simba","smokey"] }
+      bestbuddies: { title:"Best Buddies Wave", desc:"Buddy-Finale", story:"3x Simba + 1x Smokey (oder umgekehrt) -> Reihe+Spalte + Bonus.", icons:["simba","simba","simba","smokey"] },
+      
+      // Powerup Combos (UI)
+      crossblast: { title:"Mega Cross Blast", desc:"Cross Clear", story:"Koala + Worm -> Riesiger Kreuz-Knall!", icons:["koala","worm"] },
+      bigbang: { title:"Big Bang", desc:"Double Clean", story:"Koala + Citrussy -> Board Clean x2!", icons:["koala","cit"] },
+      weaver: { title:"Weaver Web", desc:"Checkerboard", story:"Worm + Worm -> Schachbrett-Muster Wipe.", icons:["worm","worm"] },
+      starburst: { title:"Star Burst", desc:"Star Clear", story:"Worm + Citrussy -> Sternförmige Explosion.", icons:["worm","cit"] },
+      
+      // New Character Combos
+      safaritour: { title:"Safari Tour", desc:"High Ground", story:"3x Giraffie + 1x Koala -> Räumt die oberen 2 Reihen ab.", icons:["giraffie","giraffie","giraffie","koala"] },
+      towerpower: { title:"Tower Power", desc:"Laser Neck", story:"Giraffie + Supernuss -> Spalte weg + 2 Powerups.", icons:["giraffie","supernuss"] },
+
+      // Gap Fillers
+      bittersweet: { title:"Bittersweet", desc:"Sour Surprise", story:"2x Sweety + 2x Cry -> Ein saurer Wurm erscheint.", icons:["sweety","sweety","cry","cry"] },
+      sweetdreams: { title:"Sweet Dreams", desc:"Nap Time", story:"Sweety + Sleepy -> Bereich mischen + 2 Moves.", icons:["sweety","sweety","sweety","sleepy"] },
+
+      // Secret Boss
+      zillacrush: { title:"Zilla Crush", desc:"Boss vs Boss", story:"Ein neuer Boss verdrängt den alten!", icons:["mellowzilla","mellowzilla"] }
     };
+
     function comboKeysForBase(baseKey){
       if(!baseKey) return [];
       const keys = [];
@@ -3940,7 +4041,7 @@ function updateMellowHp(tile){
         img.src = IMG_LARGE[b.key] || b.img; img.alt=b.name;
 
         const seed = b.key + ":" + idx + ":" + Math.round(W) + ":" + Math.round(H);
-        const size = Math.min(420, Math.max(280, W * 0.24));
+        const size = Math.min(440, Math.max(80, W * 0.24));
         const slot = slots[idx % slots.length];
         const x = slot.x * (W - size);
         const y = slot.y * (Math.max(520,H) - size);
@@ -4022,7 +4123,7 @@ function updateMellowHp(tile){
         const wrap = document.createElement("div");
         wrap.className="bgLuv";
         wrap.style.opacity = ".78";
-        const size = Math.min(440, Math.max(300, W * 0.26));
+        const size = Math.min(440, Math.max(80, W * 0.26));
         wrap.style.width = size+"px";
         const img = document.createElement("img");
         img.loading = "lazy";
@@ -4414,6 +4515,7 @@ function updateMellowHp(tile){
             koalaMagicOn(k2);
             clearCells([{r:t1.r,c:t1.c}]);
             spendMoves(1);
+            combo += 2;
             setTimeout(()=>{ dropDown(); mergeMellows(); resolveAll(false); }, 320);
             return;
          }
@@ -4423,6 +4525,7 @@ function updateMellowHp(tile){
             else clearRow(r);
             clearCells([{r:t1.r,c:t1.c}]);
             spendMoves(1);
+            combo += 2;
             setTimeout(()=>{ dropDown(); mergeMellows(); resolveAll(false); }, 320);
             return;
          }
@@ -4431,6 +4534,7 @@ function updateMellowHp(tile){
              citBlast(r,c,3);
              clearCells([{r:t1.r,c:t1.c}]);
              spendMoves(1);
+             combo += 2;
              setTimeout(()=>{ dropDown(); mergeMellows(); resolveAll(false); }, 320);
              return;
          }
@@ -4503,6 +4607,17 @@ function updateMellowHp(tile){
 
         if(count("smokey")===3 && count("simba")===1){ unlockCombo("bestbuddies"); return "bestbuddies"; }
         if(count("simba")===3 && count("smokey")===1){ unlockCombo("bestbuddies"); return "bestbuddies"; }
+
+        // New: Safari Tour (Giraffie + Koala)
+        if(count("giraffie")===3 && count("koala")===1){ unlockCombo("safaritour"); return "safaritour"; }
+        if(count("koala")===3 && count("giraffie")===1){ unlockCombo("safaritour"); return "safaritour"; }
+
+        // New: Bittersweet (2x Sweety + 2x Cry)
+        if(count("sweety")===2 && count("cry")===2){ unlockCombo("bittersweet"); return "bittersweet"; }
+
+        // New: Sweet Dreams (Sweety + Sleepy)
+        if(count("sweety")===3 && count("sleepy")===1){ unlockCombo("sweetdreams"); return "sweetdreams"; }
+        if(count("sleepy")===3 && count("sweety")===1){ unlockCombo("sweetdreams"); return "sweetdreams"; }
 
       return null;
     }
@@ -4637,7 +4752,10 @@ function updateMellowHp(tile){
       if(isL1 && isL2) return true;
 
       // 2. Powerup + SuperNuss
-      if((isP1 && isS2) || (isP2 && isS1)) return true;
+      // Also allow Giraffie + SuperNuss (Tower Power)
+      const isG1 = p1 === "giraffie";
+      const isG2 = p2 === "giraffie";
+      if(((isP1||isG1) && isS2) || ((isP2||isG2) && isS1)) return true;
 
       // 3. Any Powerup involved (Combo or Single)
       // This covers Power+Power, Power+Normal, Lovelie+Power
@@ -4656,7 +4774,7 @@ function updateMellowHp(tile){
       if(!a || !b) return;
       if(isBlocker(a) || isBlocker(b)) return;
       if(!isSwappable(a) || !isSwappable(b)) return;
-      combo = 0; // Reset combo on any player swap
+      // combo reset moved to spendMoves (so mellow moves keep combo)
       busy = true;
       lastSwap = { pref:{r:r2,c:c2}, alt:{r:r1,c:c1} };
 
@@ -4899,6 +5017,7 @@ function updateMellowHp(tile){
     }
 
     function resolvePowerSwap(A,B,dir){
+      combo = clamp(combo+2, 1, 999);
       const aBk = parseTypeId(A.type).baseKey;
       const bBk = parseTypeId(B.type).baseKey;
 
@@ -4910,10 +5029,11 @@ function updateMellowHp(tile){
 
       // === 2. SuperNuss + Powerup ===
       // Check if one is Powerup and other is SuperNuss
-      if(isPowerupKey(aBk) && bBk==="supernuss"){
+      // Also allow Giraffie
+      if((isPowerupKey(aBk) || aBk==="giraffie") && bBk==="supernuss"){
          superNussCombo(A, B); return;
       }
-      if(isPowerupKey(bBk) && aBk==="supernuss"){
+      if((isPowerupKey(bBk) || bBk==="giraffie") && aBk==="supernuss"){
          superNussCombo(B, A); return;
       }
 
@@ -4929,6 +5049,7 @@ function updateMellowHp(tile){
 
       // Koala + Worm
       if((aBk==="koala" && bBk==="worm") || (aBk==="worm" && bBk==="koala")){
+        unlockCombo("crossblast");
         toast("🐨🪱 KOALA × WORM!", "MEGA CROSS BLAST! 💥", 3500);
         const rMid = Math.round((A.r + B.r)/2);
         const cMid = Math.round((A.c + B.c)/2);
@@ -4947,6 +5068,7 @@ function updateMellowHp(tile){
 
       // Koala + Citrussy
       if((aBk==="koala" && bBk==="cit") || (aBk==="cit" && bBk==="koala")){
+        unlockCombo("bigbang");
         toast("🐨🍋 KOALA × Citrussy!", "DOUBLE BOARD CLEAN ×2 💥💥", 3800);
         clearWholeBoard();
         setTimeout(()=>{
@@ -4973,6 +5095,7 @@ function updateMellowHp(tile){
 
       // Worm + Worm
       if(aBk==="worm" && bBk==="worm"){
+        unlockCombo("weaver");
         toast("🪱🪱 WEAVER WEB!", "Checkerboard Wipe! 🏁", 3200);
         checkerboardWipe(A,B);
         return;
@@ -4996,6 +5119,7 @@ function updateMellowHp(tile){
 
       // Worm + Cit
       if((aBk==="worm" && bBk==="cit") || (aBk==="cit" && bBk==="worm")){
+         unlockCombo("starburst");
          toast("🪱🍋 WORM × CIT!", "Star Rows! 💥", 3400);
          // Clear 3 Rows + 3 Cols
          const rMid = Math.round((A.r + B.r)/2);
@@ -5137,6 +5261,37 @@ function updateMellowHp(tile){
            // Clear them with delay to simulate explosion
            clearCells(cells, {protectPower:true});
        }
+       else if(pk==="giraffie"){
+           unlockCombo("towerpower");
+           toast("🦒🌰 TOWER POWER!", "Laser Neck! 💥", 3500);
+           
+           // Clear column
+           clearCol(supernuss.c);
+           
+           // Spawn 2 random Powerups
+           let spawned = 0;
+           for(let i=0; i<12; i++){ 
+               if(spawned >= 2) break;
+               const rr = Math.floor(Math.random()*rows);
+               const cc = Math.floor(Math.random()*cols);
+               const t = grid[rr][cc];
+               if(t && !isBlocker(t) && !isPowerupKey(parseTypeId(t.type).baseKey) && parseTypeId(t.type).baseKey !== "supernuss"){
+                   const type = (Math.random()<0.5) ? "cit:P" : "worm:P";
+                   const oldEl = tileEls.get(t.id);
+                   if(oldEl){ oldEl.remove(); tileEls.delete(t.id); }
+                   
+                   const newT = makeTile(rr,cc,type);
+                   grid[rr][cc] = newT;
+                   const newEl = createTileEl(newT, false);
+                   newEl.classList.add("spawnGlow");
+                   tileEls.set(newT.id, newEl);
+                   ui.board.appendChild(newEl);
+                   spawned++;
+               }
+           }
+           clearCells([{r:powerup.r,c:powerup.c}, {r:supernuss.r,c:supernuss.c}], {protectPower:true});
+           return;
+       }
 
        clearCells([{r:powerup.r,c:powerup.c}, {r:supernuss.r,c:supernuss.c}], {protectPower:true});
     }
@@ -5270,6 +5425,17 @@ function updateMellowHp(tile){
 
         combo = clamp(combo+1, 1, 999);
 
+        // Safety: Infinite Loop Protection
+        if(combo > 25){
+           busy = false;
+           resolving = false;
+           combo = 1;
+           shuffleAll();
+           updateUI();
+           toast("Auto-Reset 🛠️", "Loop Protection triggered", 2000);
+           return;
+        }
+
         let acceptedSpecials = specials;
         // User requested: Special combos only on player swap to prevent loops
         // Only accept specials on the VERY FIRST step of a player swap.
@@ -5379,6 +5545,48 @@ function updateMellowHp(tile){
               levelScore += Math.round(1200*diff.scoreMult);
               continue;
             }
+
+            if(sp.kind==="safaritour"){
+              toast("🦒🐨 SAFARI TOUR!", "High Ground Wipe!", 3400);
+              clearCells(sp.cells);
+              // Clear top 2 rows
+              const cells = [];
+              for(let r=0; r<2 && r<rows; r++){
+                 for(let c=0; c<cols; c++) cells.push({r,c});
+              }
+              clearCells(cells);
+              continue;
+            }
+
+            if(sp.kind==="bittersweet"){
+              toast("💧🍬 Bittersweet!", "Worm spawns!", 3200);
+              clearCells(sp.cells);
+              for(let i=0;i<1;i++){
+                 const r=Math.floor(Math.random()*rows);
+                 const c=Math.floor(Math.random()*cols);
+                 const oldT = grid[r][c];
+                 if(oldT && !isBlocker(oldT) && !isPowerupKey(parseTypeId(oldT.type).baseKey)){
+                    const el=tileEls.get(oldT.id);
+                    if(el){ el.remove(); tileEls.delete(oldT.id); }
+                    
+                    const t=makeTile(r,c,"worm:P");
+                    grid[r][c]=t;
+                    const newEl=createTileEl(t, false);
+                    newEl.classList.add("spawnGlow");
+                    tileEls.set(t.id, newEl);
+                    ui.board.appendChild(newEl);
+                 }
+              }
+              continue;
+            }
+
+            if(sp.kind==="sweetdreams"){
+               toast("💤🍬 Sweet Dreams!", "Area Shuffle +2 Moves", 3200);
+               moves += 2;
+               clearCells(sp.cells);
+               shuffleArea4x4(center.r, center.c);
+               continue;
+            }
           }
 
           setTimeout(()=>{
@@ -5388,7 +5596,6 @@ function updateMellowHp(tile){
           }, 240);
           checkLevelUp();
           updateUI();
-          resolving=false;
           return;
         }
 
@@ -5780,9 +5987,24 @@ function updateMellowHp(tile){
            if(inBounds(r,c)){
              const t = grid[r][c];
              if(t){
-               const el = tileEls.get(t.id);
-               if(el) el.remove();
-               tileEls.delete(t.id);
+               // Check for Big Mellow overlapping
+               let victimId = null;
+               if(t.big && bigMellows.has(t.id)) victimId = t.id;
+               if(isPlaceholder(t)) victimId = t.partOf;
+               
+               if(victimId && bigMellows.has(victimId)){
+                   removeBigMellow(victimId);
+                   unlockCombo("zillacrush");
+                   toast("ZILLA CRUSH! 🦖", "Platz da!", 2000);
+               }
+
+               // Clean up any remaining tile/element
+               const t2 = grid[r][c];
+               if(t2){
+                   const el = tileEls.get(t2.id);
+                   if(el) el.remove();
+                   tileEls.delete(t2.id);
+               }
              }
              grid[r][c] = { type:"mellow_part", partOf: bigId };
            }
@@ -6166,6 +6388,12 @@ clearHints();
       // Show dedicated Game Over Modal
       document.getElementById("goScore").textContent = fmt(totalScore);
 
+      // Set Boss Images
+      const zLeft = document.getElementById("goZillaLeft");
+      const zRight = document.getElementById("goZillaRight");
+      if(zLeft && IMG.mellowzilla) zLeft.src = IMG.mellowzilla[3] || IMG.mellowzilla[0];
+      if(zRight && IMG.koalazilla) zRight.src = IMG.koalazilla[3] || IMG.koalazilla[0];
+
       const saved = getCookie("luvvies_name");
       document.getElementById("goName").value = saved || document.getElementById("lbName").value || document.getElementById("greetName").value || "";
 
@@ -6247,24 +6475,53 @@ clearHints();
       const menuGrid = document.getElementById("menuLuvGrid");
       if(menuGrid) menuGrid.innerHTML="";
 
-      const sortedBases = [...BASES].sort((a,b)=>{
-        const la = a.minLevel || 1;
-        const lb = b.minLevel || 1;
-        if(la !== lb) return la - lb;
-        return a.name.localeCompare(b.name);
-      });
-
-      const all = [
-        ...sortedBases.map(b=>({ ...b, imgSmall: IMG_SMALL[b.key] || b.img })),
+      // 1. Get Bases (including Giraffie/MellowLord which are in BASES)
+      const baseItems = BASES.map(b=>({ ...b, imgSmall: IMG_SMALL[b.key] || b.img }));
+      
+      // 2. Define Specials (Powerups/Bosses that are NOT in BASES or need manual entry)
+      const specials = [
         {key:"myst",name:"???",img:IMG.mystBtn,imgSmall:IMG_SMALL.myst,tag:"powerup",ability:"Mystery‑Powerup",story:"Mystery ist Glück + Rarity.",lines:{easy:["???","Puff ✨","Glück!"],normal:["Reveal time.","Puff.","Random!"],hard:["Risk it.","Puff.","Roll!"],shock:["ALL IN 😈","Puff!","GAMBLE!"]}},
         {key:"worm",name:"Sourworm",img:IMG.worm,imgSmall:IMG_SMALL.worm,tag:"powerup",ability:"Powerup‑Effekt",story:"Sauer, aber räumt sauber.",lines:{easy:["Chomp!","Weg damit!","Sauer!"],normal:["Line clear.","Crunch.","Nice."],hard:["Präzise.","Perfekt.","Clean."],shock:["WELLE!","CRUNCH!","RIP Reihe!"]}},
         {key:"cit",name:"Citrussy",img:IMG.citrussy,imgSmall:IMG_SMALL.citrussy,tag:"powerup",ability:"Powerup‑Effekt",story:"Zitrus-Boom in alle Richtungen.",lines:{easy:["CIT!","Spritz!","Boom!"],normal:["Cross clear.","Zing!","Nice."],hard:["Setz’s gut.","Perfekt.","Value!"],shock:["ZITRUS-NUKE!","BOOM!","MEHR!"]}},
         {key:"koala",name:"Koala",img:IMG.koala,imgSmall:IMG_SMALL.koala,tag:"powerup",ability:"Powerup‑Effekt",story:"Boss-Magie: eine Sorte komplett weg.",lines:{easy:["Boss!","Magie!","Clean!"],normal:["Koala time.","Alles weg.","Nice."],hard:["Richtig wählen.","Perfekt.","Carry."],shock:["BOSS MODE 😈","Wipe!","SWEET!"]}},
         {key:"mellow",name:"Mellow",img:IMG.mellow,imgSmall:IMG_SMALL.mellow,tag:"obstacle",ability:"Kein HP – 10× gratis bewegbar",story:"Mellow blockt nicht, er schenkt dir Free‑Moves.",lines:{easy:["Gratis Move!","Slide!","10x frei"],normal:["Free‑Move.","Geschenkt.","Weiter!"],hard:["Gratis Zug.","Nutzen.","Sauber."],shock:["FREE MOVES 😈","Schieben!","Go!"]}},
         {key:"lovelie",name:"Lovelie",img:IMG.lovelie,imgSmall:IMG_SMALL.lovelie,tag:"bonus",ability:"Ultra selten (Bonus)",story:"Wenn Lovelie kommt, lohnt’s sich.",lines:{easy:["OMG 💖","So selten!","Bonus!"],normal:["Lovelie!","Lucky!","Nice."],hard:["Rare!","Take it.","Value!"],shock:["ULTRA RARE 💖","LETS GO!","HYPE!"]}},
-        {key:"mellowzilla",name:"MellowZilla",img:IMG.mellowzilla[0],imgSmall:IMG_SMALL.mellowzilla,tag:"boss",ability:"Boss‑Präsenz",story:"MellowZilla stampft durchs Board – wenn er auftaucht, wird’s wild.",lines:{easy:["Grrr…","Ich bin groß!","ROAR!"],normal:["Stampf.","Chaos.","Zilla time."],hard:["Ich komme.","Bereit?","Druck."],shock:["MELLOWZILLA!! 😈","BOARD CRUSH","ROOOAR!"]}}
+        {key:"mellowzilla",name:"MellowZilla",img:IMG.mellowzilla[0],imgSmall:IMG_SMALL.mellowzilla,tag:"boss",ability:"Boss‑Präsenz",story:"MellowZilla stampft durchs Board – wenn er auftaucht, wird’s wild.",lines:{easy:["Grrr…","Ich bin groß!","ROAR!"],normal:["Stampf.","Chaos.","Zilla time."],hard:["Ich komme.","Bereit?","Druck."],shock:["MELLOWZILLA!! 😈","BOARD CRUSH","ROOOAR!"]}},
+        {key:"koalazilla",name:"KoalaZilla",img:IMG.koalazilla[0],imgSmall:IMG_SMALL.koalazilla,tag:"boss",ability:"Boss‑Präsenz",story:"KoalaZilla ist selten, aber brutal – der Boss räumt hart ab.",lines:{easy:["Koala…Zilla!","ROAR!","Big Boss."],normal:["Zilla time.","Bereit.","Grrr."],hard:["Kein Fehler.","Druck.","Achtung."],shock:["KOALAZILLA 😈","BOSS RAGE","CRUSH!"]}}
       ];
-      all.push({key:"koalazilla",name:"KoalaZilla",img:IMG.koalazilla[0],imgSmall:IMG_SMALL.koalazilla,tag:"boss",ability:"Boss‑Präsenz",story:"KoalaZilla ist selten, aber brutal – der Boss räumt hart ab.",lines:{easy:["Koala…Zilla!","ROAR!","Big Boss."],normal:["Zilla time.","Bereit.","Grrr."],hard:["Kein Fehler.","Druck.","Achtung."],shock:["KOALAZILLA 😈","BOSS RAGE","CRUSH!"]}});
+
+      // Merge maps to ensure unique keys (prefer BASES version if exists)
+      const map = new Map();
+      baseItems.forEach(x=>map.set(x.key, x));
+      specials.forEach(x=>{
+         if(!map.has(x.key)) map.set(x.key, x);
+      });
+      
+      const all = Array.from(map.values());
+
+      // Custom Order: Group Koalas, Group Mellows, rest roughly by level/theme
+      const order = [
+         "sweety", "donut", "sleepy", "mond", 
+         "grumpy", "happy", "cry", "normal",
+         "joyce", "smokey", "simba", 
+         "worm", "cit", 
+         "fledernuss", "flederheld", "supernuss",
+         "giraffie",
+         "lovelie", "myst",
+         // Koala Group
+         "koala", "koalazilla",
+         // Mellow Group
+         "mellow", "mellowlord", "mellowzilla"
+      ];
+      
+      all.sort((a,b)=>{
+         let ia = order.indexOf(a.key);
+         let ib = order.indexOf(b.key);
+         if(ia===-1) ia=999;
+         if(ib===-1) ib=999;
+         if(ia !== ib) return ia - ib;
+         return (a.minLevel||0) - (b.minLevel||0);
+      });
 
       const createCard = (b) => {
         const card=document.createElement("div");
@@ -6286,10 +6543,20 @@ clearHints();
             <b>${b.name}</b>
             <small>${b.tag || "normal"}</small>
           </div>
+          <button class="luvSave" title="Diese Farbe dauerhaft speichern" style="position:absolute;right:8px;bottom:38px;height:26px;min-width:28px;padding:0 6px;border-radius:999px;border:1px solid rgba(17,13,26,.12);background:rgba(255,255,255,.9);font-weight:1000;font-size:12px;cursor:pointer;box-shadow:0 6px 14px rgba(0,0,0,.10);z-index:2;">💾</button>
           <button class="luvChange" title="Farbe wechseln">🌈</button>
           ${hasB ? `<button class="variantBadge btn" title="Variante B Farbe">B</button>` : ""}
         `;
         card.addEventListener("click", ()=>openInfo(b));
+        const saveBtn = card.querySelector(".luvSave");
+        if(saveBtn){
+          saveBtn.addEventListener("click", (e)=>{
+            e.stopPropagation();
+            saveTintState();
+            saveTintOverrides();
+            toast("Farbe gespeichert 💾", b.name, 1800);
+          });
+        }
         const changeBtn = card.querySelector(".luvChange");
         if(changeBtn){
           changeBtn.addEventListener("click", (e)=>{
@@ -6657,7 +6924,8 @@ clearHints();
     document.getElementById("btnMenu").addEventListener("click", ()=>{
        document.getElementById("settingsBack").style.display = "flex";
     });
-    document.getElementById("menuClose").addEventListener("click", ()=>{
+    const menuCloseX = document.getElementById("menuCloseX");
+    if(menuCloseX) menuCloseX.addEventListener("click", ()=>{
        document.getElementById("settingsBack").style.display = "none";
     });
 
@@ -6803,6 +7071,9 @@ clearHints();
         const allowDrag = e.target && e.target.dataset && e.target.dataset.allowDrag === "1";
         if((tag==="button" || tag==="input" || tag==="select" || tag==="textarea") && !allowDrag) return;
 
+        // Prevent default to stop scrolling/text selection
+        e.preventDefault();
+
         dragging=true;
         try{ handle.setPointerCapture(e.pointerId); }catch(_e){}
         const r = el.getBoundingClientRect();
@@ -6812,10 +7083,13 @@ clearHints();
         el.style.position="fixed";
         el.style.left = r.left+"px";
         el.style.top  = r.top+"px";
+        el.style.right = "auto";
+        el.style.bottom = "auto";
         el.style.transform="none";
       });
       handle.addEventListener("pointermove", (e)=>{
         if(!dragging) return;
+        e.preventDefault(); // crucial for touch
         const dx=e.clientX-sx, dy=e.clientY-sy;
         el.style.left = (ox+dx)+"px";
         el.style.top  = (oy+dy)+"px";
@@ -6832,6 +7106,15 @@ clearHints();
 
     // aktivieren (script läuft nach DOM)
         try{ makeHudDraggable(document.getElementById("maxHud"), "luvHudPos_max"); }catch(e){}
+        try{ makeHudDraggable(document.getElementById("fsHud"), "luvHudPos_fs"); }catch(e){}
+        
+        try{
+           const t = document.getElementById("toast");
+           if(t){
+              t.style.pointerEvents = "auto";
+              makeHudDraggable(t, "luvToastPos");
+           }
+        }catch(e){}
 
 // FX Slider (Dimmer Overlay)
     function updateFx(v){
@@ -6890,9 +7173,7 @@ clearHints();
     // Menu Btn
     const btnMenu = document.getElementById("fsMenuBtn");
     if(btnMenu) btnMenu.addEventListener("click", ()=>{
-       const list = document.getElementById("comboList");
-       if(list) document.getElementById("fsMenuTips").innerHTML = list.innerHTML;
-       document.getElementById("fsMenuBack").style.display="flex";
+       document.getElementById("settingsBack").style.display="flex";
     });
 
     const menuClose = document.getElementById("fsMenuClose");
@@ -6936,23 +7217,35 @@ clearHints();
       if(document.fullscreenElement) await document.exitFullscreen();
     });
 
-    // Google Translate (simple selector)
-    function initTranslate(){
-      try{
-        if(!window.google || !google.translate) return;
-        new google.translate.TranslateElement(
-          { pageLanguage: "de", autoDisplay: false },
-          "translateWidget"
-        );
-      }catch(e){}
+    function resetTileTints(){
+      TINT_OVERRIDES.clear();
+      rerollTileTints();
+      toast("Alle Farben zurückgesetzt 🔄", "Gespeicherte Farben gelöscht.", 2200);
     }
-    try{
-      const gt = document.createElement("script");
-      gt.src = "https://translate.google.com/translate_a/element.js?cb=initTranslate";
-      gt.async = true;
-      document.head.appendChild(gt);
-      window.initTranslate = initTranslate;
-    }catch(e){}
+
+    const btnSaveColors = document.getElementById("btnSaveColors");
+    if(btnSaveColors) btnSaveColors.addEventListener("click", () => {
+       saveTintState();
+       saveTintOverrides();
+       toast("Farben gespeichert 💾", "Deine Auswahl ist gesichert.", 2000);
+    });
+    
+    const fsSaveColors = document.getElementById("fsSaveColors");
+    if(fsSaveColors) fsSaveColors.addEventListener("click", () => {
+       saveTintState();
+       saveTintOverrides();
+       toast("Farben gespeichert 💾", "Deine Auswahl ist gesichert.", 2000);
+    });
+
+    const btnResetColors = document.getElementById("btnResetColors");
+    if(btnResetColors) btnResetColors.addEventListener("click", resetTileTints);
+
+    const fsThemeHud = document.getElementById("fsTheme");
+    if(fsThemeHud) fsThemeHud.addEventListener("click", () => {
+       document.body.classList.toggle("dark");
+       syncTheme();
+       fsThemeHud.textContent = document.body.classList.contains("dark") ? "☀️" : "🌙";
+    });
 
     /**********************
      * Boot
