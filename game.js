@@ -38,9 +38,10 @@
         level: 1, score: 0, moves: 0, hp: 100, maxHp: 100, shield: 0,
         target: 2000, combo: 1, bag: {}, enemy: null
     };
+    window.GAME_SESSION = session; // Expose for Rogue Engine
     
     // --- Data: Bases & Combos (Restored) ---
-    const BASES = [
+    window.BASES = [
       { key:"sweety", name:"Sweety", color:"#f8bbd0" },
       { key:"sleepy", name:"Sleepy", color:"#e3f2fd" },
       { key:"normal", name:"Normal", color:"#f3e5f5" },
@@ -65,7 +66,7 @@
 
     // --- Asset Management ---
     const ASSETS = {};
-    const IMG_SOURCES = {
+    window.IMG_SOURCES = {
         tile_bg: "Images/optimized-150/Button/variant-a1.png",
         sweety: "Images/optimized-150/Luvvies/sweety.png",
         sleepy: "Images/optimized-150/Luvvies/sleepy.png",
@@ -379,15 +380,27 @@
         session.score += dmg * 10;
         session.hp = Math.min(session.hp + 2, session.maxHp); // Heal slightly
         
+        // Rogue Gold Logic (New Balanced Formula)
+        if(window.rogueEngine && window.rogueEngine.state) {
+            // Base: 1 Gold per tile
+            // Level Multiplier: +10% per level (Gentle scaling)
+            // Difficulty 10 Bonus? User mentioned diff 10 should be high.
+            // Assuming 'level' is the main scaler.
+            
+            const baseGold = matches.length;
+            const levelMult = 1 + (session.level * 0.1);
+            const goldGain = Math.ceil(baseGold * levelMult);
+            
+            window.rogueEngine.state.gold += goldGain;
+            
+            // Optional: Float text for gold?
+            // toast(`+${goldGain} G`); // Might be too spammy
+        }
+        
         // Check for 4+ matches -> Powerups
-        // (Simplified logic: if match length > 3 spawn powerup at first tile)
-        // Ideally we need to know WHICH group was >3. `findMatches` flattens it.
-        // For Roguelite speed, we just spawn a powerup if >4 tiles total cleared
         if(matches.length >= 4){
             const p = matches[0];
             const type = (matches.length >= 5) ? "koala:A" : (Math.random() > 0.5 ? "worm:A" : "cit:A");
-            // We will respawn this later in Gravity, or just convert one tile now?
-            // Converting is better.
             p.type = type;
             matches.splice(0, 1); // Keep this one
         }
@@ -455,7 +468,14 @@
 
     function processEnemy(){
         // Enemy Logic
-        session.hp -= 5;
+        let dmg = 5;
+        if(window.rogueEngine && window.rogueEngine.state.currentEnemy) {
+            dmg = window.rogueEngine.state.currentEnemy.dmg || 5;
+        }
+        
+        session.hp -= dmg;
+        // Float Text?
+        
         if(session.hp <= 0) { currentState = STATE.GAME_OVER; alert("Game Over!"); }
         else currentState = STATE.IDLE;
         updateUI();
@@ -497,7 +517,63 @@
         document.getElementById("uiScore").textContent = fmt(session.score);
         document.getElementById("uiMoves").textContent = session.moves;
         document.getElementById("uiHp").textContent = session.hp;
+        
+        // Update Rogue Enemy UI
+        if(window.rogueEngine && window.rogueEngine.state.currentEnemy) {
+            const e = window.rogueEngine.state.currentEnemy;
+            const el = document.querySelector('.rogueEnemy');
+            if(el) {
+                el.style.display = 'flex';
+                el.querySelector('.enemyTitle').innerHTML = `${e.name} <span class="enemyTier" data-tier="${e.tier||''}">Lv.${window.level}</span>`;
+                // el.querySelector('.enemyDesc').textContent = `HP: ${e.hp} | DMG: ${e.dmg}`; // Optional
+                
+                // Update Image
+                const imgKey = e.img || 'town_slime';
+                const src = IMG_SOURCES[imgKey] || IMG_SOURCES['town_slime'];
+                const imgEl = el.querySelector('.enemyPortrait img');
+                if(imgEl && imgEl.src !== src) imgEl.src = src;
+                
+                // Update HP Bar if we had one?
+                // The current HTML has a "ProgressRow" but no dedicated Enemy HP bar in the standard UI?
+                // `rogue.html` has `.rogueEnemy` with a `.bar` inside?
+                const bar = el.querySelector('.bar > i');
+                if(bar) {
+                    const pct = Math.max(0, (session.score / (session.target||1000)) * 100); // Standard Logic is Score Target
+                    // BUT for Rogue we might want Enemy HP?
+                    // Let's stick to Score for now as "Damage dealt to enemy"
+                    // Or change logic: Score = Damage. 
+                    // Let's keep it simple: Score bar fills up to kill enemy.
+                    bar.style.width = pct + "%";
+                }
+            }
+        }
     }
     
+    function checkLevelUp(){
+        if(ROGUE_MODE){
+            if(window.rogueEngine && session.score >= 2000 * (1 + (window.level||1)*0.2)){
+                 const ov = document.getElementById("victoryOverlay");
+                 if(ov && ov.style.display !== "flex"){
+                     ov.style.display = "flex";
+                     document.getElementById("vScore").textContent = fmt(session.score);
+                     if(window.rogueEngine.state) document.getElementById("vGold").textContent = window.rogueEngine.state.gold;
+                     try { burstFx(window.innerWidth/2, window.innerHeight/2, 20); } catch(e){}
+                 }
+                 return;
+            }
+            return;
+        }
+        // Classic Logic
+        if(levelScore >= target){
+            level++;
+            // ... (rest of classic logic) ...
+            levelScore = 0;
+            target = calcTarget(level);
+            moves = calcMoves(level);
+            spawnMellow();
+            maybeSpawnLovelie();
+        }
+    }
+
     window.newGame = () => startLevel(1);
     window.postScore = () => alert("Score posted (Mockup)");

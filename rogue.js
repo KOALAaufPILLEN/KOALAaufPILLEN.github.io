@@ -10,13 +10,39 @@ window.rogueEngine = {
         hp: 100,
         maxHp: 100,
         map: [],
+        biomeSequence: [],
         mapCols: 5,
         mapRows: 0,
         currentNode: -1,
         path: [],
         customCombos: {}, 
-        deck: [] 
+        deck: [], // Current available tiles in bag
+        inventory: [], // Relics / Items
+        currentEnemy: null
     },
+
+    // --- Databases ---
+    
+    // Kawaii Enemies
+    enemyDB: [
+        { id: "slime", name: "Glibber-Pudding", hp: 80, dmg: 4, img: "town_slime", biome: ["forest", "swamp"] },
+        { id: "rat", name: "Käse-Dieb", hp: 60, dmg: 6, img: "town_wolf", biome: ["cave", "forest"] }, 
+        { id: "bat", name: "Fleder-Mausi", hp: 50, dmg: 5, img: "fledernuss", biome: ["cave", "night"] },
+        { id: "stump", name: "Grantiger Baumstumpf", hp: 120, dmg: 3, img: "town_skel", biome: ["forest"] }, 
+        { id: "ghost", name: "Grusel-Beere", hp: 70, dmg: 7, img: "town_skel", biome: ["swamp", "cave"] },
+        { id: "crab", name: "Zwick-Zwack", hp: 90, dmg: 5, img: "town_player", biome: ["beach"] }, 
+        { id: "cacty", name: "Stachel-Kaktus", hp: 80, dmg: 6, img: "town_player", biome: ["farmland"] },
+        { id: "boss_zilla", name: "KoalaMegaZilla", hp: 500, dmg: 10, img: "koalamegazilla", biome: ["boss"], tier: "boss" }
+    ],
+
+    // Shop Items
+    itemDB: [
+        { id: "potion_s", name: "Sweet Juice", type: "consumable", cost: 50, desc: "Heal 30 HP", effect: (s)=>{ s.hp = Math.min(s.hp+30, s.maxHp); } },
+        { id: "potion_m", name: "Mega Shake", type: "consumable", cost: 90, desc: "Heal 60 HP", effect: (s)=>{ s.hp = Math.min(s.hp+60, s.maxHp); } },
+        { id: "moves_up", name: "Coffee Bean", type: "relic", cost: 120, desc: "+5 Max Moves", effect: "moves+5" },
+        { id: "gold_up", name: "Golden Spoon", type: "relic", cost: 150, desc: "+20% Gold", effect: "gold+20" },
+        { id: "dmg_up", name: "Spicy Candy", type: "relic", cost: 140, desc: "+1 Base Dmg", effect: "dmg+1" }
+    ],
     
     biomes: [
         { id: "forest", name: "Wald", bg: "Images/Zip/Cute_Fantasy/Cute_Fantasy/Tiles/Grass/Grass_2_Middle.png", filter: "blur(0.3px) saturate(1.05)", opacity: 0.36, size: "48px 48px", blend: "soft-light", mapSize: "48px 48px" },
@@ -65,29 +91,23 @@ window.rogueEngine = {
     confirmChar: function() {
         if(!this.tempHero) { alert("Wähle deinen Helden!"); return; }
         this.state.hero = this.tempHero;
-        console.log("Hero selected:", this.state.hero);
-        this.generateMap();
+        this.startNewRun();
         this.showMap();
     },
 
     startNewRun: function() {
-        this.state.hero = null;
-        this.tempHero = null;
         this.state.gold = 200;
         this.state.hp = 100;
         this.state.maxHp = 100;
         this.state.customCombos = {};
-        this.state.deck = [];
+        this.state.deck = ["sweety", "sleepy", "normal", "cry"]; // Starter Deck
+        this.state.inventory = [];
         this.generateMap();
-        this.showScene('charView');
-        this.renderCharSelect();
     },
 
     generateMap: function() {
-        const rows = 15;
-        const cols = 5;
-        const minNodes = 3;
-        const maxNodes = 5;
+        const rows = 18;
+        const cols = 7;
         const nodes = [];
         const rowNodes = [];
         let id = 0;
@@ -98,65 +118,77 @@ window.rogueEngine = {
         this.state.mapCols = cols;
         this.state.mapRows = rows;
 
-        const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-        const pickCols = (count) => {
-            const pool = Array.from({length: cols}, (_, i) => i);
-            for(let i = pool.length - 1; i > 0; i--){
-                const j = Math.floor(Math.random() * (i + 1));
-                const tmp = pool[i];
-                pool[i] = pool[j];
-                pool[j] = tmp;
-            }
-            return pool.slice(0, count).sort((a,b) => a - b);
-        };
-        const pickBiome = () => this.biomes[Math.floor(Math.random() * this.biomes.length)];
+        const shuffle = (arr) => arr.sort(() => Math.random() - 0.5);
+        const pickedBiomes = shuffle(this.biomes.slice()).slice(0, 4);
+        const rowsPerBiome = Math.ceil(rows / pickedBiomes.length);
 
-        const typeForRow = (row) => {
-            if(row === rows - 1) return "boss";
-            if(row > 0 && row % 3 === 0) return "shop";
-            return "combat";
-        };
-
-        for(let r=0; r<rows; r++){
-            const count = randInt(minNodes, maxNodes);
-            const colsPicked = pickCols(count);
+        // Structured Paths: Define 3-4 distinct paths (indices)
+        // e.g. [1, 3, 5]
+        const paths = [1, 3, 5]; 
+        
+        for (let r = 0; r < rows; r++) {
             const rowList = [];
-            colsPicked.forEach(c => {
-                const node = { id: id++, row: r, col: c, type: typeForRow(r), biome: pickBiome(), next: [] };
+            const isBossRow = (r === rows - 1);
+            
+            // Determine active columns for this row
+            // Randomly shift paths slightly or merge them
+            let activeCols = new Set();
+            if(isBossRow) {
+                activeCols.add(3); // Center Boss
+            } else {
+                paths.forEach(p => {
+                    // Wiggle path: p-1, p, or p+1 (clamped)
+                    let c = p;
+                    if(Math.random() < 0.3) c += (Math.random() < 0.5 ? -1 : 1);
+                    c = Math.max(0, Math.min(cols-1, c));
+                    activeCols.add(c);
+                });
+                // Ensure at least 3 nodes per row for variety
+                while(activeCols.size < 3){
+                    activeCols.add(Math.floor(Math.random()*cols));
+                }
+            }
+            
+            const sortedCols = Array.from(activeCols).sort((a,b)=>a-b);
+
+            sortedCols.forEach(c => {
+                let type = "combat";
+                const rng = Math.random();
+                if (isBossRow) type = "boss";
+                else if (r > 0 && r % 5 === 0 && rng < 0.5) type = "shop";
+                else if (rng < 0.1) type = "shop";
+                else if (rng < 0.25) type = "elite";
+                
+                const biome = pickedBiomes[Math.min(Math.floor(r / rowsPerBiome), pickedBiomes.length - 1)];
+                const node = { id: id++, row: r, col: c, type: type, biome: biome, next: [] };
                 nodes.push(node);
                 rowList.push(node);
             });
             rowNodes.push(rowList);
         }
 
-        const pickClosest = (list, col) => {
-            if(!list || !list.length) return null;
-            const sorted = [...list].sort((a,b) => Math.abs(a.col - col) - Math.abs(b.col - col));
-            const top = sorted.slice(0, Math.min(2, sorted.length));
-            return top[Math.floor(Math.random() * top.length)];
-        };
-
-        for(let r=0; r<rows-1; r++){
+        // Connect Forward (Only to near neighbors)
+        for (let r = 0; r < rows - 1; r++) {
             const curr = rowNodes[r];
-            const next = rowNodes[r+1];
-            curr.forEach(n => { n.next = new Set(); });
-
-            next.forEach(n => {
-                const parent = pickClosest(curr, n.col);
-                if(parent) parent.next.add(n.id);
-            });
-
+            const next = rowNodes[r + 1];
+            
             curr.forEach(n => {
-                const extra = Math.random() < 0.5 ? 1 : 0;
-                for(let i=0; i<extra; i++){
-                    const target = pickClosest(next, n.col);
-                    if(target) n.next.add(target.id);
+                // Connect to closest nodes in next row (dist <= 1 or 2)
+                // Prefer closer ones.
+                const neighbors = next.filter(tn => Math.abs(tn.col - n.col) <= 1);
+                if(neighbors.length === 0){
+                    // Force connection to closest if no immediate neighbor (gap jump)
+                    // Find absolute closest
+                    let closest = next[0];
+                    let minD = 999;
+                    next.forEach(tn => {
+                        const d = Math.abs(tn.col - n.col);
+                        if(d < minD){ minD = d; closest = tn; }
+                    });
+                    neighbors.push(closest);
                 }
-                if(n.next.size === 0){
-                    const target = pickClosest(next, n.col);
-                    if(target) n.next.add(target.id);
-                }
-                n.next = Array.from(n.next);
+                
+                neighbors.forEach(tn => n.next.push(tn.id));
             });
         }
 
@@ -179,6 +211,7 @@ window.rogueEngine = {
         const con = document.getElementById("mapNodes");
         if(!con) return;
         con.innerHTML = "";
+        const nodeEls = new Map();
 
         const nodes = this.state.map;
         if(!nodes.length) return;
@@ -221,6 +254,7 @@ window.rogueEngine = {
                 el.title = node.biome.name + " - " + node.type;
                 el.textContent = node.type === "shop" ? "S" : (node.type === "boss" ? "B" : "C");
                 el.onclick = () => { if(activeIds.has(node.id)) this.enterNode(node); };
+                nodeEls.set(node.id, el);
                 rowEl.appendChild(el);
             }
             con.appendChild(rowEl);
@@ -229,6 +263,61 @@ window.rogueEngine = {
         const biomeNames = [...new Set(activeNodes.map(n => n.biome.name))];
         document.getElementById("mapBiomeName").textContent = biomeNames.length ? biomeNames.join(" / ") : "Ende";
         document.getElementById("mapGold").textContent = this.state.gold;
+        requestAnimationFrame(() => this.drawMapLines(nodeEls, con, visited));
+        this.bindMapResize();
+    },
+
+    bindMapResize: function() {
+        if(this._mapResizeBound) return;
+        this._mapResizeBound = true;
+        window.addEventListener("resize", () => {
+            const mapView = document.getElementById("mapView");
+            if(mapView && mapView.style.display === "flex") this.showMap();
+        });
+    },
+
+    drawMapLines: function(nodeEls, container, visited) {
+        const svg = document.getElementById("mapLines");
+        if(!svg || !container) return;
+        while(svg.firstChild) svg.removeChild(svg.firstChild);
+
+        const conRect = container.getBoundingClientRect();
+        if(conRect.width === 0 || conRect.height === 0) return;
+        svg.setAttribute("width", conRect.width);
+        svg.setAttribute("height", conRect.height);
+        svg.setAttribute("viewBox", `0 0 ${conRect.width} ${conRect.height}`);
+
+        const centers = new Map();
+        nodeEls.forEach((el, id) => {
+            const r = el.getBoundingClientRect();
+            centers.set(id, {
+                x: r.left - conRect.left + (r.width / 2),
+                y: r.top - conRect.top + (r.height / 2)
+            });
+        });
+
+        const currentId = this.state.currentNode;
+
+        this.state.map.forEach(node => {
+            if(!node.next || !node.next.length) return;
+            const from = centers.get(node.id);
+            if(!from) return;
+            node.next.forEach(nextId => {
+                const to = centers.get(nextId);
+                if(!to) return;
+                const c1x = from.x;
+                const c1y = from.y + (to.y - from.y) * 0.35;
+                const c2x = to.x;
+                const c2y = from.y + (to.y - from.y) * 0.65;
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                path.setAttribute("d", `M ${from.x} ${from.y} C ${c1x} ${c1y} ${c2x} ${c2y} ${to.x} ${to.y}`);
+                let cls = "map-line";
+                if(currentId === node.id) cls += " active";
+                else if(visited && visited.has(node.id) && visited.has(nextId)) cls += " done";
+                path.setAttribute("class", cls);
+                svg.appendChild(path);
+            });
+        });
     },
 
 
@@ -260,39 +349,147 @@ window.rogueEngine = {
         const grid = document.getElementById("shopContent");
         grid.innerHTML = "";
         
-        // Build random combo offers
-        const pool = BASES.filter(b => !b.tag || b.tag === 'normal');
-        for(let i=0; i<2; i++){
-            const b1 = pool[Math.floor(Math.random()*pool.length)];
-            const b2 = pool[Math.floor(Math.random()*pool.length)];
-            const key = [b1.key, b2.key].sort().join(":");
-            const current = this.state.customCombos[key];
-            const lvl = current ? current.lvl + 1 : 1;
+        // 1. Sell Luvvies (Biome Specific Unlocks)
+        const currentNode = this.state.map.find(n => n.id === this.state.currentNode);
+        const biomeId = currentNode ? currentNode.biome.id : "forest";
+        
+        let biomePool = [];
+        switch(biomeId) {
+            case "forest": biomePool = ["mond"]; break;
+            case "swamp": biomePool = ["smokey", "grumpy"]; break;
+            case "cave": biomePool = ["joyce", "cry"]; break;
+            case "beach": biomePool = ["donut", "happy"]; break;
+            case "farmland": biomePool = ["giraffie", "simba", "cit"]; break;
+            default: biomePool = ["normal"];
+        }
+        
+        const offerPool = biomePool.filter(k => !this.state.deck.includes(k));
+        const generalPool = BASES.filter(b => !this.state.deck.includes(b.key) && !b.tag);
+        const finalPool = offerPool.length > 0 ? offerPool : generalPool;
+        
+        if(finalPool.length > 0) {
+            const luvKey = finalPool[Math.floor(Math.random() * finalPool.length)];
+            const luv = BASES.find(b => b.key === luvKey) || BASES[0];
+            
+            // Cost: 80 G (approx 2 levels of play)
+            const cost = 80;
             
             const div = document.createElement("div");
-            div.className = "shop-item";
-            div.innerHTML = `<b>${b1.name} + ${b2.name}</b><br>Lv.${lvl}<br>${100*lvl} G`;
+            div.className = "shop-item luv";
+            div.innerHTML = `
+                <img src="${IMG_SOURCES[luv.key] || luv.img}" style="width:40px;">
+                <b>${luv.name}</b><br><span style="font-size:10px; opacity:0.8;">${biomeId.toUpperCase()} SPECIAL</span><br>Join Team<br>${cost} G
+            `;
             div.onclick = () => {
-                if(this.state.gold >= 100*lvl){
-                    this.state.gold -= 100*lvl;
-                    if(!this.state.customCombos[key]) this.state.customCombos[key] = {lvl:0};
-                    this.state.customCombos[key].lvl++;
-                    alert("Combo aufgewertet!");
+                if(this.state.gold >= cost){
+                    this.state.gold -= cost;
+                    this.state.deck.push(luv.key);
+                    alert(`${luv.name} joined!`);
                     this.openShop();
                 }
             };
             grid.appendChild(div);
         }
+
+        // 2. Sell Items
+        // Lowered costs
+        const items = this.itemDB.sort(()=>Math.random()-0.5).slice(0, 2);
+        items.forEach(it => {
+            // Re-scale item costs for display/logic
+            // Base Item Cost logic override
+            let realCost = 30; // Default
+            if(it.id.includes("potion")) realCost = 25;
+            if(it.type === "relic") realCost = 60;
+            
+            const div = document.createElement("div");
+            div.className = "shop-item";
+            div.innerHTML = `<b>${it.name}</b><br>${it.desc}<br>${realCost} G`;
+            div.onclick = () => {
+                if(this.state.gold >= realCost){
+                    this.state.gold -= realCost;
+                    if(it.type === 'consumable') it.effect(this.state);
+                    else this.state.inventory.push(it);
+                    alert(`Bought ${it.name}!`);
+                    this.openShop(); // Refresh
+                }
+            };
+            grid.appendChild(div);
+        });
+
+        // 3. Custom Combo
+        const pool = BASES.filter(b => this.state.deck.includes(b.key)); 
+        if(pool.length >= 2){
+            const b1 = pool[Math.floor(Math.random()*pool.length)];
+            const b2 = pool[Math.floor(Math.random()*pool.length)];
+            if(b1.key !== b2.key){
+                const key = [b1.key, b2.key].sort().join(":");
+                const current = this.state.customCombos[key];
+                const lvl = current ? current.lvl + 1 : 1;
+                
+                // Cost: 25 * lvl
+                const cost = 25 * lvl;
+                
+                const div = document.createElement("div");
+                div.className = "shop-item combo";
+                div.innerHTML = `<b>${b1.name} + ${b2.name}</b><br>Combo Lv.${lvl}<br>${cost} G`;
+                div.onclick = () => {
+                    if(this.state.gold >= cost){
+                        this.state.gold -= cost;
+                        if(!this.state.customCombos[key]) this.state.customCombos[key] = {lvl:0};
+                        this.state.customCombos[key].lvl++;
+                        alert("Combo Upgraded!");
+                        this.openShop();
+                    }
+                };
+                grid.appendChild(div);
+            }
+        }
     },
 
     startCombat: function(node) {
         console.log("Starting Combat Node", node.id);
+        
+        // 1. Pick Enemy
+        const biomeId = node.biome.id;
+        const potential = this.enemyDB.filter(e => e.biome.includes(biomeId) || (node.type==='boss' && e.tier==='boss'));
+        let enemy = potential[Math.floor(Math.random() * potential.length)];
+        
+        // Fallback
+        if(!enemy) enemy = this.enemyDB[0];
+
+        // Scale Stats
+        const lvl = (node.row + 1);
+        let scale = 1 + (lvl * 0.15); // +15% per level
+        
+        // Elite Scaling
+        if (node.type === 'elite') {
+            scale *= 1.5; // 50% stronger
+            enemy = { ...enemy, name: "Elite " + enemy.name, tier: "elite" };
+        }
+        
+        this.state.currentEnemy = {
+            ...enemy,
+            maxHp: Math.floor(enemy.hp * scale),
+            hp: Math.floor(enemy.hp * scale),
+            dmg: Math.floor(enemy.dmg * (1 + lvl * 0.05))
+        };
+        
+        console.log("VS", this.state.currentEnemy.name);
+
         this.showScene('gameView');
 
+        // Randomized Board Shapes
+        const shapes = [
+            { c: 7, r: 9 }, // Standard
+            { c: 6, r: 9 }, // Narrow
+            { c: 8, r: 8 }, // Square-ish
+            { c: 7, r: 8 }  // Shorter
+        ];
+        const shape = shapes[Math.floor(Math.random() * shapes.length)];
+        
         // Injektion in Original Engine
-        window.cols = 7;
-        window.rows = 9;
-        const lvl = (node && typeof node.row === "number") ? node.row + 1 : (node.id + 1);
+        window.cols = shape.c;
+        window.rows = shape.r;
         window.level = lvl;
         window.ROGUE_DIFFICULTY = { match4: lvl >= 5, match5: lvl >= 8 };
 

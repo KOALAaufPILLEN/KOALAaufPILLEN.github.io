@@ -1,4 +1,12 @@
-// Mechanics Patch for Custom Combos & Scaling
+// Mechanics Patch for Custom Combos & Scaling & Town
+
+// Define Town Buildings (German)
+window.TOWN_BUILDINGS = [
+    { key: "forge", name: "Schmiede", map: {x:0.2, y:0.4, icon:"house"} },
+    { key: "bank", name: "Bank", map: {x:0.7, y:0.4, icon:"house"} }, // Was "Bank", kept as "Bank" (German is same)
+    { key: "armory", name: "Rüstkammer", map: {x:0.5, y:0.2, icon:"house"} },
+    { key: "library", name: "Bibliothek", map: {x:0.3, y:0.7, icon:"house"} }
+];
 
 // Backup original trySwap to wrap it
 const originalTrySwap = window.trySwap;
@@ -67,27 +75,69 @@ window.findLineMatches = function() {
     // Modify spawns based on Rogue Difficulty
     if(window.ROGUE_DIFFICULTY && result.spawn.size > 0) {
         for(const [key, val] of result.spawn) {
-            // Level 5+: Match 4 no longer creates Worms? Or Worms are weaker?
-            // User request: "Powerups schwerer zu bauen"
-            
-            // Logic:
-            // If Level >= 5, downgrade Match-4 (Worm) to nothing?
-            // If Level >= 8, downgrade Match-5 (Cit/Koala) to Worm?
-            
             const isMatch5 = val.prio >= 2; // Cit/Koala
             const isMatch4 = val.prio === 1; // Worm
             
             if(window.ROGUE_DIFFICULTY.match5 && isMatch5) {
-                // Downgrade to Worm (make it harder to get big ones)
                 val.type = typeId("worm","P");
             }
             if(window.ROGUE_DIFFICULTY.match4 && isMatch4) {
-                // Remove spawn (Match 4 does nothing special)
                 result.spawn.delete(key);
             }
         }
     }
     return result;
 };
+
+// Override Bag Refill to use Deck
+if(typeof window.rogueEngine !== 'undefined') {
+    // Override newGame to Filter BASES based on Deck
+    const originalNewGame = window.newGame;
+    window.newGame = function(isRogue) {
+        if(isRogue && window.rogueEngine && window.rogueEngine.state.deck.length > 0) {
+            BASES.forEach(b => {
+                if(window.rogueEngine.state.deck.includes(b.key)) {
+                    b.minLevel = 0; // Always available
+                } else {
+                    b.minLevel = 999; // Locked
+                }
+            });
+            console.log("Deck injected into BASES:", window.rogueEngine.state.deck);
+        }
+        
+        if(originalNewGame) originalNewGame();
+        
+        // Sync HP for Boss Logic safety
+        if(window.GAME_SESSION && window.rogueEngine) {
+             window.GAME_SESSION.hp = window.rogueEngine.state.hp;
+             window.GAME_SESSION.maxHp = window.rogueEngine.state.maxHp;
+        }
+    };
+}
+
+// Override Enemy Processing to prevent premature Game Over
+// We redefine the global `processEnemy` from game.js
+window.processEnemy = function(){
+    // Enemy Logic
+    let dmg = 5;
+    if(window.rogueEngine && window.rogueEngine.state.currentEnemy) {
+        dmg = window.rogueEngine.state.currentEnemy.dmg || 5;
+    }
+    
+    if(window.GAME_SESSION) {
+        window.GAME_SESSION.hp -= dmg;
+        if(window.rogueEngine) window.rogueEngine.state.hp = window.GAME_SESSION.hp; // Sync back
+        
+        if(window.GAME_SESSION.hp <= 0) { 
+            currentState = 9; // STATE.GAME_OVER
+            alert("Game Over! (No HP)"); 
+            // In Rogue, we should probably return to Map/Char Select instead of reloading?
+            // For now, alert is fine.
+        } else {
+            currentState = 0; // STATE.IDLE
+        }
+        updateUI();
+    }
+}
 
 console.log("Mechanics Patch Loaded");
