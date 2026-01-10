@@ -10663,36 +10663,45 @@ return;
     // 1. Override initBoard to use Engine Settings
     const originalInitBoard = window.initBoard;
     window.initBoard = function() {
+        console.log("Rogue InitBoard Hook Triggered");
         // Force dimensions from Engine if available
         if(window.rogueEngine && window.level) {
             const r = window.rows || 9;
             const c = window.cols || 7;
+            console.log("Setting Dimensions:", r, c);
 
             // Hack: Update the 'diff' object so originalInitBoard uses our size
             if(typeof diff !== 'undefined') {
                 diff.rows = r;
                 diff.cols = c;
             }
-            rows = r;
-            cols = c;
+            // Force globals
+            window.rows = r;
+            window.cols = c;
 
             // Set CSS Vars
             document.documentElement.style.setProperty('--rows', rows);
             document.documentElement.style.setProperty('--cols', cols);
 
             // Update Biome BG
-            if(window.CURRENT_BIOME) {
-                const b = rogueEngine.state.map.find(n => n.biome.id === window.CURRENT_BIOME)?.biome;
-                const bg = b ? b.bg : "";
-                const wrap = document.getElementById("boardWrap");
-                if(wrap && bg) wrap.style.backgroundImage = `url('${bg}')`;
+            if(window.CURRENT_BIOME && rogueEngine.state.map) {
+                const n = rogueEngine.state.map.find(n => n.biome.id === window.CURRENT_BIOME);
+                if(n && n.biome) {
+                    const wrap = document.getElementById("boardWrap");
+                    if(wrap) wrap.style.backgroundImage = `url('${n.biome.bg}')`;
+                }
             }
         }
 
-        // Call original logic (which fills grid, etc.)
-        if(typeof originalInitBoard === "function") originalInitBoard();
-
-        // Post-Init: Spawn Rogue Specifics? (Maybe handled by engine)
+        // Call original logic
+        if(typeof originalInitBoard === "function") {
+            originalInitBoard();
+            console.log("Original InitBoard Finished. Tile count:", document.querySelectorAll(".tile").length);
+            // Force resize again just in case
+            if(window.rogueEngine) window.rogueEngine.resizeBoard();
+        } else {
+            console.error("Original initBoard not found!");
+        }
     };
 
     // 2. Override updateUI to show Rogue Stats
