@@ -1,0 +1,47 @@
+Rogue Mode Biomes & Mechanics Documentation
+
+1. Forest (Wald)
+   - BG: Grass_2_Middle.png
+   - Filter: None
+   - Effect: Standard
+
+2. Neon City
+   - BG: Water_Middle.png
+   - Filter: hue-rotate(180deg) saturate(2)
+   - Effect: High saturation, futuristic feel.
+
+3. Candy (Schokoschlucht)
+   - BG: Path_Middle.png
+   - Filter: sepia(0.8) hue-rotate(-30deg)
+   - Effect: Chocolate tones.
+
+4. Cloud (Wolkenreich)
+   - BG: Water_Tile.png
+   - Filter: brightness(1.5) grayscale(0.5)
+   - Effect: Bright, airy.
+
+5. Spooky (Geistergrotte)
+   - BG: Cave_Floor_Middle.png
+   - Filter: invert(0.8) hue-rotate(180deg)
+   - Effect: Dark, inverted colors.
+
+6. Magma (Lavasee)
+   - BG: FarmLand_Tile.png
+   - Filter: hue-rotate(-50deg) saturate(3)
+   - Effect: Red/Orange intensity.
+
+7. Crystal (Kristallgipfel)
+   - BG: Water_Middle.png
+   - Filter: hue-rotate(220deg) brightness(1.2)
+   - Effect: Icy blue.
+
+8. Cyber Slums
+   - BG: Cave_Floor_Middle.png
+   - Filter: contrast(1.5) hue-rotate(90deg)
+   - Effect: Green matrix style.
+
+Boss Mechanics:
+- Every 15th node (Tier End) or Special Encounter.
+- MellowZilla: 3x3 Boss.
+- KoalaZilla: 3x3 Boss.
+- HP Bars: Multi-stack (1000 HP per stack).
